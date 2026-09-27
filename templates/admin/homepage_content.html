@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home Page Content Management – Admin Panel – CampusSync</title>
+    <!-- Google Fonts & Bootstrap Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Custom Theme Stylesheets -->
+    <link href="{{ url_for('static', filename='css/common.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/admin.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/notification_modal.css') }}" rel="stylesheet">
+    <style>
+        .cms-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 1.25rem;
+            background: #ffffff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            transition: all 0.2s ease;
+        }
+        .cms-nav-pills .nav-link {
+            border: 1px solid #e2e8f0;
+            border-radius: 2rem;
+            padding: 0.55rem 1.25rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #475569;
+            background: #ffffff;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .cms-nav-pills .nav-link:hover {
+            background: #f1f5f9;
+            color: #0f172a;
+        }
+        .cms-nav-pills .nav-link.active {
+            background: #2563eb;
+            color: #ffffff;
+            border-color: #2563eb;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+        }
+        .preview-container {
+            border: 1px solid #cbd5e1;
+            border-radius: 1.25rem;
+            overflow: hidden;
+            background: #0f172a;
+            color: #ffffff;
+            position: relative;
+            box-shadow: 0 12px 28px rgba(15, 23, 42, 0.15);
+        }
+        .preview-hero-bg {
+            position: absolute;
+            inset: 0;
+            background-size: cover;
+            background-position: center;
+            opacity: 0.25;
+            transition: all 0.3s ease;
+        }
+        .preview-hero-content {
+            position: relative;
+            z-index: 2;
+            padding: 2.5rem 1.8rem;
+            text-align: center;
+        }
+        .preview-badge-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.35rem 0.85rem;
+            border-radius: 2rem;
+            background: rgba(37, 99, 235, 0.25);
+            border: 1px solid rgba(59, 130, 246, 0.4);
+            color: #93c5fd;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            margin-bottom: 1rem;
+        }
+        .stat-edit-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 1.25rem;
+            background: #ffffff;
+            padding: 1.25rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .stat-edit-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+            border-color: #cbd5e1;
+        }
+        .ticker-preview-bar {
+            background: #0f172a;
+            border-radius: 0.75rem;
+            padding: 0.75rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            color: #e2e8f0;
+            font-size: 0.875rem;
+            overflow: hidden;
+        }
+        .upload-dropzone {
+            border: 2px dashed #cbd5e1;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            text-align: center;
+            background: #f8fafc;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .upload-dropzone:hover {
+            border-color: #2563eb;
+            background: #eff6ff;
+        }
+    </style>
+</head>
+<body class="admin-theme">
+<div class="wrapper">
+    <!-- Sidebar Navigation -->
+    {% include 'components/sidebar.html' %}
+
+    <!-- Main Content Area -->
+    <div id="content">
+        <!-- Topbar Header -->
+        {% include 'components/topbar.html' %}
+
+        <div class="content-body">
+            <!-- Flash Message Alerts -->
+            <div id="flashContainer" class="flash-container">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }} alert-dismissible fade show rounded-3 shadow-xs" role="alert">
+                                <i class="bi {% if category == 'success' %}bi-check-circle-fill text-success{% else %}bi-exclamation-triangle-fill text-danger{% endif %} me-2"></i>
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+            </div>
+
+            <!-- Page Header -->
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+                <div>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb mb-1 small">
+                            <li class="breadcrumb-item"><a href="{{ url_for('admin_dashboard') }}" class="text-decoration-none">Dashboard</a></li>
+                            <li class="breadcrumb-item"><a href="{{ url_for('admin_website') }}" class="text-decoration-none">Website</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Home Page Content</li>
+                        </ol>
+                    </nav>
+                    <h2 class="fw-bold mb-1 text-dark" style="font-size: 1.65rem;">
+                        <i class="bi bi-layout-text-window text-primary me-2"></i>Home Page Content Management
+                    </h2>
+                    <p class="text-muted small mb-0">Control hero section text, campus statistics counters, news ticker, and key feature cards on the public landing page.</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('admin_website') }}" class="btn btn-outline-secondary btn-sm px-3">
+                        <i class="bi bi-arrow-left me-1"></i> Back to Website
+                    </a>
+                    <a href="{{ url_for('home') }}" target="_blank" class="btn btn-outline-primary btn-sm px-3 fw-semibold">
+                        <i class="bi bi-box-arrow-up-right me-1"></i> Live Preview
+                    </a>
+                    <button type="submit" form="homepageForm" class="btn btn-primary btn-sm px-4 fw-semibold shadow-sm">
+                        <i class="bi bi-cloud-arrow-up-fill me-1"></i> Save Changes
+                    </button>
+                </div>
+            </div>
+
+            <!-- Main Form -->
+            <form id="homepageForm" method="POST" action="{{ url_for('admin_homepage_content') }}" enctype="multipart/form-data">
+                <!-- Navigation Tabs -->
+                <ul class="nav cms-nav-pills gap-2 mb-4" id="cmsTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="hero-tab" data-bs-toggle="tab" data-bs-target="#tab-hero" type="button" role="tab" aria-controls="tab-hero" aria-selected="true">
+                            <i class="bi bi-image"></i> Hero Banner
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="stats-tab" data-bs-toggle="tab" data-bs-target="#tab-stats" type="button" role="tab" aria-controls="tab-stats" aria-selected="false">
+                            <i class="bi bi-bar-chart-line"></i> Campus Stats &amp; Counters
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="ticker-tab" data-bs-toggle="tab" data-bs-target="#tab-ticker" type="button" role="tab" aria-controls="tab-ticker" aria-selected="false">
+                            <i class="bi bi-broadcast"></i> News Ticker
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="features-tab" data-bs-toggle="tab" data-bs-target="#tab-features" type="button" role="tab" aria-controls="tab-features" aria-selected="false">
+                            <i class="bi bi-grid-3x3-gap"></i> Feature Highlights
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- Tab Contents -->
+                <div class="tab-content" id="cmsTabContent">
+                    
+                    <!-- ==================== TAB 1: HERO BANNER ==================== -->
+                    <div class="tab-pane fade show active" id="tab-hero" role="tabpanel" aria-labelledby="hero-tab">
+                        <div class="row g-4">
+                            <!-- Left Column: Edit Controls -->
+                            <div class="col-lg-6">
+                                <div class="cms-card p-4">
+                                    <h5 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
+                                        <i class="bi bi-pencil-square text-primary"></i> Hero Content Settings
+                                    </h5>
+
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold small text-secondary">Top Pill Badge Text</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-white"><i class="bi bi-stars text-warning"></i></span>
+                                            <input type="text" name="hero_pill_badge" id="inputPillBadge" class="form-control" value="{{ settings.hero_pill_badge }}" placeholder="e.g. ✨ Smart QR Attendance System" oninput="updateLivePreview()">
+                                        </div>
+                                        <small class="text-muted" style="font-size: 0.75rem;">Small pill highlighted at the top of hero section.</small>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold small text-secondary">Hero Main Headline <span class="text-danger">*</span></label>
+                                        <input type="text" name="hero_headline" id="inputHeadline" class="form-control fw-bold" value="{{ settings.hero_headline }}" required placeholder="e.g. CampusSync Digital ERP" oninput="updateLivePreview()">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold small text-secondary">Tagline / Subtitle Description</label>
+                                        <textarea name="hero_subtitle" id="inputSubtitle" class="form-control" rows="3" placeholder="Describe the campus mission and portal benefits..." oninput="updateLivePreview()">{{ settings.hero_subtitle }}</textarea>
+                                    </div>
+
+                                    <!-- Call to Action Buttons -->
+                                    <div class="row g-2 mb-3">
+                                        <div class="col-sm-6">
+                                            <label class="form-label fw-semibold small text-secondary">Primary Button Text</label>
+                                            <input type="text" name="hero_cta1_text" id="inputCta1Text" class="form-control form-control-sm" value="{{ settings.hero_cta1_text }}" placeholder="Access Portals" oninput="updateLivePreview()">
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <label class="form-label fw-semibold small text-secondary">Primary Button Link</label>
+                                            <input type="text" name="hero_cta1_link" class="form-control form-control-sm" value="{{ settings.hero_cta1_link }}" placeholder="#portals">
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <label class="form-label fw-semibold small text-secondary">Secondary Button Text</label>
+                                            <input type="text" name="hero_cta2_text" id="inputCta2Text" class="form-control form-control-sm" value="{{ settings.hero_cta2_text }}" placeholder="Explore Features" oninput="updateLivePreview()">
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <label class="form-label fw-semibold small text-secondary">Secondary Button Link</label>
+                                            <input type="text" name="hero_cta2_link" class="form-control form-control-sm" value="{{ settings.hero_cta2_link }}" placeholder="#features">
+                                        </div>
+                                    </div>
+
+                                    <!-- Banner Image Upload -->
+                                    <div class="mb-0">
+                                        <label class="form-label fw-semibold small text-secondary">Hero Background Banner Image (Optional)</label>
+                                        <div class="upload-dropzone" onclick="document.getElementById('bannerImageInput').click()">
+                                            <i class="bi bi-cloud-arrow-up display-6 text-primary d-block mb-1"></i>
+                                            <span class="fw-semibold text-dark small d-block">Click to select new banner image</span>
+                                            <span class="text-muted" style="font-size: 0.75rem;">Supported formats: JPG, PNG, WEBP (Recommended: 1920x800px)</span>
+                                            <input type="file" name="banner_image" id="bannerImageInput" class="d-none" accept="image/*" onchange="previewBannerFile(this)">
+                                        </div>
+                                        
+                                        {% if settings.hero_banner_image %}
+                                            <div class="mt-2 p-2 bg-light rounded-3 border d-flex align-items-center justify-content-between">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <img src="{{ url_for('global_serve_uploads', filename='homepage/' + settings.hero_banner_image) }}" alt="Banner" class="rounded" style="width: 50px; height: 35px; object-fit: cover;">
+                                                    <small class="text-truncate" style="max-width: 200px;">{{ settings.hero_banner_image }}</small>
+                                                </div>
+                                                <div class="form-check form-check-inline m-0">
+                                                    <input class="form-check-input" type="checkbox" name="remove_banner_image" value="1" id="removeBannerCheck">
+                                                    <label class="form-check-label text-danger small fw-semibold" for="removeBannerCheck">Remove Image</label>
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Right Column: Live Responsive Preview -->
+                            <div class="col-lg-6">
+                                <div class="cms-card p-4 h-100 d-flex flex-column">
+                                    <div class="d-flex align-items-center justify-content-between mb-3">
+                                        <h5 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                                            <i class="bi bi-display text-success"></i> Live Interactive Preview
+                                        </h5>
+                                        <span class="badge bg-success-subtle text-success small px-2 py-1"><i class="bi bi-lightning-charge-fill me-1"></i>Real-time</span>
+                                    </div>
+
+                                    <div class="preview-container flex-grow-1 d-flex flex-column justify-content-center">
+                                        <div id="previewBg" class="preview-hero-bg" {% if settings.hero_banner_image %}style="background-image: url('{{ url_for('global_serve_uploads', filename='homepage/' + settings.hero_banner_image) }}');"{% endif %}></div>
+                                        <div class="preview-hero-content">
+                                            <!-- Pill Badge -->
+                                            <div>
+                                                <span id="previewPillBadge" class="preview-badge-pill">
+                                                    {{ settings.hero_pill_badge }}
+                                                </span>
+                                            </div>
+
+                                            <!-- Headline -->
+                                            <h2 id="previewHeadline" class="fw-bold mb-3 text-white" style="font-size: 1.85rem; letter-spacing: -0.02em;">
+                                                {{ settings.hero_headline }}
+                                            </h2>
+
+                                            <!-- Subtitle -->
+                                            <p id="previewSubtitle" class="text-slate-300 small mx-auto mb-4" style="max-width: 440px; color: #cbd5e1; line-height: 1.5;">
+                                                {{ settings.hero_subtitle }}
+                                            </p>
+
+                                            <!-- CTA Buttons -->
+                                            <div class="d-flex justify-content-center gap-2 flex-wrap">
+                                                <button type="button" class="btn btn-primary btn-sm px-3 rounded-pill fw-semibold shadow-sm" id="previewCta1">
+                                                    {{ settings.hero_cta1_text }} <i class="bi bi-arrow-right ms-1"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-outline-light btn-sm px-3 rounded-pill fw-semibold" id="previewCta2" style="border-color: rgba(255,255,255,0.4);">
+                                                    {{ settings.hero_cta2_text }}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="text-center mt-3 text-muted small">
+                                        <i class="bi bi-info-circle me-1"></i>Any changes made in the fields on the left immediately update in this preview box.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ==================== TAB 2: STATS & COUNTERS ==================== -->
+                    <div class="tab-pane fade" id="tab-stats" role="tabpanel" aria-labelledby="stats-tab">
+                        <div class="cms-card p-4">
+                            <div class="d-flex align-items-center justify-content-between mb-4">
+                                <div>
+                                    <h5 class="fw-bold text-dark mb-1">
+                                        <i class="bi bi-bar-chart-fill text-primary me-2"></i>Campus Statistics Counters
+                                    </h5>
+                                    <p class="text-muted small mb-0">Highlight the key numeric metrics shown in the public statistics banner on the landing page.</p>
+                                </div>
+                            </div>
+
+                            <div class="row g-3">
+                                <!-- Counter 1: Enrolled Students -->
+                                <div class="col-sm-6 col-lg-3">
+                                    <div class="stat-edit-card">
+                                        <div class="d-flex align-items-center justify-content-between mb-3">
+                                            <div class="stat-icon icon-bg-primary rounded-3 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px; font-size: 1.2rem;">
+                                                <i class="bi bi-people-fill"></i>
+                                            </div>
+                                            <div class="form-check form-switch m-0">
+                                                <input class="form-check-input" type="checkbox" role="switch" name="stat1_active" id="stat1Active" {% if settings.stat1_active %}checked{% endif %}>
+                                            </div>
+                                        </div>
+                                        <label class="form-label small fw-semibold text-secondary mb-1">Counter Number</label>
+                                        <input type="text" name="stat1_number" class="form-control fw-bold fs-5 text-primary mb-2" value="{{ settings.stat1_number }}" placeholder="5,000+">
+                                        <label class="form-label small fw-semibold text-secondary mb-1">Label / Title</label>
+                                        <input type="text" name="stat1_label" class="form-control form-control-sm" value="{{ settings.stat1_label }}" placeholder="Enrolled Students">
+                                    </div>
+                                </div>
+
+                                <!-- Counter 2: Faculty Members -->
+                                <div class="col-sm-6 col-lg-3">
+                                    <div class="stat-edit-card">
+                                        <div class="d-flex align-items-center justify-content-between mb-3">
+                                            <div class="stat-icon icon-bg-success rounded-3 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px; font-size: 1.2rem;">
+                                                <i class="bi bi-person-badge-fill"></i>
+                                            </div>
+                                            <div class="form-check form-switch m-0">
+                                                <input class="form-check-input" type="checkbox" role="switch" name="stat2_active" id="stat2Active" {% if settings.stat2_active %}checked{% endif %}>
+                                            </div>
+                                        </div>
+                                        <label class="form-label small fw-semibold text-secondary mb-1">Counter Number</label>
+                                        <input type="text" name="stat2_number" class="form-control fw-bold fs-5 text-success mb-2" value="{{ settings.stat2_number }}" placeholder="150+">
+                                        <label class="form-label small fw-semibold text-secondary mb-1">Label / Title</label>
+                                        <input type="text" name="stat2_label" class="form-control form-control-sm" value="{{ settings.stat2_label }}" placeholder="Faculty Members">
+                                    </div>
+                                </div>
+
+                                <!-- Counter 3: Pass Rate / Accuracy -->
+                                <div class="col-sm-6 col-lg-3">
+                                    <div class="stat-edit-card">
+                                        <div class="d-flex align-items-center justify-content-between mb-3">
+                                            <div class="stat-icon rounded-3 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px; font-size: 1.2rem; background: #e0f2fe; color: #0284c7;">
+                                                <i class="bi bi-check2-circle"></i>
+                                            </div>
+                                            <div class="form-check form-switch m-0">
+                                                <input class="form-check-input" type="checkbox" role="switch" name="stat3_active" id="stat3Active" {% if settings.stat3_active %}checked{% endif %}>
+                                            </div>
+                                        </div>
+                                        <label class="form-label small fw-semibold text-secondary mb-1">Counter Number</label>
+                                        <input type="text" name="stat3_number" class="form-control fw-bold fs-5 text-info mb-2" value="{{ settings.stat3_number }}" placeholder="99.8%">
+                                        <label class="form-label small fw-semibold text-secondary mb-1">Label / Title</label>
+                                        <input type="text" name="stat3_label" class="form-control form-control-sm" value="{{ settings.stat3_label }}" placeholder="Attendance Accuracy">
+                                    </div>
+                                </div>
+
+                                <!-- Counter 4: Placement -->
+                                <div class="col-sm-6 col-lg-3">
+                                    <div class="stat-edit-card">
+                                        <div class="d-flex align-items-center justify-content-between mb-3">
+                                            <div class="stat-icon icon-bg-warning rounded-3 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px; font-size: 1.2rem;">
+                                                <i class="bi bi-award-fill"></i>
+                                            </div>
+                                            <div class="form-check form-switch m-0">
+                                                <input class="form-check-input" type="checkbox" role="switch" name="stat4_active" id="stat4Active" {% if settings.stat4_active %}checked{% endif %}>
+                                            </div>
+                                        </div>
+                                        <label class="form-label small fw-semibold text-secondary mb-1">Counter Number</label>
+                                        <input type="text" name="stat4_number" class="form-control fw-bold fs-5 text-warning mb-2" value="{{ settings.stat4_number }}" placeholder="100%">
+                                        <label class="form-label small fw-semibold text-secondary mb-1">Label / Title</label>
+                                        <input type="text" name="stat4_label" class="form-control form-control-sm" value="{{ settings.stat4_label }}" placeholder="Placement Assistance">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ==================== TAB 3: NEWS TICKER ==================== -->
+                    <div class="tab-pane fade" id="tab-ticker" role="tabpanel" aria-labelledby="ticker-tab">
+                        <div class="cms-card p-4">
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <div>
+                                    <h5 class="fw-bold text-dark mb-1">
+                                        <i class="bi bi-broadcast text-danger me-2"></i>Breaking News Ticker Banner
+                                    </h5>
+                                    <p class="text-muted small mb-0">High-priority announcement banner displayed right below the hero section on the homepage.</p>
+                                </div>
+                                <div class="form-check form-switch fs-5">
+                                    <input class="form-check-input" type="checkbox" role="switch" name="ticker_active" id="tickerActive" {% if settings.ticker_active %}checked{% endif %}>
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-3">
+                                    <label class="form-label fw-semibold small text-secondary">Ticker Badge Text</label>
+                                    <input type="text" name="ticker_badge" id="inputTickerBadge" class="form-control" value="{{ settings.ticker_badge }}" placeholder="LATEST" oninput="updateTickerPreview()">
+                                </div>
+                                <div class="col-md-9">
+                                    <label class="form-label fw-semibold small text-secondary">Announcement Message Text</label>
+                                    <input type="text" name="ticker_text" id="inputTickerText" class="form-control" value="{{ settings.ticker_text }}" placeholder="Admissions open for Academic Year 2026-27..." oninput="updateTickerPreview()">
+                                </div>
+                            </div>
+
+                            <!-- Live Ticker Preview -->
+                            <label class="form-label fw-semibold small text-secondary">Live Ticker Preview</label>
+                            <div class="ticker-preview-bar">
+                                <span class="badge bg-danger text-uppercase fw-bold px-2 py-1" id="previewTickerBadge" style="letter-spacing: 0.05em; font-size: 0.75rem;">
+                                    <i class="bi bi-broadcast me-1"></i>{{ settings.ticker_badge }}
+                                </span>
+                                <span class="text-truncate flex-grow-1" id="previewTickerText">
+                                    {{ settings.ticker_text or 'No active announcement set.' }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ==================== TAB 4: FEATURE HIGHLIGHTS ==================== -->
+                    <div class="tab-pane fade" id="tab-features" role="tabpanel" aria-labelledby="features-tab">
+                        <div class="cms-card p-4">
+                            <div class="mb-4">
+                                <h5 class="fw-bold text-dark mb-1">
+                                    <i class="bi bi-grid-3x3-gap-fill text-primary me-2"></i>Key Capabilities &amp; Features Cards
+                                </h5>
+                                <p class="text-muted small mb-0">Customize the 4 core feature cards shown under the "Built for Campus Operations" section.</p>
+                            </div>
+
+                            <div class="row g-4">
+                                <!-- Feature 1 -->
+                                <div class="col-md-6">
+                                    <div class="p-3 bg-light rounded-3 border">
+                                        <div class="d-flex align-items-center gap-2 mb-2">
+                                            <span class="badge bg-primary px-2 py-1">Feature 1</span>
+                                            <i class="bi bi-qr-code-scan text-primary fs-5"></i>
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label small fw-semibold text-secondary mb-1">Title</label>
+                                            <input type="text" name="feat1_title" class="form-control form-control-sm fw-bold" value="{{ settings.feat1_title }}">
+                                        </div>
+                                        <div>
+                                            <label class="form-label small fw-semibold text-secondary mb-1">Description</label>
+                                            <textarea name="feat1_desc" class="form-control form-control-sm" rows="2">{{ settings.feat1_desc }}</textarea>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Feature 2 -->
+                                <div class="col-md-6">
+                                    <div class="p-3 bg-light rounded-3 border">
+                                        <div class="d-flex align-items-center gap-2 mb-2">
+                                            <span class="badge bg-success px-2 py-1">Feature 2</span>
+                                            <i class="bi bi-journal-check text-success fs-5"></i>
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label small fw-semibold text-secondary mb-1">Title</label>
+                                            <input type="text" name="feat2_title" class="form-control form-control-sm fw-bold" value="{{ settings.feat2_title }}">
+                                        </div>
+                                        <div>
+                                            <label class="form-label small fw-semibold text-secondary mb-1">Description</label>
+                                            <textarea name="feat2_desc" class="form-control form-control-sm" rows="2">{{ settings.feat2_desc }}</textarea>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Feature 3 -->
+                                <div class="col-md-6">
+                                    <div class="p-3 bg-light rounded-3 border">
+                                        <div class="d-flex align-items-center gap-2 mb-2">
+                                            <span class="badge bg-info px-2 py-1">Feature 3</span>
+                                            <i class="bi bi-globe2 text-info fs-5"></i>
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label small fw-semibold text-secondary mb-1">Title</label>
+                                            <input type="text" name="feat3_title" class="form-control form-control-sm fw-bold" value="{{ settings.feat3_title }}">
+                                        </div>
+                                        <div>
+                                            <label class="form-label small fw-semibold text-secondary mb-1">Description</label>
+                                            <textarea name="feat3_desc" class="form-control form-control-sm" rows="2">{{ settings.feat3_desc }}</textarea>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Feature 4 -->
+                                <div class="col-md-6">
+                                    <div class="p-3 bg-light rounded-3 border">
+                                        <div class="d-flex align-items-center gap-2 mb-2">
+                                            <span class="badge bg-warning text-dark px-2 py-1">Feature 4</span>
+                                            <i class="bi bi-bar-chart-line-fill text-warning fs-5"></i>
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label small fw-semibold text-secondary mb-1">Title</label>
+                                            <input type="text" name="feat4_title" class="form-control form-control-sm fw-bold" value="{{ settings.feat4_title }}">
+                                        </div>
+                                        <div>
+                                            <label class="form-label small fw-semibold text-secondary mb-1">Description</label>
+                                            <textarea name="feat4_desc" class="form-control form-control-sm" rows="2">{{ settings.feat4_desc }}</textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bottom Floating Sticky Action Bar -->
+                <div class="cms-card p-3 mt-4 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <span class="text-muted small">
+                        <i class="bi bi-clock-history me-1"></i>Last Updated: {{ settings.updated_at.strftime('%d %B %Y, %I:%M %p') if settings.updated_at else 'Initial Default' }}
+                    </span>
+                    <div class="d-flex gap-2">
+                        <a href="{{ url_for('admin_website') }}" class="btn btn-outline-secondary btn-sm px-3">Discard</a>
+                        <button type="submit" class="btn btn-primary btn-sm px-4 fw-semibold shadow-sm">
+                            <i class="bi bi-cloud-arrow-up-fill me-1"></i> Save Changes
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ url_for('static', filename='js/common.js') }}"></script>
+<script>
+    // Real-time Live Interactive Preview update
+    function updateLivePreview() {
+        const headline = document.getElementById('inputHeadline').value || 'CampusSync Digital ERP';
+        const subtitle = document.getElementById('inputSubtitle').value || 'A unified platform to streamline QR attendance...';
+        const badge = document.getElementById('inputPillBadge').value || '✨ Smart Attendance';
+        const cta1 = document.getElementById('inputCta1Text').value || 'Access Portals';
+        const cta2 = document.getElementById('inputCta2Text').value || 'Explore Features';
+
+        document.getElementById('previewHeadline').textContent = headline;
+        document.getElementById('previewSubtitle').textContent = subtitle;
+        document.getElementById('previewPillBadge').textContent = badge;
+        document.getElementById('previewCta1').innerHTML = cta1 + ' <i class="bi bi-arrow-right ms-1"></i>';
+        document.getElementById('previewCta2').textContent = cta2;
+    }
+
+    // Ticker Live Preview update
+    function updateTickerPreview() {
+        const badge = document.getElementById('inputTickerBadge').value || 'LATEST';
+        const text = document.getElementById('inputTickerText').value || 'No active announcement message.';
+        document.getElementById('previewTickerBadge').innerHTML = '<i class="bi bi-broadcast me-1"></i>' + badge;
+        document.getElementById('previewTickerText').textContent = text;
+    }
+
+    // Banner image local preview
+    function previewBannerFile(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const previewBg = document.getElementById('previewBg');
+                previewBg.style.backgroundImage = 'url(' + e.target.result + ')';
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+</script>
+
+{% include 'components/notification_modal.html' %}
+</body>
+</html>

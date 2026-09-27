@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+<head>
+  <!-- Basic Meta Tags -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="CampusSync - Student Portal Login">
+  <title>Student Login - {{ college.college_short_name if college and college.college_short_name else 'CampusSync' }} ERP</title>
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Bootstrap 5 CSS CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+
+  <!-- Bootstrap Icons CDN -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+  <!-- Custom Login CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <div class="top-navbar">
+    <button type="button" class="theme-toggle-btn" id="themeToggleBtn" aria-label="Toggle light and dark theme">
+      <i class="bi bi-moon-stars-fill text-primary" id="themeIcon"></i>
+      <span id="themeText">Dark Mode</span>
+    </button>
+  </div>
+
+  <!-- Main Page Wrapper (Split-Screen Layout) -->
+  <div class="container-fluid p-0 login-wrapper">
+    <div class="row g-0 min-vh-100">
+
+      <!-- Left Side: Branding & Illustration -->
+      <div class="col-lg-6 left-panel d-none d-lg-flex">
+        
+        <div class="left-content">
+          
+          <!-- Project Logo & Brand Name -->
+          <div class="brand-logo-container">
+            <div class="brand-icon-box">
+              {% if college and college.logo and college.logo != 'default-logo.png' %}
+                <img src="{{ url_for('admin.serve_uploads', filename='college/' + college.logo) }}" alt="College Logo" style="width: 38px; height: 38px; object-fit: contain; border-radius: 50%;">
+              {% else %}
+                <i class="bi bi-mortarboard-fill"></i>
+              {% endif %}
+            </div>
+            <div>
+              <h2 class="brand-name">
+                {{ college.college_short_name if college and college.college_short_name else 'CampusSync' }}
+                <span class="brand-badge">ERP</span>
+              </h2>
+            </div>
+          </div>
+
+          <!-- Main Headline -->
+          <h1 class="system-title">
+            Student Portal Login
+          </h1>
+
+          <!-- Short Description -->
+          <p class="system-description">
+            Access your student profile, academic details, and institutional announcements through your student portal account.
+          </p>
+
+          <!-- Feature Cards Container -->
+          <div class="features-container">
+            
+            <div class="feature-card">
+              <div class="feature-icon-badge">
+                <i class="bi bi-check-lg"></i>
+              </div>
+              <p class="feature-text">Student Profile Details</p>
+            </div>
+
+            <div class="feature-card">
+              <div class="feature-icon-badge">
+                <i class="bi bi-check-lg"></i>
+              </div>
+              <p class="feature-text">Academic Enrollment Info</p>
+            </div>
+
+            <div class="feature-card">
+              <div class="feature-icon-badge">
+                <i class="bi bi-check-lg"></i>
+              </div>
+              <p class="feature-text">Secure Credentials Access</p>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- Bottom Section Illustration -->
+        <div class="illustration-wrapper">
+          <img src="{{ url_for('static', filename='images/defaults/admin-login.svg') }}" alt="Student Portal Illustration" class="illustration-img">
+        </div>
+
+      </div>
+
+      <!-- Right Side: Student Login Card Form -->
+      <div class="col-lg-6 right-panel">
+        
+        <div class="login-card-container">
+          
+          <div class="login-card">
+            
+            <!-- Login Header -->
+            <div class="login-header text-center text-lg-start">
+              <div class="login-title-badge">
+                <i class="bi bi-person-badge-fill me-1"></i> Student Portal
+              </div>
+              <h2 class="login-title">Student Login</h2>
+              <p class="login-subtitle">Sign in using your student email address.</p>
+            </div>
+
+            <!-- Error Alert Banner -->
+            {% if error %}
+            <div class="alert alert-danger d-flex align-items-center mb-3" role="alert">
+              <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+              <div>{{ error }}</div>
+            </div>
+            {% endif %}
+
+            <!-- Success Alert Banner -->
+            {% if success %}
+            <div class="alert alert-success d-flex align-items-center mb-3" role="alert">
+              <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+              <div>{{ success }}</div>
+            </div>
+            {% endif %}
+
+            <!-- Student Login Form -->
+            <form id="studentLoginForm" action="{{ url_for('student_login') }}" method="POST" class="needs-validation" novalidate>
+              <input type="hidden" name="device_fingerprint" id="deviceFingerprintInput">
+              <input type="hidden" name="device_model" id="deviceModelInput">
+              <input type="hidden" name="skip_binding_confirmed" id="skipBindingConfirmed" value="0">
+              
+              <!-- Student Email Input -->
+              <div class="mb-3">
+                <label for="studentEmail" class="form-label">Student Email Address</label>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <i class="bi bi-envelope-fill"></i>
+                  </span>
+                  <input 
+                    type="email" 
+                    class="form-control" 
+                    id="studentEmail" 
+                    name="email" 
+                    placeholder="student@college.edu" 
+                    required 
+                    autocomplete="email"
+                    autofocus
+                  >
+                </div>
+              </div>
+
+              <!-- Student Password Input -->
+              <div class="mb-3">
+                <label for="studentPassword" class="form-label">Password</label>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <i class="bi bi-lock-fill"></i>
+                  </span>
+                  <input 
+                    type="password" 
+                    class="form-control" 
+                    id="studentPassword" 
+                    name="password" 
+                    placeholder="Enter student password" 
+                    required 
+                    autocomplete="current-password"
+                  >
+                  <!-- Show / Hide Password Button -->
+                  <button 
+                    type="button" 
+                    class="btn-toggle-password" 
+                    id="togglePasswordBtn" 
+                    title="Show password"
+                    aria-label="Toggle password visibility"
+                  >
+                    <i class="bi bi-eye" id="togglePasswordIcon"></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Forgot Password Link (Triggers Popup Modal) -->
+              <div class="d-flex justify-content-end mb-3">
+                <a href="javascript:void(0)" class="forgot-password-link" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal">
+                  Forgot Password?
+                </a>
+              </div>
+
+              <!-- Submit Login Button -->
+              <button type="submit" class="btn btn-login-primary mt-2" id="loginBtn">
+                <span class="spinner-border spinner-border-sm d-none" id="loginBtnSpinner" role="status" aria-hidden="true"></span>
+                <span id="loginBtnText">Sign In to Student Portal</span>
+                <i class="bi bi-arrow-right-short fs-4"></i>
+              </button>
+
+              <!-- Back To Home Button -->
+              <a href="{{ url_for('home') }}" class="btn btn-back-home mt-2">
+                <i class="bi bi-house-door"></i>
+                <span>Back to Home</span>
+              </a>
+
+              <!-- Graduated / Old Student Result Link -->
+              <div class="mt-3 p-2 text-center rounded-3 bg-light border border-light-subtle">
+                <span class="text-muted small">Completed BCA / Graduated?</span>
+                <a href="{{ url_for('alumni.alumni_results') }}" class="small fw-bold text-primary text-decoration-none ms-1">
+                  <i class="bi bi-mortarboard-fill me-1"></i> View Old Student Result
+                </a>
+              </div>
+
+              <!-- Detected Device Hardware ID Badge -->
+              <div class="mt-2 text-center">
+                <span class="badge bg-light text-secondary border px-2 py-1 small fw-normal" style="font-size: 0.76rem;">
+                  <i class="bi bi-phone me-1 text-primary"></i> Device ID: <code id="displayDeviceFp" class="text-primary fw-bold">Detecting...</code>
+                </span>
+              </div>
+
+            </form>
+
+            <!-- Bottom Version Info -->
+            <div class="login-footer">
+              <span>{{ college.college_name if college else 'CampusSync ERP' }}</span>
+              <span class="version-tag">Student Portal</span>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Bootstrap 5 JavaScript Bundle CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Custom Login JavaScript -->
+  <script src="{{ url_for('static', filename='js/login.js') }}?v=1.2"></script>
+  <!-- Immutable Hardware Fingerprint Engine -->
+  <script src="{{ url_for('static', filename='js/device_fingerprint.js') }}?v=2.0"></script>
+  <script src="{{ url_for('static', filename='js/webauthn_device.js') }}?v=2.0"></script>
+
+  <!-- Interactive Forgot / Reset Password Modal Popup -->
+  {% include 'auth/modal-forgot-password.html' %}
+
+
+<!-- ========================================== -->
+<!-- 3. WebAuthn First-Time Device Verification Modal -->
+<!-- ========================================== -->
+<div class="modal fade" id="webauthnSetupModal" tabindex="-1" aria-labelledby="webauthnSetupModalTitle" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-dialog-centered modal-md">
+    <div class="modal-content border-0 shadow-lg text-center" style="border-radius: 24px; overflow: hidden; background: #ffffff;">
+      <!-- Purple/Indigo accent bar -->
+      <div style="height: 6px; background: linear-gradient(90deg, #4f46e5, #7c3aed, #a855f7);"></div>
+      
+      <div class="modal-body p-4 p-md-5">
+        <!-- Glowing Shield/Fingerprint Icon Circle -->
+        <div class="d-inline-flex align-items-center justify-content-center mb-3" style="width: 76px; height: 76px; border-radius: 50%; background: #eef2ff; border: 2px solid #c7d2fe; box-shadow: 0 0 0 8px rgba(224, 231, 255, 0.4);">
+          <i class="bi bi-shield-lock-fill text-primary" style="font-size: 2.4rem;"></i>
+        </div>
+
+        <h4 class="fw-bold text-dark mb-1" id="webauthnSetupModalTitle">Device Verification Required</h4>
+        <div class="d-inline-block badge px-3 py-1 rounded-pill mb-3" style="background: #ede9fe; color: #5b21b6; font-size: 0.82rem; font-weight: 600;">
+          <i class="bi bi-fingerprint me-1"></i> Screen Lock / Biometric Binding
+        </div>
+
+        <p class="text-secondary small mb-3">
+          Welcome, <strong class="text-dark" id="webauthnStudentName">Student</strong>! Please bind this mobile phone to your account by verifying your <strong>Phone Screen Lock (Fingerprint, PIN, or Pattern)</strong>.
+        </p>
+
+        <!-- Status / Error Notification Box -->
+        <div id="webauthnAlertBox" class="alert alert-warning py-2 px-3 small text-start mb-3" style="border-radius: 12px;">
+          <i class="bi bi-exclamation-triangle-fill me-1 text-warning"></i>
+          <span id="webauthnAlertText">If you do not verify this device, you will <strong>not be able to mark lecture attendance</strong>. Device verification is mandatory.</span>
+        </div>
+
+        <!-- Explanatory Policy Note -->
+        <div class="p-3 bg-light rounded-3 text-start small border text-muted mb-4" style="line-height: 1.5;">
+          <div class="fw-semibold text-dark mb-1"><i class="bi bi-shield-check text-success me-1"></i> 1 Phone = 1 Student Policy:</div>
+          <div>This phone will be securely bound to your student account only. No other student can mark attendance from this physical device. Duplicate device registration is strictly blocked.</div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="d-flex flex-column flex-sm-row justify-content-center gap-2 pt-1">
+          <button type="button" class="btn btn-outline-secondary px-3 py-2.5 rounded-pill fw-medium" id="btnSkipWebauthnLogin">
+            Skip for Now (Attendance Disabled)
+          </button>
+          <button type="button" class="btn btn-primary px-4 py-2.5 rounded-pill fw-semibold shadow" id="btnVerifyWebauthnLogin" style="background: linear-gradient(135deg, #4f46e5, #7c3aed); border: none;">
+            <i class="bi bi-fingerprint me-1"></i> Verify Screen Lock Now
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- 1. State-of-the-Art Device Duplication Modal Popup -->
+<!-- ========================================== -->
+<div class="modal fade" id="deviceConflictModal" tabindex="-1" aria-labelledby="deviceConflictModalTitle" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-dialog-centered modal-md">
+    <div class="modal-content border-0 shadow-lg" style="border-radius: 24px; overflow: hidden; background: #ffffff;">
+      <!-- Subtle top amber accent bar -->
+      <div style="height: 6px; background: linear-gradient(90deg, #f59e0b, #fbbf24);"></div>
+      
+      <div class="modal-body p-4 p-md-5 text-center">
+        <!-- Glowing Amber Icon Circle -->
+        <div class="d-inline-flex align-items-center justify-content-center mb-3" style="width: 76px; height: 76px; border-radius: 50%; background: #fffbeb; border: 2px solid #fde68a; box-shadow: 0 0 0 8px rgba(254, 243, 199, 0.4);">
+          <i class="bi bi-shield-exclamation text-warning" style="font-size: 2.4rem;"></i>
+        </div>
+
+        <h4 class="fw-bold text-dark mb-1" id="deviceConflictModalTitle">Phone Already Registered</h4>
+        <div class="d-inline-block badge px-3 py-1 rounded-pill mb-3" style="background: #fef3c7; color: #92400e; font-size: 0.82rem; font-weight: 600;">
+          ⚠️ Device Conflict Detected
+        </div>
+
+        <!-- Bound Student Info Box -->
+        <div class="p-3 mb-3 text-center" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px;">
+          <div class="text-muted small mb-1 fw-medium">This mobile phone is currently registered to:</div>
+          <div class="d-inline-flex align-items-center gap-2 px-3 py-1.5 rounded-pill bg-white border shadow-sm font-monospace text-primary fw-bold fs-6">
+            <i class="bi bi-person-badge-fill text-primary"></i>
+            <span>Roll #<span id="conflictRoll">{% if device_conflict %}{{ device_conflict.bound_to_roll }}{% endif %}</span></span>
+            <span class="text-secondary opacity-50">•</span>
+            <span id="conflictName">{% if device_conflict %}{{ device_conflict.bound_to_name }}{% endif %}</span>
+          </div>
+        </div>
+
+        <!-- English Security Notice Card -->
+        <div class="p-3 text-start small mb-4" style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 16px; color: #1e40af; line-height: 1.55;">
+          <div class="fw-bold d-flex align-items-center gap-1 mb-1">
+            <i class="bi bi-info-circle-fill fs-6 text-primary"></i>
+            <span>Important Security Notice:</span>
+          </div>
+          <div>
+            This mobile phone is already bound to another registered student. You may proceed with <strong>Continue Login</strong> to access your dashboard, examination results, and notices. However, <strong>this device will not be linked to your account</strong>, preventing proxy errors when scanning from your personal phone in the future.
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="d-flex flex-column flex-sm-row justify-content-center gap-2 pt-1">
+          <button type="button" class="btn btn-outline-secondary px-4 py-2.5 rounded-pill fw-medium" data-bs-dismiss="modal" id="cancelConflictBtn">
+            <i class="bi bi-x-circle me-1"></i> Cancel
+          </button>
+          <button type="button" class="btn btn-primary px-4 py-2.5 rounded-pill fw-semibold shadow" id="confirmConflictLoginBtn" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); border: none;">
+            <i class="bi bi-box-arrow-in-right me-1"></i> Continue Login
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- 2. Professional Login Error Modal Popup -->
+<!-- ========================================== -->
+<div class="modal fade" id="loginErrorModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content border-0 shadow-lg text-center p-3" style="border-radius: 20px;">
+      <div class="modal-body p-3">
+        <div class="d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px; border-radius: 50%; background: #fef2f2; border: 2px solid #fecaca;">
+          <i class="bi bi-exclamation-triangle-fill text-danger fs-2"></i>
+        </div>
+        <h5 class="fw-bold text-dark mb-1">Sign In Failed</h5>
+        <p class="text-secondary small mb-3" id="loginErrorMessage">Invalid email or password. Please verify your credentials and try again.</p>
+        <button type="button" class="btn btn-dark w-100 rounded-pill py-2 fw-semibold" data-bs-dismiss="modal">
+          Try Again
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+    function getCookie(name) {
+        const val = `; ${document.cookie}`;
+        const parts = val.split(`; ${name}=`);
+        if (parts.length === 2) return decodeURIComponent(parts.pop().split(';').shift());
+        return null;
+    }
+
+    function setCookie(name, val, days = 365) {
+        const d = new Date();
+        d.setTime(d.getTime() + (days * 24 * 60 * 60 * 1000));
+        document.cookie = `${name}=${encodeURIComponent(val)}; expires=${d.toUTCString()}; path=/; SameSite=Lax`;
+    }
+
+    // 1. Immutable Hardware Device Fingerprint (Survives full Cache/Cookie/History clearing)
+    function getDeviceFingerprint() {
+        if (window.CampusSyncDevice && typeof window.CampusSyncDevice.getHardwareFingerprint === 'function') {
+            return window.CampusSyncDevice.getHardwareFingerprint();
+        }
+        let f = null;
+        try { f = localStorage.getItem('cs_device_fingerprint'); } catch(e) {}
+        if (!f) f = getCookie('cs_device_fp');
+        if (!f) f = 'DEV-' + Math.random().toString(36).substring(2, 10).toUpperCase();
+        try { localStorage.setItem('cs_device_fingerprint', f); } catch(e) {}
+        setCookie('cs_device_fp', f);
+        return f;
+    }
+    
+    function getDeviceModel() {
+        if (window.CampusSyncDevice && typeof window.CampusSyncDevice.getDeviceModel === 'function') {
+            return window.CampusSyncDevice.getDeviceModel();
+        }
+        return (navigator.userAgentData ? navigator.userAgentData.platform : (navigator.platform || "Mobile Browser"));
+    }
+
+    const devFp = getDeviceFingerprint();
+    const fpInput = document.getElementById('deviceFingerprintInput');
+    const modelInput = document.getElementById('deviceModelInput');
+    const displayFp = document.getElementById('displayDeviceFp');
+
+    if (fpInput) fpInput.value = devFp;
+    if (modelInput) modelInput.value = getDeviceModel();
+    if (displayFp) displayFp.textContent = devFp;
+
+    // 2. Client-Side Interactive AJAX Form Submission
+    const loginForm = document.getElementById('studentLoginForm');
+    const loginBtn = document.getElementById('loginBtn');
+    const loginBtnSpinner = document.getElementById('loginBtnSpinner');
+    const loginBtnText = document.getElementById('loginBtnText');
+    const confirmConflictBtn = document.getElementById('confirmConflictLoginBtn');
+
+    let pendingConflictData = null;
+
+    if (loginForm) {
+        loginForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            if (!loginForm.checkValidity()) {
+                loginForm.classList.add('was-validated');
+                return;
+            }
+
+            const email = document.getElementById('studentEmail').value.trim();
+            const password = document.getElementById('studentPassword').value;
+            const deviceFp = getDeviceFingerprint();
+            const deviceModel = getDeviceModel();
+
+            if (loginBtnSpinner) loginBtnSpinner.classList.remove('d-none');
+            if (loginBtnText) loginBtnText.textContent = 'Authenticating...';
+            if (loginBtn) loginBtn.disabled = true;
+
+            try {
+                const response = await fetch("{{ url_for('student_login') }}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password,
+                        device_fingerprint: deviceFp,
+                        device_model: deviceModel,
+                        skip_binding_confirmed: '0'
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'conflict') {
+                    // STORE CONFLICT DATA & POP UP BEAUTIFUL MODAL
+                    pendingConflictData = data.conflict;
+                    document.getElementById('conflictRoll').textContent = data.conflict.bound_to_roll;
+                    document.getElementById('conflictName').textContent = data.conflict.bound_to_name;
+
+                    const conflictModal = new bootstrap.Modal(document.getElementById('deviceConflictModal'), { backdrop: 'static', keyboard: false });
+                    conflictModal.show();
+                } else if (data.status === 'success') {
+                    if (data.has_passkey) {
+                        window.location.href = data.redirect_url || "{{ url_for('student_dashboard') }}";
+                    } else {
+                        // First-time login: Prompt for Screen Lock / Device verification right here!
+                        openWebauthnSetupModal(data);
+                    }
+                } else {
+                    // Show error popup modal
+                    document.getElementById('loginErrorMessage').textContent = data.message || "Invalid email or password.";
+                    const errModal = new bootstrap.Modal(document.getElementById('loginErrorModal'));
+                    errModal.show();
+                }
+            } catch (err) {
+                console.error("Fetch login error, submitting via standard POST fallback:", err);
+                loginForm.submit();
+            } finally {
+                if (loginBtnSpinner) loginBtnSpinner.classList.add('d-none');
+                if (loginBtnText) loginBtnText.textContent = 'Sign In to Student Portal';
+                if (loginBtn) loginBtn.disabled = false;
+            }
+        });
+    }
+
+    // 3. Handle 'Continue Login' button in Device Duplication Modal
+    if (confirmConflictBtn) {
+        confirmConflictBtn.addEventListener('click', async function() {
+            if (!pendingConflictData) {
+                // If loaded from server-side render
+                {% if device_conflict %}
+                pendingConflictData = {
+                    student_id: "{{ device_conflict.student_id or '' }}",
+                    email: "{{ device_conflict.email or '' }}"
+                };
+                {% endif %}
+            }
+
+            confirmConflictBtn.disabled = true;
+            confirmConflictBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Logging in...';
+
+            try {
+                const response = await fetch("{{ url_for('student_login') }}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({
+                        student_id: pendingConflictData ? pendingConflictData.student_id : null,
+                        email: pendingConflictData ? pendingConflictData.email : '',
+                        skip_binding_confirmed: '1'
+                    })
+                });
+
+                const data = await response.json();
+                if (data.status === 'success') {
+                    window.location.href = data.redirect_url || "{{ url_for('student_dashboard') }}";
+                } else {
+                    const cModal = bootstrap.Modal.getInstance(document.getElementById('deviceConflictModal'));
+                    if (cModal) cModal.hide();
+                    document.getElementById('loginErrorMessage').textContent = data.message || 'Login failed. Please reload and try again.';
+                    const errModal = new bootstrap.Modal(document.getElementById('loginErrorModal'));
+                    errModal.show();
+                    confirmConflictBtn.disabled = false;
+                    confirmConflictBtn.innerHTML = '<i class="bi bi-box-arrow-in-right me-1"></i> Continue Login';
+                }
+            } catch (err) {
+                console.error("Continue login error:", err);
+                window.location.reload();
+            }
+        });
+    }
+
+    // 4. Server-Side Fallback: If device_conflict passed in template context, show modal automatically
+    {% if device_conflict %}
+    window.addEventListener('DOMContentLoaded', () => {
+        const modalEl = document.getElementById('deviceConflictModal');
+        if (modalEl) {
+            const conflictModal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
+            conflictModal.show();
+        }
+    });
+    {% endif %}
+
+    // 5. Server-Side Fallback: If error passed in template context, show error modal automatically
+    {% if error %}
+    window.addEventListener('DOMContentLoaded', () => {
+        const errModalEl = document.getElementById('loginErrorModal');
+        if (errModalEl) {
+            document.getElementById('loginErrorMessage').textContent = "{{ error }}";
+            const errModal = new bootstrap.Modal(errModalEl);
+            errModal.show();
+        }
+    });
+    {% endif %}
+})();
+</script>
+
+</body>
+</html>

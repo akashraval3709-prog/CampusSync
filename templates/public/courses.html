@@ -1,0 +1,299 @@
+{% extends 'public/base_public.html' %}
+
+{% block title %}Academic Programs & Courses – {{ college.college_name if college else 'CampusSync College' }}{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="pub-hero">
+    <div class="container position-relative" style="z-index: 1;">
+        <div class="pub-hero-pill">
+            <i class="bi bi-mortarboard-fill"></i> Industry 4.0 Aligned Degrees
+        </div>
+        <h1 class="pub-hero-title">Academic Programs & Specializations</h1>
+        <p class="pub-hero-subtitle">
+            Explore our accredited undergraduate, postgraduate, and professional diploma degrees designed in consultation with Fortune 500 technology leaders.
+        </p>
+        <div class="pub-breadcrumb">
+            <a href="{{ url_for('home') }}"><i class="bi bi-house-door-fill me-1"></i> Home</a>
+            <span>/</span>
+            <span class="text-white fw-semibold">Programs</span>
+        </div>
+    </div>
+</section>
+
+<!-- Course Filter & Grid Section -->
+<section class="py-5" style="background: #f8fafc;">
+    <div class="container">
+        <!-- Filter Controls -->
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+            <div class="d-flex align-items-center gap-2 flex-wrap" id="courseFilters">
+                <button class="pub-filter-pill active" data-filter="all">All Disciplines</button>
+                <button class="pub-filter-pill" data-filter="btech">B.Tech Engineering</button>
+                <button class="pub-filter-pill" data-filter="it-cs">Computer Apps (BCA/MCA)</button>
+                <button class="pub-filter-pill" data-filter="diploma">Diploma Programs</button>
+            </div>
+            <div class="text-muted small">
+                Showing <strong class="text-dark">6 Industry-Ready Degree Programs</strong>
+            </div>
+        </div>
+
+        <!-- Course Cards Grid -->
+        <div class="row g-4" id="coursesGrid">
+            
+            <!-- Program 1: B.Tech CSE (AI & ML) -->
+            <div class="col-lg-4 col-md-6 course-item" data-category="btech">
+                <div class="pub-course-card">
+                    <div class="p-4 flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="pub-course-badge-top bg-primary-subtle text-primary border border-primary-subtle">UG Degree</span>
+                            <span class="badge bg-light text-secondary border"><i class="bi bi-person-fill text-primary me-1"></i> 120 Seats</span>
+                        </div>
+                        <h4 class="fw-bold text-dark mb-2" style="font-size: 1.18rem;">B.Tech in Computer Science & Engineering (AI & ML)</h4>
+                        <p class="text-muted small mb-3" style="line-height: 1.6;">
+                            Master neural networks, computer vision, natural language processing, and high-performance computing with hands-on lab deployments.
+                        </p>
+                        <div class="mb-3">
+                            <span class="badge bg-light text-muted border me-1 mb-1">Deep Learning</span>
+                            <span class="badge bg-light text-muted border me-1 mb-1">Python 3</span>
+                            <span class="badge bg-light text-muted border me-1 mb-1">TensorFlow</span>
+                            <span class="badge bg-light text-muted border me-1 mb-1">Cloud Systems</span>
+                        </div>
+                    </div>
+                    <div class="pub-course-meta">
+                        <span><i class="bi bi-clock-history me-1"></i> 4 Years (8 Semesters)</span>
+                        <span><i class="bi bi-mortarboard me-1"></i> 10+2 PCM (60%)</span>
+                    </div>
+                    <div class="p-3 bg-white border-top d-flex gap-2">
+                        <a href="{{ url_for('contact') }}" class="btn btn-primary btn-sm w-100 fw-semibold">
+                            Enquire for Admission <i class="bi bi-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Program 2: B.Tech IT -->
+            <div class="col-lg-4 col-md-6 course-item" data-category="btech">
+                <div class="pub-course-card">
+                    <div class="p-4 flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="pub-course-badge-top bg-info-subtle text-info border border-info-subtle">UG Degree</span>
+                            <span class="badge bg-light text-secondary border"><i class="bi bi-person-fill text-info me-1"></i> 60 Seats</span>
+                        </div>
+                        <h4 class="fw-bold text-dark mb-2" style="font-size: 1.18rem;">B.Tech in Information Technology & Cloud Architecture</h4>
+                        <p class="text-muted small mb-3" style="line-height: 1.6;">
+                            Deep dive into distributed microservices, Docker & Kubernetes infrastructure, cybersecurity defense, and enterprise DBMS.
+                        </p>
+                        <div class="mb-3">
+                            <span class="badge bg-light text-muted border me-1 mb-1">DevOps</span>
+                            <span class="badge bg-light text-muted border me-1 mb-1">AWS & Azure</span>
+                            <span class="badge bg-light text-muted border me-1 mb-1">Cyber Defense</span>
+                            <span class="badge bg-light text-muted border me-1 mb-1">Linux Kernel</span>
+                        </div>
+                    </div>
+                    <div class="pub-course-meta">
+                        <span><i class="bi bi-clock-history me-1"></i> 4 Years (8 Semesters)</span>
+                        <span><i class="bi bi-mortarboard me-1"></i> 10+2 PCM (55%)</span>
+                    </div>
+                    <div class="p-3 bg-white border-top d-flex gap-2">
+                        <a href="{{ url_for('contact') }}" class="btn btn-primary btn-sm w-100 fw-semibold">
+                            Enquire for Admission <i class="bi bi-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Program 3: BCA -->
+            <div class="col-lg-4 col-md-6 course-item" data-category="it-cs">
+                <div class="pub-course-card">
+                    <div class="p-4 flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="pub-course-badge-top bg-success-subtle text-success border border-success-subtle">UG Degree</span>
+                            <span class="badge bg-light text-secondary border"><i class="bi bi-person-fill text-success me-1"></i> 80 Seats</span>
+                        </div>
+                        <h4 class="fw-bold text-dark mb-2" style="font-size: 1.18rem;">Bachelor of Computer Applications (BCA)</h4>
+                        <p class="text-muted small mb-3" style="line-height: 1.6;">
+                            Comprehensive software development training covering full-stack web technologies, mobile apps, database architecture, and agile methodology.
+                        </p>
+                        <div class="mb-3">
+                            <span class="badge bg-light text-muted border me-1 mb-1">React & Node</span>
+                            <span class="badge bg-light text-muted border me-1 mb-1">SQL & NoSQL</span>
+                            <span class="badge bg-light text-muted border me-1 mb-1">Data Structures</span>
+                            <span class="badge bg-light text-muted border me-1 mb-1">Mobile Dev</span>
+                        </div>
+                    </div>
+                    <div class="pub-course-meta">
+                        <span><i class="bi bi-clock-history me-1"></i> 3 Years (6 Semesters)</span>
+                        <span><i class="bi bi-mortarboard me-1"></i> 10+2 Any Stream (50%)</span>
+                    </div>
+                    <div class="p-3 bg-white border-top d-flex gap-2">
+                        <a href="{{ url_for('contact') }}" class="btn btn-primary btn-sm w-100 fw-semibold">
+                            Enquire for Admission <i class="bi bi-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Program 4: MCA -->
+            <div class="col-lg-4 col-md-6 course-item" data-category="it-cs">
+                <div class="pub-course-card">
+                    <div class="p-4 flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="pub-course-badge-top bg-purple-subtle text-purple border" style="background:#f3e8ff; color:#7e22ce; border-color:#e9d5ff;">PG Degree</span>
+                            <span class="badge bg-light text-secondary border"><i class="bi bi-person-fill text-purple me-1"></i> 60 Seats</span>
+                        </div>
+                        <h4 class="fw-bold text-dark mb-2" style="font-size: 1.18rem;">Master of Computer Applications (MCA)</h4>
+                        <p class="text-muted small mb-3" style="line-height: 1.6;">
+                            Advanced post-graduate research & corporate engineering degree focusing on enterprise system architecture, big data, and machine intelligence.
+                        </p>
+                        <div class="mb-3">
+                            <span class="badge bg-light text-muted border me-1 mb-1">Distributed AI</span>
+                            <span class="badge bg-light text-muted border me-1 mb-1">Big Data Spark</span>
+                            <span class="badge bg-light text-muted border me-1 mb-1">Software QA</span>
+                            <span class="badge bg-light text-muted border me-1 mb-1">Capstone Lab</span>
+                        </div>
+                    </div>
+                    <div class="pub-course-meta">
+                        <span><i class="bi bi-clock-history me-1"></i> 2 Years (4 Semesters)</span>
+                        <span><i class="bi bi-mortarboard me-1"></i> BCA / B.Sc / B.Tech (50%)</span>
+                    </div>
+                    <div class="p-3 bg-white border-top d-flex gap-2">
+                        <a href="{{ url_for('contact') }}" class="btn btn-primary btn-sm w-100 fw-semibold">
+                            Enquire for Admission <i class="bi bi-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Program 5: B.Tech ECE -->
+            <div class="col-lg-4 col-md-6 course-item" data-category="btech">
+                <div class="pub-course-card">
+                    <div class="p-4 flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="pub-course-badge-top bg-warning-subtle text-warning border border-warning-subtle">UG Degree</span>
+                            <span class="badge bg-light text-secondary border"><i class="bi bi-person-fill text-warning me-1"></i> 60 Seats</span>
+                        </div>
+                        <h4 class="fw-bold text-dark mb-2" style="font-size: 1.18rem;">B.Tech in Electronics & IoT Embedded Systems</h4>
+                        <p class="text-muted small mb-3" style="line-height: 1.6;">
+                            Robotics, VLSI design, semiconductor hardware prototyping, sensor telemetry networks, and real-time operating systems (RTOS).
+                        </p>
+                        <div class="mb-3">
+                            <span class="badge bg-light text-muted border me-1 mb-1">IoT Sensors</span>
+                            <span class="badge bg-light text-muted border me-1 mb-1">Embedded C</span>
+                            <span class="badge bg-light text-muted border me-1 mb-1">VLSI Design</span>
+                            <span class="badge bg-light text-muted border me-1 mb-1">Raspberry Pi</span>
+                        </div>
+                    </div>
+                    <div class="pub-course-meta">
+                        <span><i class="bi bi-clock-history me-1"></i> 4 Years (8 Semesters)</span>
+                        <span><i class="bi bi-mortarboard me-1"></i> 10+2 PCM (55%)</span>
+                    </div>
+                    <div class="p-3 bg-white border-top d-flex gap-2">
+                        <a href="{{ url_for('contact') }}" class="btn btn-primary btn-sm w-100 fw-semibold">
+                            Enquire for Admission <i class="bi bi-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Program 6: Diploma CSE -->
+            <div class="col-lg-4 col-md-6 course-item" data-category="diploma">
+                <div class="pub-course-card">
+                    <div class="p-4 flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="pub-course-badge-top bg-secondary-subtle text-secondary border">Polytechnic Diploma</span>
+                            <span class="badge bg-light text-secondary border"><i class="bi bi-person-fill me-1"></i> 60 Seats</span>
+                        </div>
+                        <h4 class="fw-bold text-dark mb-2" style="font-size: 1.18rem;">Diploma in Computer Engineering & Network Admin</h4>
+                        <p class="text-muted small mb-3" style="line-height: 1.6;">
+                            Accelerated technical foundation program in computer assembling, Cisco networking fundamentals, and core programming languages.
+                        </p>
+                        <div class="mb-3">
+                            <span class="badge bg-light text-muted border me-1 mb-1">C & C++</span>
+                            <span class="badge bg-light text-muted border me-1 mb-1">LAN / WAN</span>
+                            <span class="badge bg-light text-muted border me-1 mb-1">Hardware Support</span>
+                            <span class="badge bg-light text-muted border me-1 mb-1">Cyber Basics</span>
+                        </div>
+                    </div>
+                    <div class="pub-course-meta">
+                        <span><i class="bi bi-clock-history me-1"></i> 3 Years (6 Semesters)</span>
+                        <span><i class="bi bi-mortarboard me-1"></i> 10th Standard (50%)</span>
+                    </div>
+                    <div class="p-3 bg-white border-top d-flex gap-2">
+                        <a href="{{ url_for('contact') }}" class="btn btn-primary btn-sm w-100 fw-semibold">
+                            Enquire for Admission <i class="bi bi-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+<!-- Admission Flow Strip -->
+<section class="py-5 bg-white border-top border-bottom">
+    <div class="container">
+        <div class="text-center mb-5">
+            <span class="badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-size:.78rem;padding:.4em 1.1em;">Simple 4-Step Process</span>
+            <h2 class="mt-2 fw-bold text-dark" style="font-size: 1.85rem;">How to Enroll at CampusSync College</h2>
+        </div>
+
+        <div class="row g-4 text-center">
+            <div class="col-md-3">
+                <div class="p-4 bg-light rounded-4 h-100 border">
+                    <div class="badge bg-primary rounded-circle mb-3 d-inline-flex align-items-center justify-content-center" style="width:40px;height:40px;font-size:1.1rem">1</div>
+                    <h5 class="fw-bold mb-2">Online Application</h5>
+                    <p class="text-muted small mb-0">Fill out your candidate profile and submit academic transcripts through our online portal.</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="p-4 bg-light rounded-4 h-100 border">
+                    <div class="badge bg-primary rounded-circle mb-3 d-inline-flex align-items-center justify-content-center" style="width:40px;height:40px;font-size:1.1rem">2</div>
+                    <h5 class="fw-bold mb-2">Merit & Counseling</h5>
+                    <p class="text-muted small mb-0">Merit calculation based on qualifying examination scores followed by department counseling.</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="p-4 bg-light rounded-4 h-100 border">
+                    <div class="badge bg-primary rounded-circle mb-3 d-inline-flex align-items-center justify-content-center" style="width:40px;height:40px;font-size:1.1rem">3</div>
+                    <h5 class="fw-bold mb-2">Document Verification</h5>
+                    <p class="text-muted small mb-0">Original certificates verification and formal seat allocation under respective department.</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="p-4 bg-light rounded-4 h-100 border">
+                    <div class="badge bg-success rounded-circle mb-3 d-inline-flex align-items-center justify-content-center" style="width:40px;height:40px;font-size:1.1rem"><i class="bi bi-check2"></i></div>
+                    <h5 class="fw-bold mb-2">CampusSync Onboarding</h5>
+                    <p class="text-muted small mb-0">Receive smart ERP credentials for QR attendance tracking, digital id card, and class schedules.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Frontend Course Filtering Simulation
+    document.addEventListener('DOMContentLoaded', function() {
+        const filterBtns = document.querySelectorAll('.pub-filter-pill');
+        const courseCards = document.querySelectorAll('.course-item');
+
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                filterBtns.forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+
+                const filter = this.getAttribute('data-filter');
+                courseCards.forEach(card => {
+                    if (filter === 'all' || card.getAttribute('data-category') === filter) {
+                        card.style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
+        });
+    });
+</script>
+{% endblock %}

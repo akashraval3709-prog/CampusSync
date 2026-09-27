@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notices &amp; Assignments – Student Portal</title>
+    <!-- CSS Dependencies -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/common.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/student.css') }}" rel="stylesheet">
+    <style>
+        /* Urgent Assignment Card Styling */
+        .urgent-assignment-card {
+            background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);
+            color: #ffffff;
+            border-radius: 18px;
+            padding: 1.75rem;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 25px -5px rgba(220, 38, 38, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            margin-bottom: 2rem;
+        }
+        .urgent-assignment-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #ef4444, #f59e0b, #ef4444);
+            animation: pulse-border 2s infinite ease-in-out;
+        }
+        @keyframes pulse-border {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+        .urgent-badge-pill {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            border: 1px solid #ef4444;
+            font-size: 0.78rem;
+            font-weight: 700;
+            padding: 0.35rem 0.85rem;
+            border-radius: 50px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            animation: pulse-badge 1.5s infinite;
+        }
+        @keyframes pulse-badge {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.04); }
+        }
+        .countdown-timer-display {
+            font-family: 'Inter', monospace;
+            font-size: 1.6rem;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+            color: #ffffff;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.35);
+            padding: 0.75rem 1.25rem;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin: 1rem 0;
+        }
+        .countdown-timer-display .highlight {
+            color: #f87171;
+        }
+        .notice-card {
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        .notice-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px -5px rgba(0,0,0,0.08);
+        }
+        .category-tab-link {
+            text-decoration: none;
+            color: #475569;
+            font-weight: 600;
+            font-size: 0.85rem;
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            border: 1px solid #cbd5e1;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .category-tab-link:hover {
+            background: #f1f5f9;
+            color: #0f172a;
+        }
+        .category-tab-link.active {
+            background: #2563eb;
+            color: #ffffff;
+            border-color: #2563eb;
+        }
+    </style>
+</head>
+<body class="student-theme">
+<div class="wrapper">
+    <!-- Student Sidebar -->
+    {% include 'components/sidebar.html' %}
+
+    <div id="content">
+        <!-- Student Topbar -->
+        {% include 'components/topbar.html' %}
+
+        <div class="content-body p-4">
+            <!-- Page Header -->
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+                <div>
+                    <h2 class="fw-bold mb-1 text-dark">
+                        <i class="bi bi-megaphone-fill text-primary me-2"></i>Campus Notices &amp; Assignments
+                    </h2>
+                    <p class="text-muted small mb-0">
+                        Semester {{ student.semester }} (Div {{ student.division }}) &bull; Real-time updates, tests, and assignment submission deadlines.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Category Filter Tabs -->
+            <div class="d-flex flex-wrap gap-2 mb-4">
+                <a href="{{ url_for('student_notices', category='All') }}" class="category-tab-link {% if selected_category == 'All' %}active{% endif %}">
+                    <i class="bi bi-grid-fill"></i> All Notices
+                </a>
+                <a href="{{ url_for('student_notices', category='Assignment Submit Date') }}" class="category-tab-link {% if selected_category == 'Assignment Submit Date' %}active{% endif %}">
+                    <i class="bi bi-folder-check"></i> Assignments
+                </a>
+                <a href="{{ url_for('student_notices', category='Test') }}" class="category-tab-link {% if selected_category == 'Test' %}active{% endif %}">
+                    <i class="bi bi-journal-text"></i> Tests &amp; Exams
+                </a>
+                <a href="{{ url_for('student_notices', category='Subject Related') }}" class="category-tab-link {% if selected_category == 'Subject Related' %}active{% endif %}">
+                    <i class="bi bi-book"></i> Subject Related
+                </a>
+                <a href="{{ url_for('student_notices', category='General') }}" class="category-tab-link {% if selected_category == 'General' %}active{% endif %}">
+                    <i class="bi bi-pin-angle"></i> General
+                </a>
+            </div>
+
+            <!-- Urgent Assignment Cards with Live Countdown (<= 48 Hours remaining) -->
+            {% for n in notices %}
+                {% if n.deadline_info and n.deadline_info.has_deadline and n.deadline_info.is_urgent and not n.deadline_info.is_expired %}
+                <div class="urgent-assignment-card">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="fs-4">🚨</span>
+                            <h4 class="fw-bold m-0 text-white">{{ n.title }}</h4>
+                        </div>
+                        <span class="urgent-badge-pill">
+                            <i class="bi bi-exclamation-triangle-fill"></i> URGENT: DEADLINE APPROACHING
+                        </span>
+                    </div>
+
+                    <!-- Digital Live Countdown Display -->
+                    <div class="countdown-timer-display" data-deadline="{{ n.deadline_info.end_date_iso }}" data-seconds="{{ n.deadline_info.total_seconds }}">
+                        <i class="bi bi-hourglass-split me-2 text-danger"></i>
+                        <span class="countdown-text highlight">{{ n.deadline_info.countdown_str }}</span>
+                    </div>
+
+                    <div class="row g-3 small mb-3 text-white-50">
+                        <div class="col-6 col-md-3">
+                            <span class="d-block text-secondary">Subject:</span>
+                            <strong class="text-white">{{ n.subject.subject_name if n.subject else 'General' }}</strong>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <span class="d-block text-secondary">Posted By:</span>
+                            <strong class="text-white"><i class="bi bi-person-fill text-warning me-1"></i>{{ n.author_name }}</strong>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <span class="d-block text-secondary">Start Date:</span>
+                            <span class="text-white">{{ n.start_date.strftime('%d %b %Y, %I:%M %p') if n.start_date else 'N/A' }}</span>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <span class="d-block text-secondary">Deadline:</span>
+                            <span class="text-danger fw-bold">{{ n.end_date.strftime('%d %b %Y, %I:%M %p') if n.end_date else 'N/A' }}</span>
+                        </div>
+                    </div>
+
+                    <p class="text-white-50 small mb-3">{{ n.message }}</p>
+
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pt-2 border-top border-secondary">
+                        <div>
+                            {% if n.photo_file %}
+                                <a href="{{ url_for('global_serve_uploads', filename='notifications/' + n.photo_file) }}" target="_blank" class="btn btn-sm btn-outline-light d-inline-flex align-items-center gap-1">
+                                    <i class="bi bi-file-earmark-arrow-down"></i> View Attached Material / Question Paper
+                                </a>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <span class="badge" style="background: rgba(255, 255, 255, 0.08); color: #cbd5e1; border: 1px solid rgba(255, 255, 255, 0.15); font-size: 0.8rem; padding: 0.5rem 0.9rem;">
+                                <i class="bi bi-journal-check text-warning me-1"></i> Submit Journal Physically in Class
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            {% endfor %}
+
+            <!-- Notices Grid -->
+            <div class="row g-4">
+                {% if notices %}
+                    {% for n in notices %}
+                        <!-- Regular card display -->
+                        <div class="col-md-6 col-lg-4">
+                            <div class="notice-card shadow-sm p-4">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <span class="badge {% if n.category == 'Assignment Submit Date' %}bg-primary-subtle text-primary border border-primary-subtle{% elif n.category == 'Test' %}bg-warning-subtle text-warning border border-warning-subtle{% else %}bg-secondary-subtle text-secondary border border-secondary-subtle{% endif %}">
+                                        {{ n.category }}
+                                    </span>
+                                    <small class="text-muted">{{ n.created_at.strftime('%d %b, %Y') if n.created_at else '' }}</small>
+                                </div>
+
+                                <h5 class="fw-bold text-dark mb-2" style="font-size: 1.05rem;">{{ n.title }}</h5>
+
+                                {% if n.subject %}
+                                    <div class="small text-primary fw-semibold mb-2">
+                                        <i class="bi bi-book me-1"></i>{{ n.subject.subject_code }} - {{ n.subject.subject_name }}
+                                    </div>
+                                {% endif %}
+
+                                <p class="text-secondary small flex-grow-1 mb-3" style="line-height: 1.5;">
+                                    {{ n.message }}
+                                </p>
+
+                                <!-- Deadline Display if Assignment -->
+                                {% if n.end_date %}
+                                    <div class="p-2 mb-3 rounded border {% if n.deadline_info and n.deadline_info.is_urgent and not n.deadline_info.is_expired %}bg-danger-subtle text-danger border-danger-subtle{% elif n.deadline_info and n.deadline_info.is_expired %}bg-light text-muted{% else %}bg-light text-secondary{% endif %} small">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span><i class="bi bi-alarm me-1"></i>Deadline:</span>
+                                            <strong class="{% if n.deadline_info and n.deadline_info.is_urgent and not n.deadline_info.is_expired %}text-danger{% endif %}">
+                                                {{ n.end_date.strftime('%d %b, %I:%M %p') }}
+                                            </strong>
+                                        </div>
+                                        {% if n.deadline_info and n.deadline_info.is_expired %}
+                                            <div class="text-danger fw-bold mt-1" style="font-size: 0.75rem;">❌ Submission Closed</div>
+                                        {% elif n.deadline_info and n.deadline_info.is_urgent %}
+                                            <div class="text-danger fw-bold mt-1" style="font-size: 0.75rem;">⏳ {{ n.deadline_info.countdown_str }}</div>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+
+                                <!-- Attachment Photo / Document Preview -->
+                                {% if n.photo_file %}
+                                    <div class="mb-3">
+                                        {% if n.file_type == 'image' %}
+                                            <a href="{{ url_for('global_serve_uploads', filename='notifications/' + n.photo_file) }}" target="_blank">
+                                                <img src="{{ url_for('global_serve_uploads', filename='notifications/' + n.photo_file) }}" alt="Notice Photo" class="img-fluid rounded border" style="max-height: 150px; width: 100%; object-fit: cover;">
+                                            </a>
+                                        {% else %}
+                                            <a href="{{ url_for('global_serve_uploads', filename='notifications/' + n.photo_file) }}" target="_blank" class="btn btn-outline-danger btn-sm w-100 d-flex align-items-center justify-content-center gap-1">
+                                                <i class="bi bi-file-earmark-pdf fs-6"></i> Download Attached Document
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+
+                                <div class="d-flex justify-content-between align-items-center pt-2 border-top mt-auto">
+                                    <small class="text-muted d-flex align-items-center gap-1">
+                                        <i class="bi bi-person-circle text-primary"></i>By: <strong class="text-dark">{{ n.author_name }}</strong>
+                                    </small>
+                                    {% if n.photo_file and n.file_type == 'image' %}
+                                        <a href="{{ url_for('global_serve_uploads', filename='notifications/' + n.photo_file) }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-zoom-in me-1"></i>View Photo
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="col-12 text-center py-5 text-muted">
+                        <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary"></i>
+                        No notices found in this category.
+                    </div>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- JS Dependencies -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// Live Countdown Timer updating every second
+document.addEventListener("DOMContentLoaded", function() {
+    document.querySelectorAll('.countdown-timer-display').forEach(el => {
+        let remaining = parseInt(el.getAttribute('data-seconds'), 10);
+        const textElem = el.querySelector('.countdown-text');
+        if (!textElem) return;
+
+        function updateTick() {
+            if (isNaN(remaining) || remaining <= 0) {
+                textElem.textContent = "00 Days : 00 Hours : 00 Mins : 00 Secs (Deadline Closed)";
+                textElem.classList.remove('highlight');
+                textElem.classList.add('text-muted');
+                const urgentCard = el.closest('.urgent-assignment-card');
+                if (urgentCard) {
+                    // Smoothly fade out, slide up, and remove urgent banner
+                    setTimeout(() => {
+                        urgentCard.style.transition = 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)';
+                        urgentCard.style.opacity = '0';
+                        urgentCard.style.transform = 'translateY(-20px)';
+                        setTimeout(() => {
+                            urgentCard.remove();
+                        }, 800);
+                    }, 1500);
+                }
+                return;
+            }
+
+            const days = Math.floor(remaining / 86400);
+            const hours = Math.floor((remaining % 86400) / 3600);
+            const minutes = Math.floor((remaining % 3600) / 60);
+            const seconds = remaining % 60;
+
+            const pad = n => String(n).padStart(2, '0');
+            textElem.textContent = `${pad(days)} Days : ${pad(hours)} Hours : ${pad(minutes)} Mins : ${pad(seconds)} Secs Left!`;
+            remaining--;
+        }
+
+        updateTick();
+        setInterval(updateTick, 1000);
+    });
+});
+</script>
+<script src="{{ url_for('static', filename='js/common.js') }}"></script>
+</body>
+</html>

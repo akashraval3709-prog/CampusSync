@@ -1,0 +1,29 @@
+{% extends 'public/base_public.html' %}
+
+{% block title %}403 - Access Forbidden | CampusSync{% endblock %}
+
+{% block content %}
+<section class="py-5 my-md-5">
+    <div class="container text-center py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-6 col-md-8">
+                <div class="display-1 fw-bold text-warning mb-3" style="font-size: 6rem; letter-spacing: -2px;">
+                    4<span class="text-danger">0</span>3
+                </div>
+                <h2 class="fw-bold mb-3">Access Forbidden</h2>
+                <p class="text-muted mb-4 lead">
+                    You do not have permission to access this resource or page. Please ensure you are logged into the correct account.
+                </p>
+                <div class="d-flex flex-wrap justify-content-center gap-3">
+                    <a href="{{ url_for('home') }}" class="btn btn-primary px-4 py-2 rounded-pill fw-semibold shadow-sm">
+                        <i class="bi bi-house-door me-2"></i>Return to Homepage
+                    </a>
+                    <a href="javascript:history.back()" class="btn btn-outline-secondary px-4 py-2 rounded-pill fw-semibold">
+                        <i class="bi bi-arrow-left me-2"></i>Go Back
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

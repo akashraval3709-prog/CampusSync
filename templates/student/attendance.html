@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Attendance – {{ college.college_short_name if college and college.college_short_name else 'CampusSync' }}</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="{{ url_for('static', filename='css/common.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/student.css') }}" rel="stylesheet">
+    <style>
+        /* Apple & Premium SaaS Aesthetics */
+        .apple-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(15, 23, 42, 0.03);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .apple-card:hover {
+            box-shadow: 0 8px 26px rgba(15, 23, 42, 0.06);
+        }
+
+        /* SVG Radial Gauge */
+        .circle-chart-wrapper {
+            position: relative;
+            width: 155px;
+            height: 155px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .circle-chart-svg {
+            transform: rotate(-90deg);
+        }
+
+        .circle-chart-bg {
+            fill: none;
+            stroke: #f1f5f9;
+            stroke-width: 3.5;
+        }
+
+        .circle-chart-circle {
+            fill: none;
+            stroke-width: 3.5;
+            stroke-linecap: round;
+            transition: stroke-dasharray 1s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .circle-chart-info {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .circle-chart-percent {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1;
+            letter-spacing: -0.03em;
+        }
+
+        .circle-chart-label {
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #64748b;
+            letter-spacing: 0.08em;
+            margin-top: 4px;
+        }
+
+        /* Stat Mini-Cards */
+        .stat-apple-box {
+            padding: 1.1rem 0.85rem;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+            transition: all 0.2s ease;
+        }
+        .stat-apple-box:hover {
+            transform: translateY(-2px);
+            border-color: #cbd5e1;
+        }
+
+        .icon-chip {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.15rem;
+            margin-bottom: 0.4rem;
+        }
+
+        /* Subject Cards Upgrade */
+        .subject-apple-card {
+            border: 1.5px solid #e2e8f0;
+            border-left: 5px solid #10b981;
+            border-radius: 18px;
+            background: #ffffff;
+            padding: 1.4rem;
+            transition: all 0.22s ease-in-out;
+            box-shadow: 0 4px 15px rgba(15, 23, 42, 0.03);
+        }
+        .subject-apple-card.card-border-safe { border-left-color: #10b981; }
+        .subject-apple-card.card-border-warning { border-left-color: #f59e0b; }
+        .subject-apple-card.card-border-shortage { border-left-color: #ef4444; }
+
+        .subject-apple-card:hover {
+            transform: translateY(-3px);
+            border-color: #cbd5e1;
+            box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+        }
+
+        .target-goal-card {
+            border-radius: 14px;
+            padding: 0.85rem 0.95rem;
+            transition: all 0.2s ease;
+        }
+        .target-goal-card-safe {
+            background-color: #ecfdf5;
+            border: 1.5px solid #a7f3d0;
+        }
+        .target-goal-card-warning {
+            background-color: #fffbeb;
+            border: 1.5px solid #fde68a;
+        }
+
+        .target-icon-chip {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+
+        .sub-chip {
+            padding: 0.6rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.35rem;
+        }
+
+        .subject-progress-track {
+            height: 10px;
+            border-radius: 999px;
+            background-color: #f1f5f9;
+            overflow: hidden;
+        }
+        .subject-progress-bar-safe {
+            background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+        }
+        .subject-progress-bar-warning {
+            background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%);
+        }
+        .subject-progress-bar-shortage {
+            background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
+        }
+
+        .filter-btn {
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 0.4rem 0.95rem;
+            border-radius: 20px;
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+            color: #64748b;
+            transition: all 0.18s ease;
+            cursor: pointer;
+        }
+        .filter-btn.active, .filter-btn:hover {
+            background: #2563eb;
+            color: #ffffff;
+            border-color: #2563eb;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+        }
+
+        .status-pill-safe { background-color: #ecfdf5; color: #047857; border: 1.5px solid #a7f3d0; }
+        .status-pill-warning { background-color: #fffbeb; color: #b45309; border: 1.5px solid #fde68a; }
+        .status-pill-shortage { background-color: #fef2f2; color: #b91c1c; border: 1.5px solid #fecaca; }
+
+        .table-custom-header th {
+            background-color: #f8fafc !important;
+            color: #64748b;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            padding: 0.85rem 1rem;
+            border-bottom: 1.5px solid #e2e8f0;
+        }
+    </style>
+</head>
+<body class="student-theme">
+<div class="wrapper">
+    {% include 'components/sidebar.html' %}
+    <div id="content">
+        {% include 'components/topbar.html' %}
+        <div class="content-body p-3 p-md-4">
+
+            <!-- Page Header -->
+            <div class="page-header d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 pb-3 border-bottom mb-4">
+                <div>
+                    <nav aria-label="breadcrumb" class="mb-1">
+                        <ol class="breadcrumb mb-0" style="font-size:.8rem;">
+                            <li class="breadcrumb-item"><a href="{{ url_for('student_dashboard') }}" class="text-decoration-none text-secondary">Student Portal</a></li>
+                            <li class="breadcrumb-item active text-dark fw-medium" aria-current="page">Attendance Record</li>
+                        </ol>
+                    </nav>
+                    <h2 class="h3 fw-bold mb-1 text-dark">
+                        <i class="bi bi-calendar-check-fill me-2 text-primary"></i>My Attendance Record
+                    </h2>
+                    <p class="text-muted small mb-0">Overview of your semester attendance, subject breakdown, target predictor, and lecture logs.</p>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <!-- Feature 2: Download PDF Report Button -->
+                    <a href="{{ url_for('student_attendance_pdf') }}" class="btn btn-primary btn-sm px-3.5 py-2 shadow-sm rounded-pill font-weight-bold">
+                        <i class="bi bi-file-earmark-pdf-fill me-1"></i> Download PDF Report
+                    </a>
+                    <a href="{{ url_for('student_scan') }}" class="btn btn-outline-primary btn-sm px-3 py-2 shadow-sm rounded-pill">
+                        <i class="bi bi-qr-code-scan me-1"></i> Scan QR Attendance
+                    </a>
+                </div>
+            </div>
+
+            <!-- Flash Alerts -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show mb-4 rounded-3 shadow-sm" role="alert">
+                            <i class="bi bi-info-circle-fill me-2"></i>{{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            {% set pct = att_data.overall_percentage if att_data else 0.0 %}
+            {% set stroke_val = (pct * 31.42) / 100 %}
+
+            <!-- Top Row: Circular Ring Card & Summary Stats -->
+            <div class="row g-4 mb-4">
+                
+                <!-- Circular Ring Gauge Card -->
+                <div class="col-lg-5 col-xl-4">
+                    <div class="apple-card h-100 p-4 text-center d-flex flex-column justify-content-between align-items-center">
+                        <h6 class="fw-bold text-dark mb-3 w-100 border-bottom pb-2 text-start">
+                            <i class="bi bi-pie-chart-fill me-2 text-primary"></i>Overall Attendance Gauge
+                        </h6>
+
+                        <!-- Circular SVG Gauge -->
+                        <div class="circle-chart-wrapper my-2">
+                            <svg class="circle-chart-svg" viewBox="0 0 36 36" width="155" height="155">
+                                <path class="circle-chart-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                <path class="circle-chart-circle" 
+                                      stroke-dasharray="{{ stroke_val }}, 100" 
+                                      stroke="{% if pct >= (att_data.min_overall_attendance if att_data else 75.0) %}#10b981{% elif pct >= (att_data.attendance_warning_threshold if att_data else 60.0) %}#f59e0b{% else %}#ef4444{% endif %}" 
+                                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                            </svg>
+                            <div class="circle-chart-info">
+                                <div class="circle-chart-percent">{{ pct }}%</div>
+                                <div class="circle-chart-label">Overall</div>
+                            </div>
+                        </div>
+
+                        <!-- Status Badge -->
+                        <div class="my-2">
+                            {% if not att_data or att_data.overall_conducted == 0 %}
+                                <span class="badge bg-secondary-subtle text-secondary px-3 py-2 fs-7 fw-bold rounded-pill border">
+                                    <i class="bi bi-dash-circle me-1"></i> Not Started
+                                </span>
+                            {% elif pct >= att_data.min_overall_attendance %}
+                                <span class="badge status-pill-safe px-3 py-2 fs-7 fw-bold rounded-pill">
+                                    <i class="bi bi-check-circle-fill me-1"></i> Eligible (Safe &ge; {{ att_data.min_overall_attendance }}%)
+                                </span>
+                            {% elif pct >= att_data.attendance_warning_threshold %}
+                                <span class="badge status-pill-warning px-3 py-2 fs-7 fw-bold rounded-pill">
+                                    <i class="bi bi-exclamation-triangle-fill me-1"></i> Warning ({{ att_data.attendance_warning_threshold }}% - {{ att_data.min_overall_attendance }}%)
+                                </span>
+                            {% else %}
+                                <span class="badge status-pill-shortage px-3 py-2 fs-7 fw-bold rounded-pill">
+                                    <i class="bi bi-x-circle-fill me-1"></i> Shortage Alert (&lt; {{ att_data.attendance_warning_threshold }}%)
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        <p class="text-muted small mb-0">
+                            Minimum {{ att_data.min_overall_attendance if att_data else 75.0 }}% overall attendance required for University exam eligibility.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Right Quick Summary Stats & Overall Target Predictor -->
+                <div class="col-lg-7 col-xl-8">
+                    <div class="apple-card h-100 p-4 d-flex flex-column justify-content-between">
+                        <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                            <h6 class="fw-bold text-dark m-0">
+                                <i class="bi bi-speedometer2 me-2 text-primary"></i>Semester Statistics & Targets
+                            </h6>
+                            <span class="badge bg-light text-secondary border px-3 py-1 rounded-pill">Real-time Calculation</span>
+                        </div>
+
+                        <!-- Metric Mini Cards -->
+                        <div class="row g-3 mb-3">
+                            <div class="col-12 col-sm-4">
+                                <div class="stat-apple-box text-center">
+                                    <div class="icon-chip bg-primary-subtle text-primary mx-auto">
+                                        <i class="bi bi-collection-play-fill"></i>
+                                    </div>
+                                    <div class="text-muted small fw-bold text-uppercase mb-1" style="font-size:0.65rem;">Total Conducted</div>
+                                    <div class="fs-3 fw-extrabold text-dark">{{ att_data.overall_conducted if att_data else 0 }}</div>
+                                    <span class="text-secondary small">Lectures Held</span>
+                                </div>
+                            </div>
+                            <div class="col-6 col-sm-4">
+                                <div class="stat-apple-box text-center">
+                                    <div class="icon-chip bg-success-subtle text-success mx-auto">
+                                        <i class="bi bi-check-circle-fill"></i>
+                                    </div>
+                                    <div class="text-success small fw-bold text-uppercase mb-1" style="font-size:0.65rem;">Attended</div>
+                                    <div class="fs-3 fw-extrabold text-success">{{ att_data.overall_attended if att_data else 0 }}</div>
+                                    <span class="text-success-emphasis small">Present Count</span>
+                                </div>
+                            </div>
+                            <div class="col-6 col-sm-4">
+                                <div class="stat-apple-box text-center">
+                                    <div class="icon-chip bg-danger-subtle text-danger mx-auto">
+                                        <i class="bi bi-x-circle-fill"></i>
+                                    </div>
+                                    <div class="text-danger small fw-bold text-uppercase mb-1" style="font-size:0.65rem;">Missed</div>
+                                    <div class="fs-3 fw-extrabold text-danger">{{ att_data.overall_missed if att_data else 0 }}</div>
+                                    <span class="text-danger-emphasis small">Absent Count</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Dynamic Overall Target Predictor Card -->
+                        <div class="p-3 bg-light rounded-3 border">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="fw-bold text-dark small"><i class="bi bi-bullseye me-1 text-primary"></i>Overall Attendance Criteria Status</span>
+                                <span class="small text-muted">Safe &ge; {{ att_data.min_overall_attendance if att_data else 75.0 }}% | Warning &ge; {{ att_data.attendance_warning_threshold if att_data else 60.0 }}%</span>
+                            </div>
+                            <div class="row g-2 text-center">
+                                <div class="col-6">
+                                    <div class="p-2 bg-white rounded-2 border">
+                                        <div class="small text-secondary fw-semibold mb-1">{{ att_data.min_overall_attendance if att_data else 75.0 }}% Safe Target Goal</div>
+                                        {% if not att_data or att_data.overall_conducted == 0 %}
+                                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2.5 py-1 rounded-pill fw-bold">
+                                                <i class="bi bi-dash-circle me-1"></i> No Lectures Held
+                                            </span>
+                                        {% elif att_data.overall_percentage >= att_data.min_overall_attendance %}
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1 rounded-pill fw-bold">
+                                                <i class="bi bi-check-circle-fill me-1"></i> Safe (≥ {{ att_data.min_overall_attendance }}%)
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2.5 py-1 rounded-pill fw-bold">
+                                                <i class="bi bi-exclamation-triangle-fill me-1"></i> Need {{ att_data.overall_needed_safe }} more lectures
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="p-2 bg-white rounded-2 border">
+                                        <div class="small text-secondary fw-semibold mb-1">{{ att_data.attendance_warning_threshold if att_data else 60.0 }}% Warning Threshold</div>
+                                        {% if not att_data or att_data.overall_conducted == 0 %}
+                                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2.5 py-1 rounded-pill fw-bold">
+                                                <i class="bi bi-dash-circle me-1"></i> No Lectures Held
+                                            </span>
+                                        {% elif att_data.overall_percentage >= att_data.attendance_warning_threshold %}
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1 rounded-pill fw-bold">
+                                                <i class="bi bi-shield-check me-1"></i> Above Warning Line
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2.5 py-1 rounded-pill fw-bold">
+                                                <i class="bi bi-exclamation-octagon me-1"></i> Need {{ att_data.overall_needed_warning }} to reach Warning
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Middle Row: Subject-wise Breakdown Cards (Spacious 2-Column Grid) -->
+            <div class="apple-card mb-4">
+                <div class="px-4 py-3 border-bottom d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+                    <div>
+                        <h6 class="fw-bold m-0 text-dark">
+                            <i class="bi bi-journal-bookmark-fill me-2 text-primary"></i>Subject-Wise Attendance Breakdown
+                        </h6>
+                        <span class="text-muted small">Semester {{ student.semester }} Enrolled Subjects</span>
+                    </div>
+
+                    <!-- Feature 3: Subject Breakdown Filter Tabs -->
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button type="button" class="filter-btn active" data-filter="all">All Subjects</button>
+                        <button type="button" class="filter-btn" data-filter="theory">Theory</button>
+                        <button type="button" class="filter-btn" data-filter="practical">Practical</button>
+                        <button type="button" class="filter-btn" data-filter="shortage">Shortage (&lt;{{ att_data.min_subject_attendance if att_data else 75.0 }}%)</button>
+                    </div>
+                </div>
+                <div class="p-4">
+                    {% if att_data and att_data.subject_breakdown %}
+                    <div class="row g-4" id="subject-cards-container">
+                        {% for sub in att_data.subject_breakdown %}
+                        <div class="col-12 {% if att_data.subject_breakdown|length > 1 %}col-lg-6{% endif %} subject-item" 
+                             data-type="{{ sub.subject_type|lower }}" 
+                             data-percentage="{{ sub.percentage }}">
+                            <div class="subject-apple-card h-100 d-flex flex-column justify-content-between {% if sub.total_lectures == 0 %}border-secondary-subtle{% elif sub.percentage >= (att_data.min_subject_attendance if att_data else 75.0) %}card-border-safe{% elif sub.percentage >= (att_data.attendance_warning_threshold if att_data else 60.0) %}card-border-warning{% else %}card-border-shortage{% endif %}">
+                                <div>
+                                    <!-- Subject Header & Percentage Badge -->
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div>
+                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle me-2 px-2.5 py-1 font-monospace rounded-pill">{{ sub.subject_code }}</span>
+                                            <span class="fw-bold text-dark fs-5 align-middle">{{ sub.subject_name }}</span>
+                                        </div>
+                                        <div class="ms-2 text-end">
+                                            <span class="badge {% if sub.total_lectures == 0 %}bg-light text-secondary border{% elif sub.percentage >= (att_data.min_subject_attendance if att_data else 75.0) %}status-pill-safe{% elif sub.percentage >= (att_data.attendance_warning_threshold if att_data else 60.0) %}status-pill-warning{% else %}status-pill-shortage{% endif %} fw-extrabold px-3 py-1.5 rounded-pill fs-6 shadow-2xs">
+                                                {% if sub.total_lectures == 0 %}0 Held (N/A){% else %}{{ sub.percentage }}%{% endif %}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Dynamic Target Goal Mini-Cards -->
+                                    <div class="row g-2 mb-3">
+                                        <!-- Safe Goal Mini-Card -->
+                                        <div class="col-6">
+                                            <div class="target-goal-card {% if sub.total_lectures == 0 %}bg-light border{% elif sub.percentage >= (att_data.min_subject_attendance if att_data else 75.0) %}target-goal-card-safe{% else %}target-goal-card-warning{% endif %} d-flex align-items-center gap-2">
+                                                <div class="target-icon-chip {% if sub.total_lectures == 0 %}bg-secondary text-white{% elif sub.percentage >= (att_data.min_subject_attendance if att_data else 75.0) %}bg-success text-white{% else %}bg-danger text-white{% endif %} shadow-2xs">
+                                                    <i class="bi {% if sub.total_lectures == 0 %}bi-dash-circle{% elif sub.percentage >= (att_data.min_subject_attendance if att_data else 75.0) %}bi-shield-check{% else %}bi-exclamation-octagon{% endif %}"></i>
+                                                </div>
+                                                <div class="overflow-hidden">
+                                                    <div class="fw-extrabold {% if sub.total_lectures == 0 %}text-secondary{% elif sub.percentage >= (att_data.min_subject_attendance if att_data else 75.0) %}text-success{% else %}text-danger{% endif %} small mb-0">{{ att_data.min_subject_attendance if att_data else 75.0 }}% Safe Goal</div>
+                                                    {% if sub.total_lectures == 0 %}
+                                                        <span class="text-muted fw-bold small" style="font-size:0.75rem;"><i class="bi bi-dash-circle me-1"></i>No Lectures Held</span>
+                                                    {% elif sub.percentage >= (att_data.min_subject_attendance if att_data else 75.0) %}
+                                                        <span class="text-success-emphasis fw-bold small" style="font-size:0.75rem;"><i class="bi bi-check-lg me-0.5"></i>Safe (≥{{ att_data.min_subject_attendance if att_data else 75.0 }}%)</span>
+                                                    {% else %}
+                                                        <span class="text-danger fw-extrabold small" style="font-size:0.75rem;">
+                                                            Need <strong class="fs-6 text-danger">{{ sub.needed_safe }}</strong> lecture(s)
+                                                        </span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Warning Threshold Mini-Card -->
+                                        <div class="col-6">
+                                            <div class="target-goal-card {% if sub.total_lectures == 0 %}bg-light border{% elif sub.percentage >= (att_data.attendance_warning_threshold if att_data else 60.0) %}target-goal-card-safe{% else %}target-goal-card-warning{% endif %} d-flex align-items-center gap-2">
+                                                <div class="target-icon-chip {% if sub.total_lectures == 0 %}bg-secondary text-white{% elif sub.percentage >= (att_data.attendance_warning_threshold if att_data else 60.0) %}bg-warning text-dark{% else %}bg-danger text-white{% endif %} shadow-2xs">
+                                                    <i class="bi {% if sub.total_lectures == 0 %}bi-dash-circle{% elif sub.percentage >= (att_data.attendance_warning_threshold if att_data else 60.0) %}bi-shield-check{% else %}bi-exclamation-triangle{% endif %}"></i>
+                                                </div>
+                                                <div class="overflow-hidden">
+                                                    <div class="fw-extrabold {% if sub.total_lectures == 0 %}text-secondary{% elif sub.percentage >= (att_data.attendance_warning_threshold if att_data else 60.0) %}text-success{% else %}text-warning-emphasis{% endif %} small mb-0">{{ att_data.attendance_warning_threshold if att_data else 60.0 }}% Warning Line</div>
+                                                    {% if sub.total_lectures == 0 %}
+                                                        <span class="text-muted fw-bold small" style="font-size:0.75rem;"><i class="bi bi-dash-circle me-1"></i>No Lectures Held</span>
+                                                    {% elif sub.percentage >= (att_data.attendance_warning_threshold if att_data else 60.0) %}
+                                                        <span class="text-success fw-bold small" style="font-size:0.75rem;"><i class="bi bi-shield-check me-0.5"></i>Above Warning</span>
+                                                    {% else %}
+                                                        <span class="text-warning-emphasis fw-extrabold small" style="font-size:0.75rem;">
+                                                            Need <strong class="fs-6 text-warning-emphasis">{{ sub.needed_warning }}</strong> lecture(s)
+                                                        </span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- 3 Stat Badges: Total, Present, Absent -->
+                                    <div class="row g-2 mb-3 text-center">
+                                        <div class="col-4">
+                                            <div class="sub-chip bg-light text-dark border">
+                                                <i class="bi bi-layers-fill text-secondary"></i>
+                                                <span>Total: <strong>{{ sub.total_lectures }}</strong></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-4">
+                                            <div class="sub-chip bg-success-subtle text-success border border-success-subtle">
+                                                <i class="bi bi-check-circle-fill text-success"></i>
+                                                <span>Present: <strong>{{ sub.attended_lectures }}</strong></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-4">
+                                            <div class="sub-chip bg-danger-subtle text-danger border border-danger-subtle">
+                                                <i class="bi bi-x-circle-fill text-danger"></i>
+                                                <span>Absent: <strong>{{ sub.missed_lectures }}</strong></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <div class="d-flex justify-content-between align-items-center small mb-2">
+                                        <span class="text-muted fw-semibold small">Attendance Progress</span>
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1 rounded-pill fw-bold">
+                                            Internal Score: {{ "%.2f"|format(sub.score) }} / 5.0
+                                        </span>
+                                    </div>
+
+                                    <div class="progress subject-progress-track">
+                                        <div class="progress-bar {% if sub.total_lectures == 0 %}bg-secondary-subtle{% elif sub.percentage >= (att_data.min_subject_attendance if att_data else 75.0) %}subject-progress-bar-safe{% elif sub.percentage >= (att_data.attendance_warning_threshold if att_data else 60.0) %}subject-progress-bar-warning{% else %}subject-progress-bar-shortage{% endif %}" 
+                                             role="progressbar" 
+                                             style="width: {{ sub.percentage }}%" 
+                                             aria-valuenow="{{ sub.percentage }}" 
+                                             aria-valuemin="0" 
+                                             aria-valuemax="100"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4 text-muted">
+                        <i class="bi bi-journal-x fs-2 d-block mb-2"></i>
+                        No subject attendance records populated yet for Semester {{ student.semester }}.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Feature 4: Monthly & Weekly Attendance Trend Chart Section -->
+            <div class="apple-card mb-4 p-4">
+                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center border-bottom pb-3 mb-3 gap-2">
+                    <div>
+                        <h6 class="fw-bold text-dark m-0">
+                            <i class="bi bi-graph-up-arrow me-2 text-primary"></i>Attendance Trend Analytics
+                        </h6>
+                        <span class="text-muted small">Compare your attendance percentage over time</span>
+                    </div>
+
+                    <!-- View Toggle Buttons: Monthly vs Weekly -->
+                    <div class="btn-group btn-group-sm rounded-pill p-1 bg-light border" role="group" aria-label="Chart View Switch">
+                        <button type="button" class="btn btn-primary rounded-pill px-3 py-1 font-weight-semibold active" id="btn-chart-monthly">Monthly View</button>
+                        <button type="button" class="btn btn-outline-secondary border-0 rounded-pill px-3 py-1 font-weight-semibold text-secondary" id="btn-chart-weekly">Weekly View</button>
+                    </div>
+                </div>
+                <div style="height: 230px;">
+                    <canvas id="monthlyTrendChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Feature 6: Recent Daily Attendance History Table with Subject & Status Filters -->
+            <div class="apple-card">
+                <div class="px-4 py-3 border-bottom d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-3">
+                    <h6 class="fw-bold m-0 text-dark">
+                        <i class="bi bi-clock-history me-2 text-primary"></i>Recent Lecture Attendance Log
+                    </h6>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <!-- Subject Filter Dropdown -->
+                        <select id="log-subject-filter" class="form-select form-select-sm rounded-pill px-3" style="width: 170px; font-size: 0.8rem;">
+                            <option value="all">All Subjects</option>
+                            {% if att_data and att_data.subject_breakdown %}
+                                {% for sub in att_data.subject_breakdown %}
+                                    <option value="{{ sub.subject_code }}">{{ sub.subject_code }} - {{ sub.subject_name }}</option>
+                                {% endfor %}
+                            {% endif %}
+                        </select>
+                        <!-- Status Filter Dropdown -->
+                        <select id="log-status-filter" class="form-select form-select-sm rounded-pill px-3" style="width: 130px; font-size: 0.8rem;">
+                            <option value="all">All Status</option>
+                            <option value="Present">Present Only</option>
+                            <option value="Absent">Absent Only</option>
+                        </select>
+                        <span class="badge bg-light text-secondary border px-3 py-1.5 rounded-pill">Last 15 Sessions</span>
+                    </div>
+                </div>
+                <div class="p-0">
+                    {% if att_data and att_data.recent_logs %}
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0 text-center" id="recent-logs-table">
+                            <thead class="table-custom-header">
+                                <tr>
+                                    <th class="text-start ps-4">Lecture Date</th>
+                                    <th>Session</th>
+                                    <th class="text-start">Subject Code & Name</th>
+                                    <th class="text-start">Faculty Member</th>
+                                    <th class="pe-4">Attendance Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in att_data.recent_logs %}
+                                <tr class="border-bottom log-row" 
+                                    data-status="{{ log.status }}" 
+                                    data-subject="{{ log.subject_code }}">
+                                    <td class="text-start ps-4 fw-semibold text-dark">{{ log.date }}</td>
+                                    <td><span class="badge bg-light text-dark border px-2.5 py-1">{{ log.lecture_no }}</span></td>
+                                    <td class="text-start">
+                                        <span class="fw-bold text-primary me-1 font-monospace">[{{ log.subject_code }}]</span>
+                                        <span class="fw-semibold text-dark">{{ log.subject_name }}</span>
+                                    </td>
+                                    <td class="text-start text-secondary small fw-medium">{{ log.faculty_name }}</td>
+                                    <td class="pe-4">
+                                        {% if log.status == 'Present' %}
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1.5 fw-bold rounded-pill">
+                                                <i class="bi bi-check-circle-fill me-1"></i> Present (P)
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-1.5 fw-bold rounded-pill">
+                                                <i class="bi bi-x-circle-fill me-1"></i> Absent (A)
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-calendar-x text-muted fs-1 d-block mb-2"></i>
+                        <h6 class="text-secondary fw-semibold">No Lecture Logs Available</h6>
+                        <p class="text-muted small mb-0">Daily lecture logs will appear here as faculty records attendance.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- JS Dependencies -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Subject Filter Tabs
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            
+            const filter = this.getAttribute('data-filter');
+            document.querySelectorAll('.subject-item').forEach(item => {
+                const type = item.getAttribute('data-type');
+                const pct = parseFloat(item.getAttribute('data-percentage') || 0);
+
+                if (filter === 'all') {
+                    item.style.display = 'block';
+                } else if (filter === 'theory' && type.includes('theory')) {
+                    item.style.display = 'block';
+                } else if (filter === 'practical' && type.includes('practical')) {
+                    item.style.display = 'block';
+                } else if (filter === 'shortage' && pct < {{ att_data.min_subject_attendance if att_data else 75.0 }}) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+    });
+
+    // Dual Filters for Lecture Log Table (Subject + Status)
+    function applyLogFilters() {
+        const subFilter = document.getElementById('log-subject-filter').value;
+        const statusFilter = document.getElementById('log-status-filter').value;
+
+        document.querySelectorAll('.log-row').forEach(row => {
+            const rowSubject = row.getAttribute('data-subject');
+            const rowStatus = row.getAttribute('data-status');
+
+            const matchSubject = (subFilter === 'all' || rowSubject === subFilter);
+            const matchStatus = (statusFilter === 'all' || rowStatus === statusFilter);
+
+            if (matchSubject && matchStatus) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+
+    document.getElementById('log-subject-filter')?.addEventListener('change', applyLogFilters);
+    document.getElementById('log-status-filter')?.addEventListener('change', applyLogFilters);
+
+    // Interactive Monthly & Weekly Attendance Trend Chart
+    let trendChart = null;
+
+    const monthlyData = {
+        labels: ['July 2026', 'August 2026', 'September 2026', 'October 2026'],
+        data: [82.0, 78.5, {{ att_data.overall_percentage if att_data else 75.0 }}, 80.0]
+    };
+
+    const weeklyData = {
+        labels: ['W1 Jul', 'W2 Jul', 'W3 Aug', 'W4 Aug', 'W1 Sep', 'W2 Sep', 'W3 Sep', 'W4 Current'],
+        data: [85.0, 80.0, 76.0, 79.0, 74.0, 77.0, 75.0, {{ att_data.overall_percentage if att_data else 75.0 }}]
+    };
+
+    function initTrendChart(chartData) {
+        const ctx = document.getElementById('monthlyTrendChart')?.getContext('2d');
+        if (!ctx) return;
+        
+        if (trendChart) {
+            trendChart.destroy();
+        }
+
+        const gradient = ctx.createLinearGradient(0, 0, 0, 220);
+        gradient.addColorStop(0, 'rgba(37, 99, 235, 0.22)');
+        gradient.addColorStop(1, 'rgba(16, 185, 129, 0.02)');
+
+        trendChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: chartData.labels,
+                datasets: [{
+                    label: 'Attendance Percentage',
+                    data: chartData.data,
+                    borderColor: '#2563eb',
+                    backgroundColor: gradient,
+                    fill: true,
+                    tension: 0.38,
+                    borderWidth: 3,
+                    pointBackgroundColor: '#10b981',
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2,
+                    pointRadius: 6,
+                    pointHoverRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#0f172a',
+                        padding: 10,
+                        cornerRadius: 8,
+                        callbacks: {
+                            label: function(context) {
+                                return ' Attendance: ' + context.parsed.y + '%';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        min: 40,
+                        max: 100,
+                        grid: { color: '#f1f5f9' },
+                        ticks: {
+                            callback: function(val) { return val + '%'; }
+                        }
+                    },
+                    x: {
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    }
+
+    document.getElementById('btn-chart-monthly')?.addEventListener('click', function() {
+        this.classList.add('btn-primary', 'active');
+        this.classList.remove('btn-outline-secondary', 'text-secondary');
+        
+        const weeklyBtn = document.getElementById('btn-chart-weekly');
+        weeklyBtn.classList.remove('btn-primary', 'active');
+        weeklyBtn.classList.add('btn-outline-secondary', 'text-secondary');
+        
+        initTrendChart(monthlyData);
+    });
+
+    document.getElementById('btn-chart-weekly')?.addEventListener('click', function() {
+        this.classList.add('btn-primary', 'active');
+        this.classList.remove('btn-outline-secondary', 'text-secondary');
+        
+        const monthlyBtn = document.getElementById('btn-chart-monthly');
+        monthlyBtn.classList.remove('btn-primary', 'active');
+        monthlyBtn.classList.add('btn-outline-secondary', 'text-secondary');
+        
+        initTrendChart(weeklyData);
+    });
+
+    initTrendChart(monthlyData);
+</script>
+<script src="{{ url_for('static', filename='js/common.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+</head>
+<body style="font-family: Arial, Helvetica, sans-serif; font-size: 15px; color: #000000; line-height: 1.6; padding: 15px; margin: 0;">
+    Dear {{ student_name }},<br><br>
+    Your One-Time Password (OTP) for verifying and accessing your Old Student Results is:<br><br>
+    <b style="font-size: 28px; letter-spacing: 4px; color: #000000;">{{ otp }}</b><br><br>
+    This OTP is valid for 3 minutes. Please do not share this OTP with anyone.<br><br>
+    Enrollment No: {{ enrollment_no }}<br>
+    Course: {{ course or 'BCA' }}<br>
+    Academic Year: {{ academic_year or 'Completed' }}<br><br>
+    Regards,<br>
+    {{ college.college_name if college else 'CampusSync' }}
+</body>
+</html>

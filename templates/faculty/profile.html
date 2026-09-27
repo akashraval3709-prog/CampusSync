@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Faculty Profile – {{ college.college_short_name if college and college.college_short_name else 'CampusSync' }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/common.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/faculty.css') }}" rel="stylesheet">
+</head>
+<body class="faculty-theme">
+<div class="wrapper">
+    {% include 'components/sidebar.html' %}
+    <div id="content">
+        {% include 'components/topbar.html' %}
+        <div class="content-body">
+
+            <!-- Page Header -->
+            <div class="page-header d-flex justify-content-between align-items-center pb-3 border-bottom mb-4">
+                <div>
+                    <h2 class="h3 fw-bold mb-1">Faculty Profile</h2>
+                    <p class="text-muted mb-0">View your personal and academic employment details.</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('faculty_change_password') }}" class="btn btn-outline-warning btn-sm">
+                        <i class="bi bi-key-fill me-1"></i> Change Password
+                    </a>
+                    <a href="{{ url_for('faculty_dashboard') }}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+                    </a>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <!-- Left: Profile Photo & Basic Identity Card -->
+                <div class="col-lg-4">
+                    <div class="card shadow-sm text-center p-4 h-100">
+                        <div class="mb-3">
+                            {% if faculty.profile_photo and faculty.profile_photo != 'default-avatar.png' %}
+                                <img src="{{ url_for('admin.serve_uploads', filename='faculty/' + faculty.profile_photo) }}" alt="{{ faculty.full_name }}" class="rounded-circle shadow-sm border" style="width: 128px; height: 128px; object-fit: cover;">
+                            {% else %}
+                                <div class="rounded-circle bg-success text-white d-flex align-items-center justify-content-center mx-auto shadow-sm" style="width: 128px; height: 128px; font-size: 3rem; font-weight: 700;">
+                                    {{ (faculty.full_name[0] if faculty.full_name else 'F') | upper }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <h4 class="fw-bold mb-1 text-dark">{{ faculty.full_name }}</h4>
+                        <div class="text-primary fw-semibold mb-2">{{ faculty.faculty_code }}</div>
+                        <p class="text-muted small mb-3">{{ faculty.designation or 'Faculty Member' }} · {{ faculty.department or 'Department' }}</p>
+
+                        <div class="d-flex justify-content-center gap-2 mb-4">
+                            <span class="badge {% if faculty.status == 'Active' %}bg-success-subtle text-success border border-success-subtle{% else %}bg-danger-subtle text-danger border border-danger-subtle{% endif %} px-3 py-1">
+                                Status: {{ faculty.status }}
+                            </span>
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-1">
+                                {{ assigned_subjects|length }} Assigned Subjects
+                            </span>
+                        </div>
+
+                        <div class="border-top pt-3 text-start">
+                            <div class="d-flex align-items-center gap-2 mb-2 text-muted small">
+                                <i class="bi bi-envelope-fill text-primary"></i>
+                                <span class="text-truncate">{{ faculty.email }}</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 mb-2 text-muted small">
+                                <i class="bi bi-telephone-fill text-success"></i>
+                                <span>{{ faculty.mobile }}</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 text-muted small">
+                                <i class="bi bi-clock-history text-secondary"></i>
+                                <span>Last Login: {{ faculty.last_login.strftime('%d %b %Y, %I:%M %p') if faculty.last_login else 'Current Session' }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Detailed Information Sections -->
+                <div class="col-lg-8">
+                    <!-- Personal Information -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header py-3">
+                            <div class="fw-bold fs-6 text-primary">
+                                <i class="bi bi-person-lines-fill me-2"></i>Personal Information
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-sm-6">
+                                    <label class="text-muted small d-block">Full Name</label>
+                                    <span class="fw-semibold text-dark">{{ faculty.full_name }}</span>
+                                </div>
+                                <div class="col-sm-6">
+                                    <label class="text-muted small d-block">Faculty Code</label>
+                                    <span class="fw-semibold text-dark">{{ faculty.faculty_code }}</span>
+                                </div>
+                                <div class="col-sm-6">
+                                    <label class="text-muted small d-block">Email Address</label>
+                                    <span class="fw-semibold text-dark">{{ faculty.email }}</span>
+                                </div>
+                                <div class="col-sm-6">
+                                    <label class="text-muted small d-block">Mobile Number</label>
+                                    <span class="fw-semibold text-dark">{{ faculty.mobile }}</span>
+                                </div>
+                                <div class="col-sm-6">
+                                    <label class="text-muted small d-block">Gender</label>
+                                    <span class="fw-semibold text-dark">{{ faculty.gender or 'Not Specified' }}</span>
+                                </div>
+                                <div class="col-sm-6">
+                                    <label class="text-muted small d-block">Date of Birth</label>
+                                    <span class="fw-semibold text-dark">{{ faculty.dob.strftime('%d %B %Y') if faculty.dob else 'Not Specified' }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Professional Information -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header py-3">
+                            <div class="fw-bold fs-6 text-success">
+                                <i class="bi bi-mortarboard-fill me-2"></i>Professional & Academic Information
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-sm-6">
+                                    <label class="text-muted small d-block">Qualification</label>
+                                    <span class="fw-semibold text-dark">{{ faculty.qualification or 'Not Specified' }}</span>
+                                </div>
+                                <div class="col-sm-6">
+                                    <label class="text-muted small d-block">Designation</label>
+                                    <span class="fw-semibold text-dark">{{ faculty.designation or 'Not Specified' }}</span>
+                                </div>
+                                <div class="col-sm-6">
+                                    <label class="text-muted small d-block">Department</label>
+                                    <span class="fw-semibold text-dark">{{ faculty.department or 'Not Specified' }}</span>
+                                </div>
+                                <div class="col-sm-6">
+                                    <label class="text-muted small d-block">Joining Date</label>
+                                    <span class="fw-semibold text-dark">{{ faculty.joining_date.strftime('%d %B %Y') if faculty.joining_date else 'Not Specified' }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Address Information -->
+                    <div class="card shadow-sm">
+                        <div class="card-header py-3">
+                            <div class="fw-bold fs-6 text-secondary">
+                                <i class="bi bi-geo-alt-fill me-2 text-danger"></i>Address & Location
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label class="text-muted small d-block">Residential Address</label>
+                                    <span class="fw-semibold text-dark">{{ faculty.address or 'Not Specified' }}</span>
+                                </div>
+                                <div class="col-sm-4">
+                                    <label class="text-muted small d-block">City</label>
+                                    <span class="fw-semibold text-dark">{{ faculty.city or 'Not Specified' }}</span>
+                                </div>
+                                <div class="col-sm-4">
+                                    <label class="text-muted small d-block">State</label>
+                                    <span class="fw-semibold text-dark">{{ faculty.state or 'Not Specified' }}</span>
+                                </div>
+                                <div class="col-sm-4">
+                                    <label class="text-muted small d-block">Pincode</label>
+                                    <span class="fw-semibold text-dark">{{ faculty.pincode or 'Not Specified' }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ url_for('static', filename='js/common.js') }}"></script>
+</body>
+</html>

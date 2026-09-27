@@ -1,0 +1,73 @@
+/* Faculty theme overrides */
+.faculty-theme #sidebar { background: #0F172A; }
+.faculty-theme .sidebar-header h3 { color: #f1f5f9; }
+.faculty-theme #sidebar ul.components li.active > a { background: #10b981; }
+
+/* ============================================================
+   FACULTY SIDEBAR — Collapsible Submenu Styles
+   ============================================================ */
+
+/* Parent menu item — remove default active bg when it's the parent container */
+#sidebar ul.components li.sidebar-parent > a {
+    color: #94a3b8;
+    font-weight: 500;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+#sidebar ul.components li.sidebar-parent > a:hover {
+    background: rgba(255,255,255,.07);
+    color: #f1f5f9;
+}
+#sidebar ul.components li.sidebar-parent.open > a {
+    color: #f1f5f9;
+    background: rgba(255,255,255,.05);
+}
+
+/* Chevron arrow rotation */
+.sidebar-submenu-arrow {
+    font-size: 0.7rem;
+    transition: transform 0.25s ease;
+    opacity: 0.6;
+}
+#sidebar ul.components li.sidebar-parent.open > a .sidebar-submenu-arrow,
+#sidebar ul.components li.sidebar-parent > a[aria-expanded="true"] .sidebar-submenu-arrow {
+    transform: rotate(180deg);
+    opacity: 1;
+}
+
+/* Submenu list */
+.sidebar-submenu {
+    padding: 4px 0 4px 0 !important;
+    margin: 0 0 4px 0 !important;
+    border-left: 2px solid rgba(16, 185, 129, 0.35);
+    margin-left: 1.35rem !important;
+}
+
+/* Submenu items */
+.sidebar-submenu li a {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.55rem !important;
+    padding: 0.45rem 0.8rem !important;
+    border-radius: 6px !important;
+    color: #94a3b8 !important;
+    font-size: 0.82rem !important;
+    font-weight: 500 !important;
+    text-decoration: none !important;
+    transition: background 0.2s ease, color 0.2s ease !important;
+    margin-bottom: 1px !important;
+}
+.sidebar-submenu li a i {
+    font-size: 0.9rem;
+    flex-shrink: 0;
+}
+.sidebar-submenu li a:hover {
+    background: rgba(255,255,255,.07) !important;
+    color: #f1f5f9 !important;
+}
+
+/* Active submenu item */
+.sidebar-submenu li.active > a {
+    background: #10b981 !important;
+    color: #fff !important;
+    font-weight: 600 !important;
+}

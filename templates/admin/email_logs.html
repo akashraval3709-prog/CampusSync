@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Delivery Logs – Admin – CampusSync</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/common.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/admin.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/notification_modal.css') }}" rel="stylesheet">
+    <style>
+        .spin {
+            animation: spin 1s infinite linear;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body class="admin-theme">
+    <div class="wrapper">
+        {% include 'components/sidebar.html' %}
+        <div id="content">
+            {% include 'components/topbar.html' %}
+            <div class="content-body">
+                <div id="flashContainer" class="flash-container"></div>
+
+                <div class="page-header d-flex justify-content-between align-items-start mb-4">
+                    <div>
+                        <h2>Email Delivery Logs</h2>
+                        <p class="text-muted mb-0">Track welcome email statuses, inspect delivery failures, and trigger
+                            background retries.</p>
+                    </div>
+                    <button type="button" id="bulkRetryBtn" class="btn btn-warning btn-sm fw-semibold shadow-sm">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> Retry All Failed Emails
+                    </button>
+                </div>
+
+                <!-- Stats Overview Cards -->
+                {% set total_count = logs|length %}
+                {% set sent_count = logs | selectattr("status", "equalto", "SENT") | list | length %}
+                {% set failed_count = logs | selectattr("status", "equalto", "FAILED") | list | length %}
+                {% set pending_count = logs | selectattr("status", "in", ["PENDING", "SENDING"]) | list | length %}
+
+                <div class="row g-3 mb-4">
+                    <div class="col-xl-3 col-md-6">
+                        <div
+                            class="p-3 rounded-3 border bg-white shadow-sm d-flex align-items-center justify-content-between">
+                            <div>
+                                <span class="text-muted small fw-semibold text-uppercase">Total Dispatched</span>
+                                <h3 class="mb-0 fw-bold text-dark mt-1">{{ total_count }}</h3>
+                            </div>
+                            <div class="rounded-circle d-flex align-items-center justify-content-center"
+                                style="width: 44px; height: 44px; background: #eff6ff; color: #2563eb;">
+                                <i class="bi bi-envelope-paper-fill fs-5"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xl-3 col-md-6">
+                        <div
+                            class="p-3 rounded-3 border bg-white shadow-sm d-flex align-items-center justify-content-between">
+                            <div>
+                                <span class="text-muted small fw-semibold text-uppercase">Delivered (Sent)</span>
+                                <h3 class="mb-0 fw-bold text-success mt-1">{{ sent_count }}</h3>
+                            </div>
+                            <div class="rounded-circle d-flex align-items-center justify-content-center"
+                                style="width: 44px; height: 44px; background: #f0fdf4; color: #16a34a;">
+                                <i class="bi bi-check-circle-fill fs-5"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xl-3 col-md-6">
+                        <div
+                            class="p-3 rounded-3 border bg-white shadow-sm d-flex align-items-center justify-content-between">
+                            <div>
+                                <span class="text-muted small fw-semibold text-uppercase">Failed Deliveries</span>
+                                <h3 class="mb-0 fw-bold text-danger mt-1">{{ failed_count }}</h3>
+                            </div>
+                            <div class="rounded-circle d-flex align-items-center justify-content-center"
+                                style="width: 44px; height: 44px; background: #fef2f2; color: #dc2626;">
+                                <i class="bi bi-exclamation-octagon-fill fs-5"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xl-3 col-md-6">
+                        <div
+                            class="p-3 rounded-3 border bg-white shadow-sm d-flex align-items-center justify-content-between">
+                            <div>
+                                <span class="text-muted small fw-semibold text-uppercase">Pending / Sending</span>
+                                <h3 class="mb-0 fw-bold text-warning mt-1">{{ pending_count }}</h3>
+                            </div>
+                            <div class="rounded-circle d-flex align-items-center justify-content-center"
+                                style="width: 44px; height: 44px; background: #fffbeb; color: #d97706;">
+                                <i class="bi bi-clock-history fs-5"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Email Logs Table Card -->
+                <div class="card border shadow-sm">
+                    <div
+                        class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom">
+                        <h5 class="mb-0 fw-bold text-dark" style="font-size: 1.05rem;">
+                            <i class="bi bi-list-task me-2 text-primary"></i> Email Delivery Audit Log
+                        </h5>
+                        <div class="input-group" style="max-width: 280px;">
+                            <input type="text" id="logSearchInput" class="form-control form-control-sm"
+                                placeholder="Search student or email...">
+                            <button class="btn btn-outline-secondary btn-sm" type="button"><i
+                                    class="bi bi-search"></i></button>
+                        </div>
+                    </div>
+
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0" id="emailLogsTable">
+                                <thead class="table-light">
+                                    <tr style="font-size: 0.82rem; text-transform: uppercase; color: #64748b;">
+                                        <th class="ps-4"># Log ID</th>
+                                        <th>Student Name</th>
+                                        <th>Recipient Email</th>
+                                        <th>Email Type</th>
+                                        <th>Status</th>
+                                        <th>Sent / Attempted At</th>
+                                        <th>Retry Count</th>
+                                        <th>Failure Reason</th>
+                                        <th class="text-end pe-4">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody style="font-size: 0.88rem;">
+                                    {% if not logs %}
+                                    <tr>
+                                        <td colspan="9" class="text-center py-5 text-muted">
+                                            <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
+                                            No email delivery logs recorded yet.
+                                        </td>
+                                    </tr>
+                                    {% else %}
+                                    {% for log in logs %}
+                                    <tr>
+                                        <td class="ps-4 fw-semibold text-primary">#{{ log.id }}</td>
+                                        <td>
+                                            <strong class="text-dark">{{ log.student_name }}</strong>
+                                        </td>
+                                        <td>
+                                            <span class="text-muted">{{ log.recipient_email }}</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-secondary" style="font-size: 0.72rem;">{{
+                                                log.email_type }}</span>
+                                        </td>
+                                        <td>
+                                            {% if log.status == 'SENT' %}
+                                            <span class="badge"
+                                                style="background:#ecfdf5;color:#15803d;border:1px solid #bbf7d0;font-weight:600">
+                                                <i class="bi bi-check-circle-fill me-1"></i> SENT
+                                            </span>
+                                            {% elif log.status == 'FAILED' %}
+                                            <span class="badge"
+                                                style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;font-weight:600">
+                                                <i class="bi bi-x-circle-fill me-1"></i> FAILED
+                                            </span>
+                                            {% elif log.status == 'SENDING' %}
+                                            <span class="badge"
+                                                style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-weight:600">
+                                                <i class="bi bi-arrow-repeat spin me-1"></i> SENDING
+                                            </span>
+                                            {% else %}
+                                            <span class="badge"
+                                                style="background:#fffbeb;color:#b45309;border:1px solid #fde68a;font-weight:600">
+                                                <i class="bi bi-clock-history me-1"></i> PENDING
+                                            </span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-muted" style="font-size: 0.82rem;">
+                                            {{ log.sent_at if log.sent_at else (log.updated_at if log.updated_at else
+                                            log.created_at) }}
+                                        </td>
+                                        <td class="fw-semibold">
+                                            {% if log.retry_count > 0 %}
+                                            <span class="badge bg-light text-dark border">{{ log.retry_count }}
+                                                attempt(s)</span>
+                                            {% else %}
+                                            <span class="text-muted">0</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if log.status == 'FAILED' and log.error_message %}
+                                            <button type="button"
+                                                class="btn btn-outline-danger btn-sm py-0 px-2 view-error-btn"
+                                                style="font-size: 0.76rem;" data-error="{{ log.error_message|e }}">
+                                                <i class="bi bi-info-circle me-1"></i> View Reason
+                                            </button>
+                                            {% else %}
+                                            <span class="text-muted small">—</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end pe-4">
+                                            {% if log.status == 'FAILED' %}
+                                            <button type="button"
+                                                class="btn btn-sm btn-outline-primary single-retry-btn"
+                                                data-id="{{ log.id }}" style="border-radius: 6px; font-size: 0.8rem;">
+                                                <i class="bi bi-arrow-clockwise me-1"></i> Retry
+                                            </button>
+                                            {% elif log.status == 'SENDING' %}
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" disabled
+                                                style="border-radius: 6px; font-size: 0.8rem;">
+                                                <span class="spinner-border spinner-border-sm me-1"
+                                                    role="status"></span> Retrying...
+                                            </button>
+                                            {% else %}
+                                            <button type="button" class="btn btn-sm btn-light text-muted border"
+                                                disabled style="border-radius: 6px; font-size: 0.8rem;">
+                                                <i class="bi bi-check2 me-1"></i> Delivered
+                                            </button>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Viewing Error Details -->
+    <div class="modal fade" id="errorDetailModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border-radius: 14px;">
+                <div class="modal-header border-bottom">
+                    <h5 class="modal-title text-danger fw-bold"><i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        Failure Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="text-muted small mb-2">The background worker recorded the following exception during SMTP
+                        transmission:</p>
+                    <div id="errorDetailText" class="p-3 rounded-3"
+                        style="background: #fff5f5; border: 1px solid #fed7d7; color: #991b1b; font-family: monospace; font-size: 0.82rem; max-height: 180px; overflow-y: auto;">
+                    </div>
+                </div>
+                <div class="modal-footer border-top">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Bulk Retry Confirmation -->
+    <div class="modal fade" id="bulkRetryModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border-radius: 14px;">
+                <div class="modal-header border-bottom">
+                    <h5 class="modal-title text-dark fw-bold"><i
+                            class="bi bi-arrow-counterclockwise text-warning me-2"></i> Confirm Bulk Email Retry</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4 text-center">
+                    <div class="rounded-circle mx-auto d-flex align-items-center justify-content-center mb-3"
+                        style="width: 54px; height: 54px; background: #fffbeb; color: #d97706; font-size: 1.6rem;">
+                        <i class="bi bi-envelope-at-fill"></i>
+                    </div>
+                    <h6 class="fw-bold text-dark mb-2">Retry All Failed Welcome Emails?</h6>
+                    <p class="text-muted small mb-0">This action will queue all <strong class="text-danger">{{
+                            failed_count }} FAILED</strong> email logs for immediate background re-transmission.
+                        Successfully delivered emails will NOT be sent again.</p>
+                </div>
+                <div class="modal-footer border-top">
+                    <button type="button" class="btn btn-outline-secondary btn-sm"
+                        data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" id="confirmBulkRetryBtn" class="btn btn-warning btn-sm fw-semibold">
+                        <i class="bi bi-arrow-repeat me-1"></i> Start Bulk Retry
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/common.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/notification_modal.js') }}"></script>
+
+    {% include 'components/notification_modal.html' %}
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // Log Table Search Filter
+            const searchInput = document.getElementById("logSearchInput");
+            const tableBody = document.querySelector("#emailLogsTable tbody");
+
+            if (searchInput && tableBody) {
+                searchInput.addEventListener("keyup", function () {
+                    const query = this.value.toLowerCase();
+                    const rows = tableBody.querySelectorAll("tr");
+                    rows.forEach(row => {
+                        const text = row.textContent.toLowerCase();
+                        row.style.display = text.includes(query) ? "" : "none";
+                    });
+                });
+            }
+
+            // View Error Reason Modal
+            const viewErrorBtns = document.querySelectorAll(".view-error-btn");
+            const errorDetailModal = new bootstrap.Modal(document.getElementById("errorDetailModal"));
+            const errorDetailText = document.getElementById("errorDetailText");
+
+            viewErrorBtns.forEach(btn => {
+                btn.addEventListener("click", function () {
+                    const err = this.getAttribute("data-error") || "No detailed error message logged.";
+                    if (errorDetailText) errorDetailText.textContent = err;
+                    errorDetailModal.show();
+                });
+            });
+
+            // Single Email Retry Listener
+            const singleRetryBtns = document.querySelectorAll(".single-retry-btn");
+            singleRetryBtns.forEach(btn => {
+                btn.addEventListener("click", function () {
+                    const logId = this.getAttribute("data-id");
+                    if (!logId) return;
+
+                    this.disabled = true;
+                    this.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Retrying...`;
+
+                    fetch(`/admin/email-logs/retry/${logId}`, {
+                        method: "POST"
+                    })
+                        .then(async res => {
+                            const data = await res.json();
+                            if (res.ok && data.success) {
+                                showNotification({
+                                    type: "success",
+                                    title: "Retry Initiated",
+                                    message: data.message || "Email retry has been started in the background."
+                                });
+                                setTimeout(() => window.location.reload(), 1200);
+                            } else {
+                                showNotification({
+                                    type: "danger",
+                                    title: "Retry Failed",
+                                    message: data.message || "Could not retry email transmission."
+                                });
+                                setTimeout(() => window.location.reload(), 1500);
+                            }
+                        })
+                        .catch(err => {
+                            console.error("Single retry error:", err);
+                            showNotification({
+                                type: "danger",
+                                title: "Error",
+                                message: "Network error occurred while requesting email retry."
+                            });
+                        });
+                });
+            });
+
+            // Bulk Retry Modal Listener
+            const bulkRetryBtn = document.getElementById("bulkRetryBtn");
+            const bulkRetryModal = new bootstrap.Modal(document.getElementById("bulkRetryModal"));
+            const confirmBulkRetryBtn = document.getElementById("confirmBulkRetryBtn");
+
+            if (bulkRetryBtn) {
+                bulkRetryBtn.addEventListener("click", function () {
+                    const failedCount = {{ failed_count }};
+                if (failedCount === 0) {
+                    showNotification({
+                        type: "info",
+                        title: "No Failed Emails",
+                        message: "There are currently no failed emails to retry."
+                    });
+                    return;
+                }
+                bulkRetryModal.show();
+            });
+        }
+
+        if (confirmBulkRetryBtn) {
+            confirmBulkRetryBtn.addEventListener("click", function () {
+                bulkRetryModal.hide();
+
+                showNotification({
+                    type: "info",
+                    title: "Bulk Retry Initiated",
+                    message: "Queuing failed emails for background dispatch..."
+                });
+
+                fetch("/admin/email-logs/bulk-retry", {
+                    method: "POST"
+                })
+                    .then(async res => {
+                        const data = await res.json();
+                        if (res.ok && data.success) {
+                            showNotification({
+                                type: "success",
+                                title: "Bulk Retry Started",
+                                message: data.message || "Bulk retry started in the background."
+                            });
+                            setTimeout(() => window.location.reload(), 1500);
+                        } else {
+                            showNotification({
+                                type: "danger",
+                                title: "Bulk Retry Failed",
+                                message: data.message || "Failed to start bulk email retry."
+                            });
+                        }
+                    })
+                    .catch(err => {
+                        console.error("Bulk retry error:", err);
+                        showNotification({
+                            type: "danger",
+                            title: "Error",
+                            message: "Network error occurred while requesting bulk email retry."
+                        });
+                    });
+            });
+        }
+    });
+    </script>
+</body>
+
+</html>

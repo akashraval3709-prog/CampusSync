@@ -1,0 +1,307 @@
+<!-- Reusable Smart Sidebar Component (Admin / Faculty / Student) -->
+<style>
+@media (max-width: 991.98px) {
+    #sidebar {
+        position: fixed !important;
+        top: 0 !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        width: 280px !important;
+        max-width: 85vw !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        margin-left: 0 !important;
+        z-index: 99999 !important;
+        transform: translate3d(-100%, 0, 0) !important;
+        -webkit-transform: translate3d(-100%, 0, 0) !important;
+        transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.28s ease !important;
+        -webkit-transition: -webkit-transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.28s ease !important;
+        box-shadow: none !important;
+        pointer-events: none;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        overscroll-behavior: contain;
+    }
+    #sidebar.active {
+        transform: translate3d(0, 0, 0) !important;
+        -webkit-transform: translate3d(0, 0, 0) !important;
+        box-shadow: 12px 0 45px rgba(0, 0, 0, 0.65) !important;
+        pointer-events: auto !important;
+    }
+    .sidebar-backdrop {
+        position: fixed !important;
+        inset: 0 !important;
+        background: rgba(15, 23, 42, 0.68) !important;
+        backdrop-filter: blur(4px) !important;
+        -webkit-backdrop-filter: blur(4px) !important;
+        z-index: 99990 !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+        transition: opacity 0.26s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.26s ease !important;
+    }
+    .sidebar-backdrop.is-visible {
+        opacity: 1 !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
+    }
+    body.sidebar-open {
+        overflow: hidden !important;
+        touch-action: none;
+    }
+}
+</style>
+<nav id="sidebar">
+    <div class="sidebar-header d-flex align-items-center justify-content-between gap-2">
+        <div class="d-flex align-items-center gap-2 overflow-hidden flex-grow-1">
+            {% if college and college.logo and college.logo != 'default-logo.png' %}
+                <img src="{{ url_for('admin.serve_uploads', filename='college/' + college.logo) }}" alt="Logo" class="rounded-circle" style="width: 32px; height: 32px; object-fit: contain; background: #ffffff; padding: 2px; flex-shrink: 0;">
+            {% else %}
+                <i class="bi bi-mortarboard-fill brand-logo flex-shrink-0"></i>
+            {% endif %}
+            <h3 class="m-0 text-truncate" title="{{ college.college_name if college else 'CampusSync' }}">{{ college.college_short_name if college and college.college_short_name else (college.college_name if college else 'CampusSync') }}</h3>
+        </div>
+        <button type="button" id="sidebarCloseBtn" class="d-lg-none" title="Close Navigation" aria-label="Close Navigation" onclick="window.closeCampusSidebar ? window.closeCampusSidebar() : (document.getElementById('sidebar').classList.remove('active'), (document.getElementById('sidebarBackdrop') &amp;&amp; document.getElementById('sidebarBackdrop').classList.remove('is-visible')), document.body.classList.remove('sidebar-open'))">
+            <i class="bi bi-x-lg fs-6"></i>
+        </button>
+    </div>
+    <ul class="components">
+        {% if request.endpoint and (request.endpoint.startswith('faculty') or 'faculty.' in request.endpoint) %}
+            <!-- Faculty Portal Navigation Links -->
+            {% set students_section_active = active_page in ['students', 'marks', 'attendance', 'assignments'] %}
+            <li class="{% if active_page == 'dashboard' or request.endpoint in ['faculty.faculty_dashboard', 'faculty_dashboard'] %}active{% endif %}">
+                <a href="{{ url_for('faculty_dashboard') }}"><i class="bi bi-grid-fill"></i> Dashboard</a>
+            </li>
+            <li class="{% if active_page == 'profile' or request.endpoint in ['faculty.faculty_profile', 'faculty_profile'] %}active{% endif %}">
+                <a href="{{ url_for('faculty_profile') }}"><i class="bi bi-person-badge"></i> My Profile</a>
+            </li>
+            <li class="{% if active_page == 'subjects' or request.endpoint in ['faculty.faculty_subjects', 'faculty_subjects'] %}active{% endif %}">
+                <a href="{{ url_for('faculty_subjects') }}"><i class="bi bi-journal-bookmark-fill"></i> My Subjects</a>
+            </li>
+            <li class="{% if active_page == 'notices' or request.endpoint in ['faculty.faculty_notices', 'faculty_notices'] %}active{% endif %}">
+                <a href="{{ url_for('faculty_notices') }}"><i class="bi bi-megaphone-fill"></i> Notices &amp; Assignments</a>
+            </li>
+
+            <!-- Collapsible Students Parent Menu -->
+            <li class="sidebar-parent {% if students_section_active %}open{% endif %}">
+                <a href="#studentsSubmenu" data-bs-toggle="collapse"
+                   class="d-flex align-items-center justify-content-between"
+                   aria-expanded="{{ 'true' if students_section_active else 'false' }}"
+                   role="button">
+                    <span><i class="bi bi-people-fill"></i> Students</span>
+                    <i class="bi bi-chevron-down sidebar-submenu-arrow"></i>
+                </a>
+                <ul class="collapse sidebar-submenu list-unstyled {% if students_section_active %}show{% endif %}" id="studentsSubmenu">
+                    <li class="{% if active_page == 'students' %}active{% endif %}">
+                        <a href="{{ url_for('faculty_students') }}"><i class="bi bi-person-lines-fill"></i> Assigned Students</a>
+                    </li>
+                    <li class="{% if active_page == 'assignments' or request.endpoint in ['faculty.faculty_assignments', 'faculty_assignments'] %}active{% endif %}">
+                        <a href="{{ url_for('faculty_assignments') }}"><i class="bi bi-ui-checks"></i> Assignment Submissions</a>
+                    </li>
+                    <li class="{% if active_page == 'marks' %}active{% endif %}">
+                        <a href="{{ url_for('faculty_marks') }}"><i class="bi bi-pencil-square"></i> Internal Marks</a>
+                    </li>
+                    <li class="{% if active_page == 'attendance' %}active{% endif %}">
+                        <a href="{{ url_for('faculty_attendance') }}"><i class="bi bi-ui-checks-grid"></i> Attendance Register</a>
+                    </li>
+                </ul>
+            </li>
+
+
+            <li class="{% if active_page == 'change_password' or request.endpoint in ['faculty.faculty_change_password', 'faculty_change_password'] %}active{% endif %}">
+                <a href="{{ url_for('faculty_change_password') }}"><i class="bi bi-key-fill"></i> Change Password</a>
+            </li>
+            <li>
+                <a href="{{ url_for('faculty_logout') }}" class="text-danger-emphasis"><i class="bi bi-box-arrow-right text-danger"></i> Logout</a>
+            </li>
+        {% elif request.endpoint and (request.endpoint.startswith('student') or 'student.' in request.endpoint) %}
+            <!-- Student Portal Navigation Links -->
+            <li class="{% if active_page == 'dashboard' or request.endpoint in ['student.student_dashboard', 'student_dashboard'] %}active{% endif %}">
+                <a href="{{ url_for('student_dashboard') }}"><i class="bi bi-grid-fill"></i> Dashboard</a>
+            </li>
+            <li class="{% if active_page == 'results' or request.endpoint in ['student.student_results', 'student_results'] %}active{% endif %}">
+                <a href="{{ url_for('student_results') }}"><i class="bi bi-award-fill"></i> Student Result</a>
+            </li>
+            <li class="{% if active_page == 'scan' or request.endpoint in ['student.student_scan', 'student_scan'] %}active{% endif %}">
+                <a href="{{ url_for('student_scan') }}"><i class="bi bi-qr-code-scan"></i> Scan QR</a>
+            </li>
+            <li class="{% if active_page == 'attendance' or request.endpoint in ['student.student_attendance', 'student_attendance'] %}active{% endif %}">
+                <a href="{{ url_for('student_attendance') }}"><i class="bi bi-calendar-check"></i> Attendance</a>
+            </li>
+            <li class="{% if active_page == 'notices' or request.endpoint in ['student.student_notices', 'student_notices'] %}active{% endif %}">
+                <a href="{{ url_for('student_notices') }}"><i class="bi bi-megaphone"></i> Notices</a>
+            </li>
+        {% else %}
+            <!-- Admin Panel Navigation Links -->
+            {% set is_admin_dashboard = active_page == 'dashboard' or request.endpoint in ['admin.admin_dashboard', 'admin_dashboard'] %}
+
+            {% set is_students_section = active_page in ['students', 'old_students', 'attendance_blacklist'] or request.endpoint in [
+                'admin.admin_students', 'admin_students',
+                'admin.import_students', 'import_students',
+                'admin.admin_old_students', 'admin_old_students',
+                'admin.admin_old_student_marks', 'admin_old_student_marks',
+                'admin.admin_attendance_blacklist', 'admin_attendance_blacklist',
+                'admin.admin_attendance_blacklist_pdf'
+            ] %}
+
+            {% set is_academics_section = active_page in ['faculty', 'subjects', 'results', 'academic_settings'] or request.endpoint in [
+                'admin.admin_faculty', 'admin_faculty',
+                'admin.admin_subjects', 'admin_subjects',
+                'admin.admin_results', 'admin_results',
+                'admin.admin_academic_settings', 'admin_academic_settings'
+            ] %}
+
+            {% set is_reports_section = active_page in ['reports', 'email_logs'] or request.endpoint in [
+                'admin.admin_reports', 'admin_reports',
+                'admin.email_logs', 'email_logs'
+            ] %}
+
+            {% set is_admin_settings_section = active_page in ['college_settings', 'settings', 'website', 'gallery'] or request.endpoint in [
+                'admin.admin_college_settings', 'admin_college_settings',
+                'admin.admin_settings', 'admin_settings',
+                'admin.admin_website', 'admin_website',
+                'admin.admin_gallery', 'admin_gallery'
+            ] %}
+
+            <!-- 1. Dashboard (Direct Link) -->
+            <li class="{% if is_admin_dashboard %}active{% endif %}">
+                <a href="{{ url_for('admin_dashboard') }}">
+                    <i class="bi bi-grid-fill"></i>
+                    <span>Dashboard</span>
+                </a>
+            </li>
+
+            <!-- Announcements / Notices (Direct Link) -->
+            <li class="{% if active_page == 'notices' or request.endpoint in ['admin.admin_notices', 'admin_notices'] %}active{% endif %}">
+                <a href="{{ url_for('admin_notices') }}">
+                    <i class="bi bi-megaphone-fill"></i>
+                    <span>Announcements</span>
+                </a>
+            </li>
+
+            <!-- 2. Main Students Section (Collapsible Parent) -->
+            <li class="sidebar-parent {% if is_students_section %}open{% endif %}">
+                <a href="#adminStudentsSubmenu" data-bs-toggle="collapse"
+                   class="d-flex align-items-center justify-content-between"
+                   aria-expanded="{{ 'true' if is_students_section else 'false' }}"
+                   role="button">
+                    <span><i class="bi bi-people-fill"></i> <span>Students</span></span>
+                    <i class="bi bi-chevron-down sidebar-submenu-arrow"></i>
+                </a>
+                <ul class="collapse sidebar-submenu list-unstyled {% if is_students_section %}show{% endif %}" id="adminStudentsSubmenu">
+                    <li class="{% if active_page == 'students' or request.endpoint in ['admin.admin_students', 'admin_students', 'admin.import_students', 'import_students'] %}active{% endif %}">
+                        <a href="{{ url_for('admin_students') }}">
+                            <i class="bi bi-person-lines-fill"></i>
+                            <span>Active Students</span>
+                        </a>
+                    </li>
+                    <li class="{% if active_page == 'old_students' or request.endpoint in ['admin.admin_old_students', 'admin_old_students', 'admin.admin_old_student_marks', 'admin_old_student_marks'] %}active{% endif %}">
+                        <a href="{{ url_for('admin.admin_old_students') }}">
+                            <i class="bi bi-mortarboard-fill"></i>
+                            <span>Old Students</span>
+                        </a>
+                    </li>
+                    <li class="{% if active_page == 'attendance_blacklist' or request.endpoint in ['admin.admin_attendance_blacklist', 'admin_attendance_blacklist'] %}active{% endif %}">
+                        <a href="{{ url_for('admin_attendance_blacklist') }}">
+                            <i class="bi bi-person-x-fill text-danger"></i>
+                            <span>Attendance Blacklist</span>
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+            <!-- 3. Academics Section (Collapsible Parent) -->
+            <li class="sidebar-parent {% if is_academics_section %}open{% endif %}">
+                <a href="#adminAcademicsSubmenu" data-bs-toggle="collapse"
+                   class="d-flex align-items-center justify-content-between"
+                   aria-expanded="{{ 'true' if is_academics_section else 'false' }}"
+                   role="button">
+                    <span><i class="bi bi-journal-bookmark-fill"></i> <span>Academics</span></span>
+                    <i class="bi bi-chevron-down sidebar-submenu-arrow"></i>
+                </a>
+                <ul class="collapse sidebar-submenu list-unstyled {% if is_academics_section %}show{% endif %}" id="adminAcademicsSubmenu">
+                    <li class="{% if active_page == 'faculty' or request.endpoint in ['admin.admin_faculty', 'admin_faculty'] %}active{% endif %}">
+                        <a href="{{ url_for('admin_faculty') }}">
+                            <i class="bi bi-person-workspace"></i>
+                            <span>Faculty Management</span>
+                        </a>
+                    </li>
+                    <li class="{% if active_page == 'subjects' or request.endpoint in ['admin.admin_subjects', 'admin_subjects'] %}active{% endif %}">
+                        <a href="{{ url_for('admin_subjects') }}">
+                            <i class="bi bi-journal-code"></i>
+                            <span>Subjects</span>
+                        </a>
+                    </li>
+                    <li class="{% if active_page == 'results' or request.endpoint in ['admin.admin_results', 'admin_results'] %}active{% endif %}">
+                        <a href="{{ url_for('admin_results') }}">
+                            <i class="bi bi-award-fill"></i>
+                            <span>Internal Marks / Results</span>
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+            <!-- 4. Reports & Logs Section (Collapsible Parent) -->
+            <li class="sidebar-parent {% if is_reports_section %}open{% endif %}">
+                <a href="#adminReportsSubmenu" data-bs-toggle="collapse"
+                   class="d-flex align-items-center justify-content-between"
+                   aria-expanded="{{ 'true' if is_reports_section else 'false' }}"
+                   role="button">
+                    <span><i class="bi bi-bar-chart-line-fill"></i> <span>Reports & Logs</span></span>
+                    <i class="bi bi-chevron-down sidebar-submenu-arrow"></i>
+                </a>
+                <ul class="collapse sidebar-submenu list-unstyled {% if is_reports_section %}show{% endif %}" id="adminReportsSubmenu">
+                    <li class="{% if active_page == 'reports' or request.endpoint in ['admin.admin_reports', 'admin_reports'] %}active{% endif %}">
+                        <a href="{{ url_for('admin_reports') }}">
+                            <i class="bi bi-file-earmark-bar-graph"></i>
+                            <span>Reports</span>
+                        </a>
+                    </li>
+                    <li class="{% if active_page == 'email_logs' or request.endpoint in ['admin.email_logs', 'email_logs'] %}active{% endif %}">
+                        <a href="{{ url_for('admin.email_logs') }}">
+                            <i class="bi bi-envelope-paper-fill"></i>
+                            <span>Email Logs</span>
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+            <!-- 5. Administration & Settings Section (Collapsible Parent) -->
+            <li class="sidebar-parent {% if is_admin_settings_section %}open{% endif %}">
+                <a href="#adminSettingsSubmenu" data-bs-toggle="collapse"
+                   class="d-flex align-items-center justify-content-between"
+                   aria-expanded="{{ 'true' if is_admin_settings_section else 'false' }}"
+                   role="button">
+                    <span><i class="bi bi-gear-wide-connected"></i> <span>Administration</span></span>
+                    <i class="bi bi-chevron-down sidebar-submenu-arrow"></i>
+                </a>
+                <ul class="collapse sidebar-submenu list-unstyled {% if is_admin_settings_section %}show{% endif %}" id="adminSettingsSubmenu">
+                    <li class="{% if active_page == 'college_settings' or request.endpoint in ['admin.admin_college_settings', 'admin_college_settings'] %}active{% endif %}">
+                        <a href="{{ url_for('admin_college_settings') }}">
+                            <i class="bi bi-building"></i>
+                            <span>College Settings</span>
+                        </a>
+                    </li>
+                    <li class="{% if active_page == 'settings' or request.endpoint in ['admin.admin_settings', 'admin_settings'] %}active{% endif %}">
+                        <a href="{{ url_for('admin_settings') }}">
+                            <i class="bi bi-sliders"></i>
+                            <span>Settings</span>
+                        </a>
+                    </li>
+                    <li class="{% if active_page == 'website' or request.endpoint in ['admin.admin_website', 'admin_website'] %}active{% endif %}">
+                        <a href="{{ url_for('admin_website') }}">
+                            <i class="bi bi-globe2"></i>
+                            <span>Website Mgmt</span>
+                        </a>
+                    </li>
+                    <li class="{% if active_page == 'gallery' or request.endpoint in ['admin.admin_gallery', 'admin_gallery'] %}active{% endif %}">
+                        <a href="{{ url_for('admin_gallery') }}">
+                            <i class="bi bi-images"></i>
+                            <span>Campus Gallery</span>
+                        </a>
+                    </li>
+                </ul>
+            </li>
+        {% endif %}
+    </ul>
+</nav>

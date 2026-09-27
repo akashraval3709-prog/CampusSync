@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Basic Meta Tags -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Results & Internal Marks – {{ college.college_short_name if college and college.college_short_name else 'CampusSync' }}</title>
+    
+    <!-- CSS Dependencies -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/common.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/student.css') }}" rel="stylesheet">
+
+    <style>
+        :root {
+            --card-radius: 14px;
+            --subtle-border: #e2e8f0;
+        }
+
+        .results-hero-card {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border-radius: var(--card-radius);
+            color: #ffffff;
+            padding: 1.75rem 2rem;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.25);
+        }
+
+        .results-hero-card::after {
+            content: "";
+            position: absolute;
+            top: -40px;
+            right: -40px;
+            width: 220px;
+            height: 220px;
+            background: radial-gradient(circle, rgba(37, 99, 235, 0.25) 0%, rgba(37, 99, 235, 0) 70%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .filter-glass-card {
+            background: #ffffff;
+            border-radius: var(--card-radius);
+            border: 1px solid var(--subtle-border);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.04);
+            padding: 1.25rem 1.5rem;
+        }
+
+        .sem-pill-btn {
+            padding: 6px 16px;
+            border-radius: 30px;
+            font-size: 0.86rem;
+            font-weight: 600;
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            color: #475569;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .sem-pill-btn:hover {
+            border-color: #2563eb;
+            color: #2563eb;
+            background: #eff6ff;
+        }
+
+        .sem-pill-btn.active {
+            background: #2563eb;
+            border-color: #2563eb;
+            color: #ffffff;
+            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
+        }
+
+        .sem-pill-btn .badge {
+            font-size: 0.65rem;
+            padding: 2px 6px;
+        }
+
+        .subject-result-card {
+            background: #ffffff;
+            border-radius: var(--card-radius);
+            border: 1px solid var(--subtle-border);
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            overflow: hidden;
+        }
+
+        .subject-result-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -3px rgba(15, 23, 42, 0.08);
+        }
+
+        .subject-card-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid #f1f5f9;
+            background: #fafafa;
+        }
+
+        .score-pill-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 14px 18px;
+            text-align: center;
+        }
+
+        .score-val {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.85rem;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1;
+        }
+
+        .score-max {
+            font-size: 0.9rem;
+            color: #64748b;
+            font-weight: 600;
+        }
+
+        .breakdown-group-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 12px 14px;
+            height: 100%;
+        }
+
+        .breakdown-title {
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #475569;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .breakdown-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 0;
+            font-size: 0.83rem;
+            border-bottom: 1px dashed #e2e8f0;
+        }
+
+        .breakdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .breakdown-item .label {
+            color: #64748b;
+        }
+
+        .breakdown-item .val {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .stat-metric-box {
+            background: #ffffff;
+            border: 1px solid var(--subtle-border);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        .stat-metric-box .metric-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        /* Modal styling */
+        .modal-backdrop.show {
+            backdrop-filter: blur(5px);
+            background-color: rgba(15, 23, 42, 0.6);
+        }
+    </style>
+</head>
+<body class="student-theme">
+<div class="wrapper">
+    <!-- Sidebar Navigation -->
+    {% include 'components/sidebar.html' %}
+    
+    <div id="content">
+        <!-- Topbar Header -->
+        {% include 'components/topbar.html' %}
+
+        <div class="content-body p-4">
+            
+            <!-- Page Hero Header -->
+            <div class="results-hero-card mb-4">
+                <div class="row align-items-center g-3">
+                    <div class="col-lg-8">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="badge bg-primary px-3 py-1 text-uppercase fw-semibold" style="letter-spacing: 0.05em;">Student Academic Record</span>
+                            <span class="badge bg-secondary-subtle text-white border border-light-subtle">Academic Year: {{ selected_year }}</span>
+                        </div>
+                        <h2 class="text-white fw-bold mb-1">
+                            <i class="bi bi-award-fill me-2 text-warning"></i>Student Result & Internal Assessment
+                        </h2>
+                        <p class="text-slate-300 mb-0 opacity-90 fs-7">
+                            Showing internal continuous evaluation marks for <strong>{{ student.full_name }}</strong> &bull; Enrollment: <span class="font-monospace text-info">{{ student.enrollment_no }}</span>
+                        </p>
+                    </div>
+                    <div class="col-lg-4 text-lg-end">
+                        {% if is_result_declared %}
+                        <div class="d-inline-flex flex-column align-items-lg-end gap-2">
+                            <a href="{{ url_for('student.student_download_result_pdf', semester=selected_sem, academic_year=selected_year) }}" class="btn btn-light btn-lg fw-bold shadow-sm px-4 text-primary">
+                                <i class="bi bi-file-earmark-arrow-down-fill me-1 text-danger"></i> Download Marksheet
+                            </a>
+                            <button type="button" class="btn btn-sm btn-outline-light px-3 fw-semibold" onclick="openOfficialResultModal()">
+                                <i class="bi bi-eye me-1"></i> Preview Marksheet Card
+                            </button>
+                        </div>
+                        {% else %}
+                        <div class="d-inline-flex flex-column align-items-lg-end gap-1">
+                            <button type="button" class="btn btn-light btn-lg fw-bold shadow-sm px-4 text-muted disabled" style="opacity: 0.65; cursor: not-allowed;" title="Results for Semester {{ selected_sem }} have not been declared by administration yet.">
+                                <i class="bi bi-lock-fill me-1 text-secondary"></i> Download Locked
+                            </button>
+                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle fs-8">
+                                <i class="bi bi-hourglass-split me-1"></i> Results Not Declared Yet
+                            </span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter Toolbar -->
+            <div class="filter-glass-card mb-4">
+                <form method="GET" action="{{ url_for('student_results') }}" id="resultFilterForm">
+                    <div class="row g-3 align-items-center">
+                        <!-- Academic Year Selector -->
+                        <div class="col-md-4 col-lg-3">
+                            <label for="academic_year" class="form-label fs-7 fw-bold text-secondary mb-1">
+                                <i class="bi bi-calendar3 me-1 text-primary"></i> Academic Year
+                            </label>
+                            <select name="academic_year" id="academic_year" class="form-select form-select-sm" onchange="document.getElementById('resultFilterForm').submit()">
+                                {% for yr in available_years %}
+                                    <option value="{{ yr }}" {% if yr == selected_year %}selected{% endif %}>{{ yr }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Semester Quick-Select Navigation -->
+                        <div class="col-md-8 col-lg-9">
+                            <label class="form-label fs-7 fw-bold text-secondary mb-1 d-block">
+                                <i class="bi bi-layers-fill me-1 text-primary"></i> Select Semester
+                            </label>
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                {% for sem in available_semesters %}
+                                    {% set is_active = (sem == selected_sem) %}
+                                    {% set has_marks = (sem in semesters_with_marks) %}
+                                    <a href="{{ url_for('student_results', academic_year=selected_year, semester=sem) }}"
+                                       class="sem-pill-btn {% if is_active %}active{% endif %}">
+                                        <span>Sem {{ sem }}</span>
+                                        {% if has_marks %}
+                                            <span class="badge rounded-pill {% if is_active %}bg-light text-primary{% else %}bg-success text-white{% endif %}">
+                                                <i class="bi bi-check2"></i>
+                                            </span>
+                                        {% endif %}
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Semester Summary Metrics -->
+            <div class="row g-3 mb-4">
+                <div class="col-6 col-md-3">
+                    <div class="stat-metric-box d-flex align-items-center gap-3">
+                        <div class="metric-icon bg-primary-subtle text-primary">
+                            <i class="bi bi-calculator-fill"></i>
+                        </div>
+                        <div>
+                            <div class="fs-7 text-muted fw-semibold">Total Internal</div>
+                            <div class="fs-5 fw-bold text-dark font-monospace">{{ total_obtained }} <small class="text-muted fs-7">/ {{ total_max }}</small></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-6 col-md-3">
+                    <div class="stat-metric-box d-flex align-items-center gap-3">
+                        <div class="metric-icon bg-success-subtle text-success">
+                            <i class="bi bi-percent"></i>
+                        </div>
+                        <div>
+                            <div class="fs-7 text-muted fw-semibold">Internal %</div>
+                            <div class="fs-5 fw-bold text-success font-monospace">{{ overall_percentage }}%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-6 col-md-3">
+                    <div class="stat-metric-box d-flex align-items-center gap-3">
+                        <div class="metric-icon bg-info-subtle text-info">
+                            <i class="bi bi-journal-check"></i>
+                        </div>
+                        <div>
+                            <div class="fs-7 text-muted fw-semibold">Evaluated Subjects</div>
+                            <div class="fs-5 fw-bold text-dark">{{ evaluated_count }} <small class="text-muted fs-7">/ {{ total_subjects }}</small></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-6 col-md-3">
+                    <div class="stat-metric-box d-flex align-items-center gap-3">
+                        <div class="metric-icon bg-warning-subtle text-warning">
+                            <i class="bi bi-trophy-fill"></i>
+                        </div>
+                        <div>
+                            <div class="fs-7 text-muted fw-semibold">Assessment Status</div>
+                            <div class="fs-6 fw-bold text-dark">
+                                {% if overall_percentage >= 70 %}
+                                    <span class="text-success">Distinction</span>
+                                {% elif overall_percentage >= 50 %}
+                                    <span class="text-primary">First Class</span>
+                                {% elif overall_percentage >= 40 %}
+                                    <span class="text-warning">Passed</span>
+                                {% elif total_obtained > 0 %}
+                                    <span class="text-danger">In Progress</span>
+                                {% else %}
+                                    <span class="text-muted">Pending</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Subject Cards Container -->
+            <div class="mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold text-dark m-0">
+                        <i class="bi bi-journals me-2 text-primary"></i>Subject Breakdown (Semester {{ selected_sem }})
+                    </h5>
+                    <span class="badge bg-light text-secondary border px-3 py-2">
+                        {{ results_data|length }} Subject{{ 's' if results_data|length != 1 else '' }} in Semester {{ selected_sem }}
+                    </span>
+                </div>
+
+                {% if results_data and results_data|length > 0 %}
+                    <div class="row g-4">
+                        {% for item in results_data %}
+                        {% set sub = item.subject %}
+                        {% set bd = item.breakdown %}
+                        {% set is_eval = (item.marks_obtained is not none) %}
+                        <div class="col-12">
+                            <div class="subject-result-card">
+                                <!-- Subject Card Header -->
+                                <div class="subject-card-header d-flex flex-wrap justify-content-between align-items-center gap-3">
+                                    <div>
+                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                            <span class="badge bg-dark font-monospace">{{ sub.subject_code }}</span>
+                                            <span class="badge {% if sub.subject_type == 'Theory' %}bg-primary-subtle text-primary border border-primary-subtle{% else %}bg-secondary-subtle text-secondary border border-secondary-subtle{% endif %}">
+                                                {{ sub.subject_type }} (Max: {{ item.max_marks }})
+                                            </span>
+                                            {% if is_eval %}
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                                    <i class="bi bi-check-circle-fill me-1"></i>Evaluated
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
+                                                    <i class="bi bi-hourglass-split me-1"></i>Evaluation Pending
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                        <h4 class="fw-bold text-dark m-0 fs-5">{{ sub.subject_name }}</h4>
+                                    </div>
+
+                                    <!-- Score Box and Marksheet Button -->
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="score-pill-box">
+                                            <div class="score-val text-primary">
+                                                {{ item.marks_obtained if is_eval else '--' }}
+                                                <span class="score-max">/ {{ item.max_marks }}</span>
+                                            </div>
+                                            <div class="fs-8 text-muted fw-semibold mt-1">
+                                                {% if is_eval %}
+                                                    {{ item.percentage }}% Internal Score
+                                                {% else %}
+                                                    Awaiting Marks
+                                                {% endif %}
+                                            </div>
+                                        </div>
+
+                                        <a href="{{ url_for('student.student_download_result_pdf', semester=selected_sem, academic_year=selected_year) }}" 
+                                           class="btn btn-outline-primary btn-sm fw-semibold shadow-xs d-flex align-items-center gap-1"
+                                           title="Download Official Marksheet PDF">
+                                            <i class="bi bi-file-earmark-arrow-down"></i>
+                                            <span class="d-none d-sm-inline">Download PDF</span>
+                                        </a>
+                                    </div>
+                                </div>
+
+                                <!-- Card Body: Detailed Component Breakdown -->
+                                <div class="card-body p-4">
+                                    {% if is_eval %}
+                                        {% if sub.subject_type == 'Theory' %}
+                                            <!-- Theory Evaluation Breakdown -->
+                                            <div class="row g-3">
+                                                <!-- Class Tests Component -->
+                                                <div class="col-md-4">
+                                                    <div class="breakdown-group-card">
+                                                        <div class="breakdown-title">
+                                                            <span><i class="bi bi-pencil-square me-1 text-primary"></i> Class Tests</span>
+                                                            <span class="badge bg-primary-subtle text-primary">Best 2 / {{ bd.maxes.best2 if bd and bd.maxes and 'best2' in bd.maxes else 20 }}</span>
+                                                        </div>
+                                                        <div class="breakdown-item">
+                                                            <span class="label">Class Test 1 (/{{ bd.maxes.test1 if bd and bd.maxes and 'test1' in bd.maxes else 20 }})</span>
+                                                            <span class="val">{{ bd.test1 if bd.test1 is not none else '-' }}</span>
+                                                        </div>
+                                                        <div class="breakdown-item">
+                                                            <span class="label">Class Test 2 (/{{ bd.maxes.test2 if bd and bd.maxes and 'test2' in bd.maxes else 20 }})</span>
+                                                            <span class="val">{{ bd.test2 if bd.test2 is not none else '-' }}</span>
+                                                        </div>
+                                                        <div class="breakdown-item">
+                                                            <span class="label">Class Test 3 (/{{ bd.maxes.test3 if bd and bd.maxes and 'test3' in bd.maxes else 20 }})</span>
+                                                            <span class="val">{{ bd.test3 if bd.test3 is not none else '-' }}</span>
+                                                        </div>
+                                                        <div class="breakdown-item pt-2 fw-bold">
+                                                            <span class="text-primary">Best 2 Score (/{{ bd.maxes.best2 if bd and bd.maxes and 'best2' in bd.maxes else 20 }})</span>
+                                                            <span class="val text-primary fs-6">{{ (bd.best2 if bd.best2 is not none else bd.class_test_calculated) if (bd.best2 is not none or bd.class_test_calculated is not none) else '--' }}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Internal Exam Component (Replaces legacy Quizzes) -->
+                                                <div class="col-md-4">
+                                                    <div class="breakdown-group-card">
+                                                        <div class="breakdown-title">
+                                                            <span><i class="bi bi-file-earmark-text me-1 text-primary"></i> Internal Exam</span>
+                                                            <span class="badge bg-primary-subtle text-primary">Max: {{ (bd.maxes.internal_exam if bd and bd.maxes and 'internal_exam' in bd.maxes else (sub.maxes.internal_exam if sub.maxes and 'internal_exam' in sub.maxes else 50)) | int }}</span>
+                                                        </div>
+                                                        <div class="breakdown-item">
+                                                            <span class="label">Examination</span>
+                                                            <span class="val text-dark fw-semibold">Mid-Term Theory Exam</span>
+                                                        </div>
+                                                        <div class="breakdown-item">
+                                                            <span class="label">Maximum Marks</span>
+                                                            <span class="val">{{ (bd.maxes.internal_exam if bd and bd.maxes and 'internal_exam' in bd.maxes else (sub.maxes.internal_exam if sub.maxes and 'internal_exam' in sub.maxes else 50)) | int }}</span>
+                                                        </div>
+                                                        <div class="breakdown-item">
+                                                            <span class="label">Marks Scored</span>
+                                                            <span class="val text-primary fw-bold">{{ bd.internal_exam if bd.internal_exam is not none else '-' }}</span>
+                                                        </div>
+                                                        <div class="breakdown-item pt-2 fw-bold">
+                                                            <span class="text-primary">Internal Exam Total</span>
+                                                            <span class="val text-primary fs-6">{{ bd.internal_exam if bd.internal_exam is not none else '--' }}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- CCE & Attendance Components -->
+                                                <div class="col-md-4">
+                                                    <div class="breakdown-group-card">
+                                                        <div class="breakdown-title">
+                                                            <span><i class="bi bi-check2-all me-1 text-success"></i> CCE & Attendance</span>
+                                                            <span class="badge bg-success-subtle text-success">Total / 20</span>
+                                                        </div>
+                                                        <div class="breakdown-item">
+                                                            <span class="label">Active Learning (/5)</span>
+                                                            <span class="val">{{ bd.active_learning if bd.active_learning is not none else '-' }}</span>
+                                                        </div>
+                                                        <div class="breakdown-item">
+                                                            <span class="label">Class Assignment (/5)</span>
+                                                            <span class="val">{{ bd.class_assignment if bd.class_assignment is not none else '-' }}</span>
+                                                        </div>
+                                                        <div class="breakdown-item">
+                                                            <span class="label">Home Assignment (/5)</span>
+                                                            <span class="val">{{ bd.home_assignment if bd.home_assignment is not none else '-' }}</span>
+                                                        </div>
+                                                        <div class="breakdown-item">
+                                                            <span class="label">Attendance (/5)</span>
+                                                            <span class="val text-success fw-bold">{{ bd.attendance if bd.attendance is not none else '-' }}</span>
+                                                        </div>
+                                                        <div class="breakdown-item pt-2 fw-bold">
+                                                            <span class="text-success">Total Internal Obtained</span>
+                                                            <span class="val text-success">{{ item.marks_obtained }} / 50</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        {% else %}
+                                            <!-- Practical Evaluation Breakdown -->
+                                            <div class="row g-3">
+                                                <div class="col-md-4">
+                                                    <div class="breakdown-group-card text-center py-3">
+                                                        <div class="text-muted fs-7 mb-1">Viva / Interview</div>
+                                                        <div class="fs-4 fw-bold font-monospace text-primary">{{ (bd.internal_exam if bd.internal_exam is not none else bd.viva) if (bd.internal_exam is not none or bd.viva is not none) else '-' }} <small class="fs-7 text-muted">/ 10</small></div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="breakdown-group-card text-center py-3">
+                                                        <div class="text-muted fs-7 mb-1">Coding / Practical</div>
+                                                        <div class="fs-4 fw-bold font-monospace text-info">{{ bd.practical_eval if bd.practical_eval is not none else '-' }} <small class="fs-7 text-muted">/ 10</small></div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="breakdown-group-card text-center py-3">
+                                                        <div class="text-muted fs-7 mb-1">Journal / Lab Records</div>
+                                                        <div class="fs-4 fw-bold font-monospace text-success">{{ bd.journal if bd.journal is not none else '-' }} <small class="fs-7 text-muted">/ 5</small></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                    {% else %}
+                                        <!-- Pending Evaluation State -->
+                                        <div class="p-4 text-center rounded bg-light border">
+                                            <i class="bi bi-clock-history fs-2 text-warning opacity-75 d-block mb-2"></i>
+                                            <h6 class="fw-bold text-dark mb-1">Evaluation in Progress</h6>
+                                            <p class="text-muted fs-7 mb-0">
+                                                The internal evaluation and assessments for <strong>{{ sub.subject_name }}</strong> are currently being finalized by your course faculty. Marks will appear here once officially saved.
+                                            </p>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <!-- Empty State when No Subjects in Semester -->
+                    <div class="card shadow-sm border-0 text-center p-5">
+                        <div class="card-body">
+                            <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mb-3" style="width: 70px; height: 70px;">
+                                <i class="bi bi-journal-x fs-2 text-secondary opacity-50"></i>
+                            </div>
+                            <h5 class="fw-bold text-dark mb-1">No Subjects Found in Semester {{ selected_sem }}</h5>
+                            <p class="text-muted fs-7 mb-3">
+                                No subject records are currently configured for Semester {{ selected_sem }} in Academic Year {{ selected_year }}.
+                            </p>
+                            <a href="{{ url_for('student_results', academic_year=selected_year, semester=student.semester or 5) }}" class="btn btn-primary btn-sm px-4">
+                                <i class="bi bi-arrow-left me-1"></i> Return to Current Semester (Sem {{ student.semester or 5 }})
+                            </a>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Official Marksheet Interactive Modal (Matching Exact College Design) -->
+<div class="modal fade" id="officialResultModal" tabindex="-1" aria-labelledby="officialResultModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" style="max-width: 720px;">
+        <div class="modal-content border-0 shadow-2xl" style="border-radius: 14px; overflow: hidden; background: #f8fafc;">
+            <!-- Modal Body with Card Design -->
+            <div class="modal-body p-3 p-md-4">
+                <div class="bg-white rounded-3 p-4 shadow-sm border" style="border-color: #bfdbfe !important; position: relative;">
+                    <!-- Close Button -->
+                    <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal" aria-label="Close"></button>
+
+                    <!-- Header Section -->
+                    <div class="d-flex align-items-center justify-content-center gap-3 mb-4 pe-4">
+                        <div class="rounded-circle border border-primary-subtle p-1 bg-white shadow-xs d-flex align-items-center justify-content-center flex-shrink-0" style="width: 58px; height: 58px;">
+                            {% if college and college.logo %}
+                            <img src="{{ url_for('admin.serve_uploads', filename='college/' + college.logo) }}" alt="Logo" class="rounded-circle" style="width: 100%; height: 100%; object-fit: contain;">
+                            {% else %}
+                            <svg viewBox="0 0 100 100" style="width: 100%; height: 100%; border-radius: 50%;">
+                                <circle cx="50" cy="50" r="46" fill="#7f1d1d" stroke="#f59e0b" stroke-width="2"/>
+                                <circle cx="50" cy="50" r="40" fill="#991b1b" />
+                                <path d="M50 22 L55 35 L69 35 L58 44 L62 57 L50 49 L38 57 L42 44 L31 35 L45 35 Z" fill="#fbbf24"/>
+                                <path d="M26 62 Q50 56 74 62 L74 74 Q50 68 26 74 Z" fill="#f8fafc" opacity="0.9"/>
+                                <path d="M50 60 L50 71" stroke="#7f1d1d" stroke-width="2"/>
+                                <text x="50" y="86" font-size="9" font-weight="bold" fill="#fef08a" text-anchor="middle" font-family="sans-serif">ESTD</text>
+                            </svg>
+                            {% endif %}
+                        </div>
+                        <div class="text-center">
+                            <h1 class="h5 fw-bolder text-uppercase mb-1" style="color: #0f3460; letter-spacing: 0.6px;">
+                                {{ college.college_name if college else 'BCA COLLEGE PALANPUR' }}
+                            </h1>
+                            <h2 class="fs-7 fw-bold text-uppercase mb-0" style="color: #1e3a8a; letter-spacing: 0.4px;">
+                                INTERNAL ASSESSMENT RESULT
+                            </h2>
+                        </div>
+                    </div>
+
+                    <!-- Student Details Grid -->
+                    <div class="p-3 mb-4 rounded-3 border" style="background-color: #f8fafc; border-color: #dbeafe !important;">
+                        <div class="row g-2 fs-7">
+                            <div class="col-sm-7 d-flex">
+                                <span class="fw-semibold text-secondary" style="width: 125px; flex-shrink: 0;">Student Name</span>
+                                <span class="fw-bold text-dark">: {{ student.full_name }}</span>
+                            </div>
+                            <div class="col-sm-5 d-flex">
+                                <span class="fw-semibold text-secondary" style="width: 110px; flex-shrink: 0;">Semester</span>
+                                <span class="fw-bold text-dark">: {{ selected_sem }}</span>
+                            </div>
+
+                            <div class="col-sm-7 d-flex">
+                                <span class="fw-semibold text-secondary" style="width: 125px; flex-shrink: 0;">Enrollment No</span>
+                                <span class="fw-bold text-dark">: {{ student.enrollment_no or '-' }}</span>
+                            </div>
+                            <div class="col-sm-5 d-flex">
+                                <span class="fw-semibold text-secondary" style="width: 110px; flex-shrink: 0;">Division</span>
+                                <span class="fw-bold text-dark">: {{ student.division or 'A' }}</span>
+                            </div>
+
+                            <div class="col-sm-7 d-flex">
+                                <span class="fw-semibold text-secondary" style="width: 125px; flex-shrink: 0;">Roll No</span>
+                                <span class="fw-bold text-dark">: {{ student.roll_number or '-' }}</span>
+                            </div>
+                            <div class="col-sm-5 d-flex">
+                                <span class="fw-semibold text-secondary" style="width: 110px; flex-shrink: 0;">Academic Year</span>
+                                <span class="fw-bold text-dark">: {{ selected_year }}</span>
+                            </div>
+
+                            <div class="col-sm-7 d-flex">
+                                <span class="fw-semibold text-secondary" style="width: 125px; flex-shrink: 0;">Course</span>
+                                <span class="fw-bold text-dark">: {{ student.course or 'BCA' }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Subject-wise Internal Result Table -->
+                    <div class="fw-bold mb-2 fs-7" style="color: #0f2b5c;">Subject-wise Internal Result</div>
+                    <div class="table-responsive mb-4 rounded-2 border">
+                        <table class="table table-bordered mb-0 align-middle fs-7 bg-white">
+                            <thead style="background-color: #f8fafc;">
+                                <tr>
+                                    <th class="text-center text-secondary fw-bold" style="width: 48px;">Sr.</th>
+                                    <th class="text-secondary fw-bold" style="width: 120px;">Subject Code</th>
+                                    <th class="text-secondary fw-bold">Subject Name</th>
+                                    <th class="text-center text-secondary fw-bold" style="width: 115px;">Internal Marks</th>
+                                    <th class="text-center text-secondary fw-bold" style="width: 95px;">Max Marks</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for r in results_data %}
+                                <tr>
+                                    <td class="text-center text-muted">{{ loop.index }}</td>
+                                    <td class="font-monospace fw-semibold">{{ r.subject.subject_code }}</td>
+                                    <td class="fw-semibold text-dark">{{ r.subject.subject_name }}</td>
+                                    <td class="text-center fw-bold {% if r.marks_obtained is not none and r.marks_obtained < (r.max_marks * 0.4) %}text-danger{% else %}text-dark{% endif %}">
+                                        {{ r.marks_obtained if r.marks_obtained is not none else '-' }}
+                                    </td>
+                                    <td class="text-center text-muted">{{ r.max_marks }}</td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-3 text-muted">No subjects found for Semester {{ selected_sem }}.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Result Summary Section -->
+                    <div class="fw-bold mb-2 fs-7" style="color: #0f2b5c;">Result Summary</div>
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 p-3 rounded-3 border bg-light">
+                        <div class="d-flex flex-column gap-1 fs-7">
+                            <div class="d-flex align-items-baseline">
+                                <span class="fw-semibold text-secondary" style="width: 135px;">Total Subjects</span>
+                                <span class="fw-bold text-dark">: {{ total_subjects }}</span>
+                            </div>
+                            <div class="d-flex align-items-baseline">
+                                <span class="fw-semibold text-secondary" style="width: 135px;">Total Internal Marks</span>
+                                <span class="fw-bold text-dark">: {{ total_obtained }}</span>
+                            </div>
+                            <div class="d-flex align-items-baseline">
+                                <span class="fw-semibold text-secondary" style="width: 135px;">Total Max Marks</span>
+                                <span class="fw-bold text-dark">: {{ total_max }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Percentage Card -->
+                        <div class="px-4 py-2 text-center rounded-3 shadow-xs" style="background-color: #f0f9ff; border: 1.5px solid #bae6fd; min-width: 140px;">
+                            <div class="fw-bold fs-8 text-uppercase" style="color: #0284c7;">Percentage</div>
+                            <div class="h4 fw-bolder mb-0" style="color: #0284c7;">{{ overall_percentage }}%</div>
+                        </div>
+
+                        <!-- View Internal Calculation Action Link -->
+                        <button type="button" class="btn btn-sm btn-outline-primary fw-semibold px-3 py-2 d-inline-flex align-items-center gap-2" onclick="openInternalCalcModal()">
+                            <i class="bi bi-calculator"></i> View Internal Calculation
+                        </button>
+                    </div>
+
+                    <!-- Official Verification Footer (Seal & Signature) -->
+                    <div class="row align-items-end mt-4 pt-3 border-top g-3 text-center">
+                        <!-- College Stamp / Seal -->
+                        <div class="col-4">
+                            <div class="d-flex flex-column align-items-center">
+                                {% if college and college.college_stamp %}
+                                <img src="{{ url_for('admin.serve_uploads', filename='college/' + college.college_stamp) }}" alt="Stamp" style="max-height: 60px; max-width: 90px; object-fit: contain;">
+                                {% else %}
+                                <div style="height: 50px;"></div>
+                                {% endif %}
+                                <span class="fs-8 fw-bold text-secondary mt-1">College Official Seal</span>
+                            </div>
+                        </div>
+                        <div class="col-4 text-muted fs-8">
+                            <div>Verified & System Generated</div>
+                            <div class="font-monospace">Date: {{ now().strftime('%d/%m/%Y') if now is defined else '' }}</div>
+                        </div>
+                        <!-- Principal Signature -->
+                        <div class="col-4">
+                            <div class="d-flex flex-column align-items-center">
+                                {% if college and college.principal_signature %}
+                                <img src="{{ url_for('admin.serve_uploads', filename='college/' + college.principal_signature) }}" alt="Signature" style="max-height: 45px; max-width: 100px; object-fit: contain;">
+                                {% else %}
+                                <div style="height: 45px;"></div>
+                                {% endif %}
+                                <span class="fs-8 fw-bold text-dark mt-1">Principal Signature</span>
+                                <span class="fs-8 text-muted">({{ college.principal_name if college and college.principal_name else 'Dr. Principal' }})</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Action Footer -->
+            <div class="modal-footer bg-light border-0 px-4 py-3 justify-content-between">
+                <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">Close</button>
+                {% if is_result_declared %}
+                <a href="{{ url_for('student.student_download_result_pdf', semester=selected_sem, academic_year=selected_year) }}" class="btn btn-primary px-4 fw-bold shadow-sm">
+                    <i class="bi bi-file-earmark-arrow-down-fill me-1"></i> Download PDF Marksheet
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Internal Assessment Calculation Breakdown Modal -->
+<div class="modal fade" id="internalCalcModal" tabindex="-1" aria-labelledby="internalCalcModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 14px;">
+            <div class="modal-header border-bottom py-3 px-4">
+                <h5 class="modal-title fw-bold fs-6" style="color: #0f2b5c;">Internal Assessment Calculation</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 fs-7 text-secondary">
+                <div class="d-flex justify-content-between py-2 border-bottom border-dashed">
+                    <span>Total Marks Scored:</span>
+                    <strong class="text-dark">{{ total_obtained }}</strong>
+                </div>
+                <div class="d-flex justify-content-between py-2 border-bottom border-dashed">
+                    <span>Maximum Total Marks:</span>
+                    <strong class="text-dark">{{ total_max }}</strong>
+                </div>
+                <div class="d-flex justify-content-between py-2 border-bottom border-dashed">
+                    <span>Formula:</span>
+                    <span class="font-monospace">({{ total_obtained }} / {{ total_max }}) &times; 100</span>
+                </div>
+                <div class="d-flex justify-content-between pt-3 text-primary fw-bold fs-6">
+                    <span>Calculated Percentage:</span>
+                    <span class="text-primary">{{ overall_percentage }}%</span>
+                </div>
+            </div>
+            <div class="modal-footer border-0 p-3 pt-0">
+                <button type="button" class="btn btn-sm btn-primary w-100 fw-bold" data-bs-dismiss="modal">Understood</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JS Dependencies -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    let officialResultModalInstance = null;
+    let internalCalcModalInstance = null;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const offModalEl = document.getElementById('officialResultModal');
+        if (offModalEl) {
+            officialResultModalInstance = new bootstrap.Modal(offModalEl);
+        }
+        const calcModalEl = document.getElementById('internalCalcModal');
+        if (calcModalEl) {
+            internalCalcModalInstance = new bootstrap.Modal(calcModalEl);
+        }
+    });
+
+    function openOfficialResultModal() {
+        if (officialResultModalInstance) {
+            officialResultModalInstance.show();
+        }
+    }
+
+    function openInternalCalcModal() {
+        if (internalCalcModalInstance) {
+            internalCalcModalInstance.show();
+        }
+    }
+</script>
+<script src="{{ url_for('static', filename='js/common.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,340 @@
+/* ==========================================================================
+   CampusSync – Professional ERP Notification Modal CSS
+   ========================================================================== */
+
+body.erp-modal-open {
+    overflow: hidden !important;
+    touch-action: none;
+}
+
+/* Dark Overlay */
+.erp-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    opacity: 0;
+    transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.erp-modal-overlay.active {
+    opacity: 1;
+}
+
+/* Modal Card */
+.erp-modal-card {
+    background: #ffffff;
+    width: 100%;
+    max-width: 460px;
+    border-radius: 18px;
+    box-shadow: 0 20px 45px rgba(15, 23, 42, 0.22), 0 8px 20px rgba(15, 23, 42, 0.1);
+    padding: 1.5rem 1.6rem;
+    position: relative;
+    transform: scale(0.96);
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    color: #0f172a;
+}
+
+.erp-modal-overlay.active .erp-modal-card {
+    transform: scale(1);
+}
+
+.erp-modal-overlay.closing {
+    opacity: 0;
+}
+
+.erp-modal-overlay.closing .erp-modal-card {
+    transform: scale(0.98);
+}
+
+/* Modal Header */
+.erp-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.erp-modal-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+}
+
+.erp-modal-icon-wrapper {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.erp-modal-icon-wrapper.success {
+    background-color: #ecfdf5;
+    color: #10b981;
+}
+
+.erp-modal-icon-wrapper.danger {
+    background-color: #fef2f2;
+    color: #ef4444;
+}
+
+.erp-modal-icon-wrapper.warning {
+    background-color: #fffbeb;
+    color: #f59e0b;
+}
+
+.erp-modal-icon-wrapper.info {
+    background-color: #eff6ff;
+    color: #2563eb;
+}
+
+.erp-modal-title-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.erp-modal-title {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.25;
+}
+
+.erp-modal-subtitle {
+    font-size: 0.775rem;
+    color: #64748b;
+    font-weight: 500;
+    margin-top: 0.15rem;
+}
+
+.erp-modal-close-icon {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 1.1rem;
+    padding: 0.35rem;
+    cursor: pointer;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+}
+
+.erp-modal-close-icon:hover {
+    color: #0f172a;
+    background-color: #f1f5f9;
+}
+
+.erp-modal-divider {
+    margin: 1rem 0 1.1rem 0;
+    border: 0;
+    border-top: 1px solid #e2e8f0;
+}
+
+/* Modal Body */
+.erp-modal-body {
+    font-size: 0.925rem;
+    color: #334155;
+    line-height: 1.5;
+}
+
+.erp-modal-message {
+    margin-bottom: 0.85rem;
+    word-break: break-word;
+}
+
+/* Statistics Grid */
+.erp-modal-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.65rem;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+}
+
+.erp-stat-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.65rem 0.5rem;
+    border-radius: 12px;
+    text-align: center;
+    border: 1px solid transparent;
+}
+
+.erp-stat-card.success {
+    background-color: #f0fdf4;
+    border-color: #bbf7d0;
+}
+
+.erp-stat-card.warning {
+    background-color: #fffbeb;
+    border-color: #fde68a;
+}
+
+.erp-stat-card.danger {
+    background-color: #fef2f2;
+    border-color: #fecaca;
+}
+
+.erp-stat-label {
+    font-size: 0.725rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.erp-stat-card.success .erp-stat-label { color: #166534; }
+.erp-stat-card.warning .erp-stat-label { color: #92400e; }
+.erp-stat-card.danger .erp-stat-label { color: #991b1b; }
+
+.erp-stat-value {
+    font-size: 1.35rem;
+    font-weight: 800;
+    line-height: 1.2;
+    margin-top: 0.15rem;
+}
+
+.erp-stat-card.success .erp-stat-value { color: #15803d; }
+.erp-stat-card.warning .erp-stat-value { color: #b45309; }
+.erp-stat-card.danger .erp-stat-value { color: #dc2626; }
+
+/* Summary List */
+.erp-modal-error-summary {
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 0.75rem 0.9rem;
+    margin-bottom: 0.85rem;
+}
+
+.erp-summary-heading {
+    font-size: 0.825rem;
+    font-weight: 700;
+    color: #475569;
+    margin-bottom: 0.5rem;
+
+}
+
+.erp-summary-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.erp-summary-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.825rem;
+    color: #334155;
+}
+
+.erp-summary-badge {
+    background-color: #fee2e2;
+    color: #991b1b;
+    font-weight: 700;
+    font-size: 0.75rem;
+    padding: 0.15rem 0.55rem;
+    border-radius: 20px;
+}
+
+/* Details Accordion */
+.erp-modal-details-container {
+    margin-top: 0.75rem;
+}
+
+.erp-details-toggle-btn {
+    width: 100%;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    color: #334155;
+    font-size: 0.825rem;
+    font-weight: 600;
+    padding: 0.45rem 0.75rem;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.erp-details-toggle-btn:hover {
+    background: #e2e8f0;
+}
+
+.erp-details-content {
+    margin-top: 0.5rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    max-height: 180px;
+    overflow-y: auto;
+    padding: 0.5rem 0.75rem;
+}
+
+.erp-details-item {
+    font-size: 0.8rem;
+    color: #475569;
+    padding: 0.35rem 0;
+    border-bottom: 1px dashed #e2e8f0;
+}
+
+.erp-details-item:last-child {
+    border-bottom: none;
+}
+
+/* Modal Footer */
+.erp-modal-footer {
+    display: flex;
+    justify-content: center;
+    margin-top: 1.25rem;
+}
+
+.erp-modal-ok-btn {
+    background-color: #2563eb;
+    color: #ffffff;
+    border: none;
+    min-width: 120px;
+    padding: 0.6rem 1.4rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border-radius: 10px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+    transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.erp-modal-ok-btn:hover {
+    background-color: #1d4ed8;
+    transform: translateY(-1px);
+}
+
+.erp-modal-ok-btn:active {
+    transform: translateY(0);
+}
+
+@media (max-width: 576px) {
+    .erp-modal-card {
+        width: 95%;
+        padding: 1.25rem 1.1rem;
+        border-radius: 16px;
+    }
+}

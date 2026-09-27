@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+<head>
+  <!-- Basic Meta Tags -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="CampusSync - Alumni & Old Student Results OTP Verification">
+  <title>Verify OTP – {{ college.college_short_name if college and college.college_short_name else 'CampusSync' }} ERP</title>
+
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+
+  <!-- Bootstrap 5 CSS CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+  <!-- Custom Login CSS (Same System Design) -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+  <style>
+    /* 6-Box OTP PIN Input Styles matching uploaded design */
+    .otp-boxes-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      margin: 22px 0 15px 0;
+    }
+    .otp-box {
+      width: 48px;
+      height: 54px;
+      font-size: 24px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      text-align: center;
+      color: #1e293b;
+      background-color: #ffffff;
+      border: 2px solid #cbd5e1;
+      border-radius: 12px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      outline: none;
+      -webkit-appearance: none;
+      margin: 0;
+      padding: 0;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+    .otp-box:hover {
+      border-color: #94a3b8;
+    }
+    .otp-box:focus {
+      border-color: #2563eb;
+      background-color: #ffffff;
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
+      transform: translateY(-2px);
+    }
+    .otp-box.filled {
+      border-color: #2563eb;
+      background-color: #f8fafc;
+      color: #1e3a8a;
+    }
+    .otp-box:disabled {
+      background-color: #f1f5f9;
+      border-color: #e2e8f0;
+      color: #94a3b8;
+      cursor: not-allowed;
+      transform: none;
+    }
+    @media (max-width: 480px) {
+      .otp-boxes-container {
+        gap: 6px;
+      }
+      .otp-box {
+        width: 40px;
+        height: 48px;
+        font-size: 20px;
+        border-radius: 9px;
+      }
+    }
+    [data-bs-theme="dark"] .otp-box {
+      background-color: #1e293b;
+      border-color: #475569;
+      color: #f8fafc;
+    }
+    [data-bs-theme="dark"] .otp-box:focus {
+      border-color: #60a5fa;
+      background-color: #1e293b;
+      box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.2);
+    }
+    [data-bs-theme="dark"] .otp-box.filled {
+      background-color: #0f172a;
+      border-color: #60a5fa;
+      color: #93c5fd;
+    }
+    [data-bs-theme="dark"] .otp-box:disabled {
+      background-color: #0f172a;
+      border-color: #334155;
+      color: #64748b;
+    }
+    .otp-timer-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      background: #fef2f2;
+      border: 1px solid #fee2e2;
+      border-radius: 20px;
+      color: #dc2626;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    [data-bs-theme="dark"] .otp-timer-badge {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <div class="top-navbar">
+    <button type="button" class="theme-toggle-btn" id="themeToggleBtn" aria-label="Toggle light and dark theme">
+      <i class="bi bi-moon-stars-fill text-primary" id="themeIcon"></i>
+      <span id="themeText">Dark Mode</span>
+    </button>
+  </div>
+
+  <!-- Main Page Wrapper (Split-Screen Layout) -->
+  <div class="container-fluid p-0 login-wrapper">
+    <div class="row g-0 min-vh-100">
+
+      <!-- Left Side: Branding & Illustration -->
+      <div class="col-lg-6 left-panel d-none d-lg-flex">
+        
+        <div class="left-content">
+          
+          <!-- Project Logo & Brand Name -->
+          <div class="brand-logo-container">
+            <div class="brand-icon-box">
+              {% if college and college.logo and college.logo != 'default-logo.png' %}
+                <img src="{{ url_for('admin.serve_uploads', filename='college/' + college.logo) }}" alt="College Logo" style="width: 38px; height: 38px; object-fit: contain; border-radius: 50%;">
+              {% else %}
+                <i class="bi bi-mortarboard-fill"></i>
+              {% endif %}
+            </div>
+            <div>
+              <h2 class="brand-name">
+                {{ college.college_short_name if college and college.college_short_name else 'CampusSync' }}
+                <span class="brand-badge">ALUMNI</span>
+              </h2>
+            </div>
+          </div>
+
+          <!-- Main Headline -->
+          <h1 class="system-title">
+            Secure OTP Verification
+          </h1>
+
+          <!-- Short Description -->
+          <p class="system-description">
+            To ensure data confidentiality, an OTP has been dispatched to your verified email address on record.
+          </p>
+
+          <!-- Feature Cards Container -->
+          <div class="features-container">
+            
+            <div class="feature-card">
+              <div class="feature-icon-badge">
+                <i class="bi bi-shield-check"></i>
+              </div>
+              <p class="feature-text">3-Minute One-Time Passcode</p>
+            </div>
+
+            <div class="feature-card">
+              <div class="feature-icon-badge">
+                <i class="bi bi-shield-lock"></i>
+              </div>
+              <p class="feature-text">Hashed Cryptographic Security (PBKDF2)</p>
+            </div>
+
+            <div class="feature-card">
+              <div class="feature-icon-badge">
+                <i class="bi bi-person-check"></i>
+              </div>
+              <p class="feature-text">Authorized Academic Transcript Access</p>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- Bottom Section Illustration -->
+        <div class="illustration-wrapper">
+          <img src="{{ url_for('static', filename='images/defaults/admin-login.svg') }}" alt="Alumni Portal Illustration" class="illustration-img">
+        </div>
+
+      </div>
+
+      <!-- Right Side: OTP Verification Card Form -->
+      <div class="col-lg-6 right-panel">
+        
+        <div class="login-card-container">
+          
+          <div class="login-card">
+            
+            <!-- Header -->
+            <div class="login-header text-center text-lg-start">
+              <div class="login-title-badge">
+                <i class="bi bi-shield-lock-fill me-1"></i> Security Verification
+              </div>
+              <h2 class="login-title">Enter OTP Code</h2>
+              <p class="login-subtitle">
+                Verification code dispatched to: <br>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 mt-1 font-monospace fs-7">
+                  {{ masked_email }}
+                </span>
+              </p>
+            </div>
+
+            <!-- Flash Alerts -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                {% for category, message in messages %}
+                  <div class="alert alert-{{ category }} d-flex align-items-center mb-3" role="alert">
+                    <i class="bi {% if category == 'success' %}bi-check-circle-fill{% elif category == 'danger' %}bi-exclamation-triangle-fill{% else %}bi-info-circle-fill{% endif %} me-2 fs-5"></i>
+                    <div>{{ message }}</div>
+                  </div>
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
+
+            <!-- OTP Form -->
+            <form id="alumniOtpForm" action="{{ url_for('alumni.alumni_verify_otp') }}" method="POST">
+              
+              <!-- 6-Box Separate Digit Inputs -->
+              <div class="mb-3 text-center">
+                <label class="form-label d-block text-secondary small fw-bold text-uppercase mb-1">
+                  6-Digit Verification Code
+                </label>
+                
+                <div class="otp-boxes-container" id="otpContainer">
+                  <input type="text" class="otp-box" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="one-time-code" data-index="0" autofocus>
+                  <input type="text" class="otp-box" maxlength="1" pattern="[0-9]" inputmode="numeric" data-index="1">
+                  <input type="text" class="otp-box" maxlength="1" pattern="[0-9]" inputmode="numeric" data-index="2">
+                  <input type="text" class="otp-box" maxlength="1" pattern="[0-9]" inputmode="numeric" data-index="3">
+                  <input type="text" class="otp-box" maxlength="1" pattern="[0-9]" inputmode="numeric" data-index="4">
+                  <input type="text" class="otp-box" maxlength="1" pattern="[0-9]" inputmode="numeric" data-index="5">
+                </div>
+
+                <!-- Hidden Input For Full 6-Digit Value Submitted to Server -->
+                <input type="hidden" name="otp" id="finalOtp" required>
+
+                <!-- 3-Minute Live Countdown Timer -->
+                <div class="mt-2">
+                  <div class="otp-timer-badge" id="timerBadge">
+                    <i class="bi bi-clock-history"></i>
+                    <span>OTP expires in:</span>
+                    <span id="timerCountdown" class="font-monospace fw-bold">03:00</span>
+                  </div>
+                  <div id="expiryNotice" class="text-danger small fw-semibold mt-2 d-none">
+                    <i class="bi bi-exclamation-circle-fill me-1"></i> OTP has expired. Please click "Resend OTP" below.
+                  </div>
+                </div>
+              </div>
+
+              <!-- Submit Button (Disables immediately on click) -->
+              <button type="submit" class="btn btn-login-primary mt-2" id="btnVerifyOtp">
+                <span id="btnVerifyText">Verify & Access Results</span>
+                <i class="bi bi-arrow-right-short fs-4"></i>
+              </button>
+
+              <!-- Back to Search Button -->
+              <a href="{{ url_for('alumni.alumni_results') }}" class="btn btn-back-home mt-2">
+                <i class="bi bi-arrow-left"></i>
+                <span>Re-enter Enrollment Number</span>
+              </a>
+
+            </form>
+
+            <!-- Resend Section (Disables immediately on click) -->
+            <div class="d-flex align-items-center justify-content-between pt-3 mt-3 border-top">
+              <span class="text-muted small">Didn't receive code?</span>
+              <form method="POST" action="{{ url_for('alumni.alumni_resend_otp') }}" class="d-inline" id="alumniResendForm">
+                <button type="submit" class="btn btn-sm btn-link text-decoration-none fw-semibold p-0" id="btnResendOtp">
+                  <i class="bi bi-arrow-repeat me-1"></i> Resend OTP
+                </button>
+              </form>
+            </div>
+
+            <!-- Bottom Version Info -->
+            <div class="login-footer">
+              <span>{{ college.college_name if college else 'CampusSync ERP' }}</span>
+              <span class="version-tag">Alumni Verification</span>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Bootstrap 5 JavaScript Bundle CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Custom Login JavaScript for Theme Toggle -->
+  <script src="{{ url_for('static', filename='js/login.js') }}"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const boxes = document.querySelectorAll('.otp-box');
+      const finalOtpInput = document.getElementById('finalOtp');
+      const form = document.getElementById('alumniOtpForm');
+      const btnVerifyOtp = document.getElementById('btnVerifyOtp');
+      const timerBadge = document.getElementById('timerBadge');
+      const timerEl = document.getElementById('timerCountdown');
+      const expiryNotice = document.getElementById('expiryNotice');
+      const resendForm = document.getElementById('alumniResendForm');
+      const btnResend = document.getElementById('btnResendOtp');
+
+      // Autofocus first digit box
+      if (boxes.length > 0) {
+        boxes[0].focus();
+      }
+
+      function updateFinalOtp() {
+        let code = '';
+        boxes.forEach(box => {
+          const val = box.value.trim();
+          code += val;
+          if (val.length > 0) {
+            box.classList.add('filled');
+          } else {
+            box.classList.remove('filled');
+          }
+        });
+        finalOtpInput.value = code;
+        return code;
+      }
+
+      boxes.forEach((box, index) => {
+        // Input event: single digit and auto-advance
+        box.addEventListener('input', function(e) {
+          const val = this.value.replace(/[^0-9]/g, '');
+          this.value = val ? val[0] : '';
+          updateFinalOtp();
+
+          if (this.value && index < boxes.length - 1) {
+            boxes[index + 1].focus();
+            boxes[index + 1].select();
+          }
+        });
+
+        // Keydown event: Backspace and arrow navigation
+        box.addEventListener('keydown', function(e) {
+          if (e.key === 'Backspace') {
+            if (!this.value && index > 0) {
+              boxes[index - 1].focus();
+              boxes[index - 1].value = '';
+              updateFinalOtp();
+              e.preventDefault();
+            } else {
+              this.value = '';
+              updateFinalOtp();
+            }
+          } else if (e.key === 'ArrowLeft' && index > 0) {
+            boxes[index - 1].focus();
+            boxes[index - 1].select();
+          } else if (e.key === 'ArrowRight' && index < boxes.length - 1) {
+            boxes[index + 1].focus();
+            boxes[index + 1].select();
+          }
+        });
+
+        // Focus event: auto select existing text
+        box.addEventListener('focus', function() {
+          this.select();
+        });
+
+        // Paste event: distribute 6 digits into the 6 boxes
+        box.addEventListener('paste', function(e) {
+          e.preventDefault();
+          const pasteData = (e.clipboardData || window.clipboardData).getData('text');
+          const digits = pasteData.replace(/\D/g, '').slice(0, 6);
+          if (digits) {
+            for (let i = 0; i < boxes.length; i++) {
+              boxes[i].value = digits[i] || '';
+            }
+            updateFinalOtp();
+            const nextIndex = Math.min(digits.length, boxes.length - 1);
+            boxes[nextIndex].focus();
+          }
+        });
+      });
+
+      // Form submission handling & immediate button disable
+      form.addEventListener('submit', function(e) {
+        const code = updateFinalOtp();
+        if (code.length !== 6) {
+          e.preventDefault();
+          alert("Please enter the complete 6-digit OTP code.");
+          for (let i = 0; i < boxes.length; i++) {
+            if (!boxes[i].value) {
+              boxes[i].focus();
+              break;
+            }
+          }
+          return false;
+        }
+
+        // Disable button immediately with spinner to prevent multiple submissions
+        setTimeout(function() {
+          btnVerifyOtp.disabled = true;
+          btnVerifyOtp.innerHTML = `
+            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+            <span>Verifying Code...</span>
+          `;
+        }, 0);
+      });
+
+      // Resend OTP button: disable immediately on click with spinner
+      if (resendForm && btnResend) {
+        resendForm.addEventListener('submit', function() {
+          setTimeout(function() {
+            btnResend.disabled = true;
+            btnResend.innerHTML = `
+              <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+              <span>Sending...</span>
+            `;
+          }, 0);
+        });
+      }
+
+      // 3-Minute Countdown Timer (180 seconds)
+      const TIMER_KEY = 'alumni_otp_timer_end';
+      let targetTime = parseInt(sessionStorage.getItem(TIMER_KEY));
+      const now = Date.now();
+
+      // If no valid stored end time or expired, initialize 3 minutes from now
+      if (!targetTime || targetTime < now || (targetTime - now) > 3 * 60 * 1000) {
+        targetTime = now + 3 * 60 * 1000;
+        sessionStorage.setItem(TIMER_KEY, targetTime);
+      }
+
+      function updateTimer() {
+        const currentTime = Date.now();
+        const remainingSeconds = Math.max(0, Math.floor((targetTime - currentTime) / 1000));
+
+        const minutes = Math.floor(remainingSeconds / 60);
+        const seconds = remainingSeconds % 60;
+        timerEl.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+
+        if (remainingSeconds <= 0) {
+          clearInterval(timerInterval);
+          sessionStorage.removeItem(TIMER_KEY);
+          timerEl.textContent = 'Expired';
+          timerBadge.classList.replace('text-danger', 'text-secondary');
+          expiryNotice.classList.remove('d-none');
+
+          // Disable inputs and verify button on expiry
+          boxes.forEach(box => box.disabled = true);
+          btnVerifyOtp.disabled = true;
+        }
+      }
+
+      updateTimer();
+      const timerInterval = setInterval(updateTimer, 1000);
+    });
+  </script>
+
+</body>
+</html>

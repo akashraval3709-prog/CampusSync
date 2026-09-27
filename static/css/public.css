@@ -1,0 +1,374 @@
+/* ==========================================================================
+   CampusSync – Public Pages CSS Styling
+   Design: Modern, Premium, Glassmorphism, Micro-animations
+   ========================================================================== */
+
+/* Hero Banner for Public Pages */
+.pub-hero {
+    background: linear-gradient(135deg, #0b1329 0%, #0f172a 50%, #1e293b 100%);
+    color: #ffffff;
+    padding: 3.5rem 0 3.2rem;
+    position: relative;
+    overflow: hidden;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.pub-hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 600px;
+    height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(37, 99, 235, 0.15) 0%, rgba(37, 99, 235, 0) 70%);
+    pointer-events: none;
+}
+
+.pub-hero::after {
+    content: '';
+    position: absolute;
+    bottom: -40%;
+    left: -15%;
+    width: 500px;
+    height: 500px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(6, 182, 212, 0.12) 0%, rgba(6, 182, 212, 0) 70%);
+    pointer-events: none;
+}
+
+.pub-hero-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 0.95rem;
+    border-radius: 9999px;
+    background: rgba(37, 99, 235, 0.2);
+    border: 1px solid rgba(147, 197, 253, 0.35);
+    color: #93c5fd;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+}
+
+.pub-hero-title {
+    font-size: 2.35rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.2;
+    margin-bottom: 0.75rem;
+    color: #ffffff;
+}
+
+.pub-hero-subtitle {
+    color: #94a3b8;
+    font-size: 1.05rem;
+    max-width: 680px;
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+}
+
+.pub-breadcrumb {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.825rem;
+    color: #64748b;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 0.35rem 0.85rem;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.pub-breadcrumb a {
+    color: #93c5fd;
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+
+.pub-breadcrumb a:hover {
+    color: #ffffff;
+    text-decoration: underline;
+}
+
+/* Feature & Metric Stat Cards */
+.pub-stat-card {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 1.4rem;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.pub-stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 28px -6px rgba(15, 23, 42, 0.1);
+    border-color: #cbd5e1;
+}
+
+.pub-stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    margin-bottom: 1rem;
+}
+
+.pub-stat-val {
+    font-size: 1.85rem;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1;
+    margin-bottom: 0.25rem;
+}
+
+.pub-stat-label {
+    font-size: 0.825rem;
+    color: #64748b;
+    font-weight: 500;
+}
+
+/* Glassmorphism & Modern Content Cards */
+.pub-card {
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow: hidden;
+}
+
+.pub-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px -6px rgba(15, 23, 42, 0.12);
+    border-color: #cbd5e1;
+}
+
+.pub-card-header {
+    padding: 1.4rem 1.5rem 0.5rem;
+}
+
+.pub-card-body {
+    padding: 1.2rem 1.5rem 1.5rem;
+}
+
+/* Pillar & Value Cards */
+.pub-value-card {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 1.5rem;
+    border: 1px solid #e2e8f0;
+    height: 100%;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.pub-value-card:hover {
+    transform: translateY(-4px);
+    border-color: #3b82f6;
+    box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.1);
+}
+
+/* Timeline Components */
+.pub-timeline {
+    position: relative;
+    padding-left: 2rem;
+}
+
+.pub-timeline::before {
+    content: '';
+    position: absolute;
+    top: 10px;
+    bottom: 10px;
+    left: 7px;
+    width: 2px;
+    background: #e2e8f0;
+}
+
+.pub-timeline-item {
+    position: relative;
+    padding-bottom: 2rem;
+}
+
+.pub-timeline-item:last-child {
+    padding-bottom: 0;
+}
+
+.pub-timeline-dot {
+    position: absolute;
+    left: -2rem;
+    top: 3px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #2563eb;
+    border: 3px solid #ffffff;
+    box-shadow: 0 0 0 2px #3b82f6;
+}
+
+/* Course Filters & Cards */
+.pub-filter-pill {
+    padding: 0.45rem 1.15rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border-radius: 9999px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.pub-filter-pill:hover,
+.pub-filter-pill.active {
+    background: #2563eb;
+    color: #ffffff;
+    border-color: #2563eb;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+}
+
+.pub-course-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    overflow: hidden;
+    transition: all 0.25s ease;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.pub-course-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 16px 36px -6px rgba(15, 23, 42, 0.12);
+    border-color: #bfdbfe;
+}
+
+.pub-course-badge-top {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.25rem 0.65rem;
+    border-radius: 6px;
+}
+
+.pub-course-meta {
+    background: #f8fafc;
+    border-top: 1px solid #f1f5f9;
+    border-bottom: 1px solid #f1f5f9;
+    padding: 0.75rem 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: #64748b;
+}
+
+/* Facilities Cards */
+.pub-facility-card {
+    border-radius: 16px;
+    overflow: hidden;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    transition: all 0.25s ease;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.pub-facility-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 16px 35px -6px rgba(15, 23, 42, 0.12);
+    border-color: #cbd5e1;
+}
+
+.pub-facility-img-wrap {
+    height: 200px;
+    position: relative;
+    overflow: hidden;
+    background: #0f172a;
+}
+
+.pub-facility-img-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.4s ease;
+}
+
+.pub-facility-card:hover .pub-facility-img-wrap img {
+    transform: scale(1.05);
+}
+
+/* Contact Cards & Form */
+.pub-contact-card {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 1.4rem;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+    height: 100%;
+    transition: all 0.2s ease;
+}
+
+.pub-contact-card:hover {
+    border-color: #3b82f6;
+    transform: translateY(-3px);
+    box-shadow: 0 10px 24px -4px rgba(37, 99, 235, 0.1);
+}
+
+.pub-form-control {
+    border-radius: 10px;
+    border: 1.5px solid #e2e8f0;
+    padding: 0.7rem 1rem;
+    font-size: 0.9rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.pub-form-control:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+    outline: none;
+}
+
+/* Accordion FAQs */
+.pub-accordion .accordion-item {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px !important;
+    margin-bottom: 0.75rem;
+    overflow: hidden;
+}
+
+.pub-accordion .accordion-button {
+    font-weight: 600;
+    color: #0f172a;
+    background: #ffffff;
+    padding: 1.1rem 1.3rem;
+    border-radius: 12px;
+}
+
+.pub-accordion .accordion-button:not(.collapsed) {
+    background: #eff6ff;
+    color: #1d4ed8;
+    box-shadow: none;
+}
+
+.pub-accordion .accordion-button:focus {
+    box-shadow: none;
+    border-color: #bfdbfe;
+}
+
+.pub-accordion .accordion-body {
+    color: #475569;
+    font-size: 0.92rem;
+    line-height: 1.6;
+    background: #ffffff;
+    padding: 1rem 1.3rem 1.3rem;
+}

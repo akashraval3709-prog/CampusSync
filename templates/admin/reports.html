@@ -1,0 +1,2533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports & Institutional Analytics – {{ college.college_short_name if college and college.college_short_name else 'CampusSync' }}</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chart.js 4.4.1 UMD -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <!-- Stylesheets -->
+    <link href="{{ url_for('static', filename='css/common.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/admin.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/notification_modal.css') }}" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary-blue: #2563eb;
+            --primary-dark: #1e40af;
+            --emerald-green: #10b981;
+            --amber-warn: #f59e0b;
+            --rose-danger: #ef4444;
+            --slate-bg: #f8fafc;
+            --border-color: #e2e8f0;
+            --text-dark: #0f172a;
+            --text-muted: #64748b;
+        }
+
+        body.admin-theme {
+            background-color: #f1f5f9;
+            font-family: 'Inter', sans-serif;
+            color: var(--text-dark);
+        }
+
+        /* --- Global Filter Bar --- */
+        .reports-filter-bar {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 1rem 1.25rem;
+            box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+            margin-bottom: 1.5rem;
+        }
+
+        .filter-label {
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--text-muted);
+            margin-bottom: 0.35rem;
+        }
+
+        /* --- Tabs Navigation --- */
+        .report-nav-tabs {
+            border-bottom: none;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        .report-nav-tabs .nav-link {
+            border: 1px solid var(--border-color);
+            background: #ffffff;
+            color: #475569;
+            font-weight: 600;
+            font-size: 0.88rem;
+            padding: 0.65rem 1.15rem;
+            border-radius: 10px !important;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .report-nav-tabs .nav-link:hover {
+            border-color: #cbd5e1;
+            background: #f8fafc;
+            color: var(--primary-blue);
+        }
+
+        .report-nav-tabs .nav-link.active {
+            background: var(--primary-blue) !important;
+            color: #ffffff !important;
+            border-color: var(--primary-blue) !important;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+        }
+
+        /* --- KPI Stat Cards --- */
+        .kpi-stat-card {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 1.2rem 1.25rem;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .kpi-stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+        }
+
+        .kpi-stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--border-color);
+        }
+
+        .kpi-stat-card.card-blue::before { background: var(--primary-blue); }
+        .kpi-stat-card.card-green::before { background: var(--emerald-green); }
+        .kpi-stat-card.card-amber::before { background: var(--amber-warn); }
+        .kpi-stat-card.card-rose::before { background: var(--rose-danger); }
+
+        .kpi-icon-wrap {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        .icon-blue { background: #eff6ff; color: var(--primary-blue); }
+        .icon-green { background: #ecfdf5; color: var(--emerald-green); }
+        .icon-amber { background: #fffbeb; color: var(--amber-warn); }
+        .icon-rose { background: #fef2f2; color: var(--rose-danger); }
+
+        .kpi-title {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            margin-bottom: 0.25rem;
+        }
+
+        .kpi-value {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: var(--text-dark);
+            line-height: 1.1;
+        }
+
+        .kpi-badge {
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 0.2rem 0.55rem;
+            border-radius: 6px;
+        }
+
+        /* --- Section Container Cards --- */
+        .report-section-card {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+
+        .report-section-header {
+            padding: 1rem 1.25rem;
+            background: #ffffff;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .report-section-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* --- Tables --- */
+        .report-table {
+            margin-bottom: 0;
+            font-size: 0.875rem;
+        }
+
+        .report-table thead th {
+            background: #f8fafc;
+            color: #475569;
+            font-weight: 700;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.85rem 1rem;
+            white-space: nowrap;
+        }
+
+        .report-table tbody td {
+            padding: 0.85rem 1rem;
+            vertical-align: middle;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .report-table tbody tr:hover {
+            background-color: #f8fafc;
+        }
+
+        /* --- Podium / Top Rankers --- */
+        .podium-container {
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            gap: 1.25rem;
+            padding: 2rem 1rem 1rem;
+            flex-wrap: wrap;
+        }
+
+        .podium-card {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 1.25rem;
+            text-align: center;
+            width: 220px;
+            box-shadow: 0 4px 15px rgba(15, 23, 42, 0.04);
+            position: relative;
+            transition: transform 0.2s ease;
+        }
+
+        .podium-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .podium-card.rank-1 {
+            border: 2px solid #f59e0b;
+            background: linear-gradient(180deg, #fffbeb 0%, #ffffff 40%);
+            order: 2;
+        }
+
+        .podium-card.rank-2 {
+            border: 2px solid #94a3b8;
+            background: linear-gradient(180deg, #f8fafc 0%, #ffffff 40%);
+            order: 1;
+        }
+
+        .podium-card.rank-3 {
+            border: 2px solid #d97706;
+            background: linear-gradient(180deg, #fff7ed 0%, #ffffff 40%);
+            order: 3;
+        }
+
+        .podium-crown {
+            font-size: 2rem;
+            margin-bottom: 0.25rem;
+            display: inline-block;
+        }
+
+        .podium-avatar {
+            width: 58px;
+            height: 58px;
+            border-radius: 50%;
+            background: var(--primary-blue);
+            color: #ffffff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+            border: 3px solid #ffffff;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Loading skeleton & spinner */
+        .loading-overlay {
+            display: none;
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(2px);
+            z-index: 20;
+            align-items: center;
+            justify-content: center;
+            border-radius: 14px;
+        }
+
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        /* Print friendly styles */
+        @media print {
+            body { background: #ffffff !important; color: #000000 !important; }
+            #sidebar, #topbar, .reports-filter-bar, .report-nav-tabs, .btn, .no-print {
+                display: none !important;
+            }
+            #content { margin-left: 0 !important; padding: 0 !important; width: 100% !important; }
+            .content-body { padding: 0 !important; }
+            .report-section-card { border: 1px solid #ccc !important; box-shadow: none !important; break-inside: avoid; }
+            .tab-pane { display: block !important; opacity: 1 !important; visibility: visible !important; }
+        }
+    </style>
+</head>
+<body class="admin-theme">
+<div class="wrapper">
+    <!-- Sidebar Component -->
+    {% include 'components/sidebar.html' %}
+
+    <div id="content">
+        <!-- Topbar Component -->
+        {% include 'components/topbar.html' %}
+
+        <div class="content-body" style="padding: 1.5rem 1.75rem;">
+            <div id="flashContainer" class="flash-container"></div>
+
+            <!-- Page Header -->
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                <div>
+                    <h2 class="fw-bold mb-1" style="font-size: 1.6rem; color: #0f172a;">
+                        <i class="bi bi-bar-chart-fill text-primary me-2"></i>Institutional Reports & Analytics
+                    </h2>
+                    <p class="text-muted mb-0" style="font-size: 0.9rem;">
+                        Real-time academic performance, attendance compliance, faculty workload & security audit logs.
+                    </p>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span id="liveBadge" class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 fs-7">
+                        <i class="bi bi-circle-fill me-1" style="font-size: 0.55rem;"></i> Live System Data
+                    </span>
+                    <button class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1 shadow-sm" onclick="window.print()">
+                        <i class="bi bi-printer"></i> Print
+                    </button>
+                </div>
+            </div>
+
+            <!-- Global Filter Bar -->
+            <div class="reports-filter-bar">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-3 col-sm-6">
+                        <div class="filter-label"><i class="bi bi-calendar3 me-1"></i> Academic Year</div>
+                        <select id="filterAcademicYear" class="form-select form-select-sm fw-semibold shadow-none">
+                            {% for ay in academic_years %}
+                                <option value="{{ ay }}" {% if ay == current_ay %}selected{% endif %}>{{ ay }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2 col-sm-6">
+                        <div class="filter-label"><i class="bi bi-mortarboard me-1"></i> Course</div>
+                        <select id="filterCourse" class="form-select form-select-sm fw-semibold shadow-none" disabled>
+                            <option value="BCA" selected>BCA</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 col-sm-6">
+                        <div class="filter-label"><i class="bi bi-layers me-1"></i> Semester Scope <span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1">{{ semester_cycle }} Cycle</span></div>
+                        <select id="filterSemester" class="form-select form-select-sm fw-semibold shadow-none">
+                            <option value="" selected>All Active Semesters (Sem {{ active_semesters|join(', ') }})</option>
+                            {% for s in active_semesters %}
+                                <option value="{{ s }}">Semester {{ s }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4 col-sm-6 d-flex gap-2 justify-content-md-end flex-wrap">
+                        <button id="btnExportMasterPdf" class="btn btn-dark btn-sm d-flex align-items-center gap-1 shadow-sm px-3" onclick="exportMasterPdf()" title="Download Official Institutional Executive Master PDF">
+                            <i class="bi bi-file-earmark-ruled-fill text-warning"></i> Master PDF
+                        </button>
+                        <button id="btnExportExcel" class="btn btn-success btn-sm d-flex align-items-center gap-1 shadow-sm px-3" onclick="exportExcel()">
+                            <i class="bi bi-file-earmark-excel"></i> Export Excel
+                        </button>
+                        <button id="btnExportPdf" class="btn btn-danger btn-sm d-flex align-items-center gap-1 shadow-sm px-3" onclick="exportDefaultersPdf()">
+                            <i class="bi bi-file-earmark-pdf"></i> Defaulter PDF
+                        </button>
+                        <button id="btnRefresh" class="btn btn-primary btn-sm d-flex align-items-center gap-1 shadow-sm px-3" onclick="loadAllReportsData()">
+                            <i class="bi bi-arrow-clockwise"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category Navigation Tabs (5 Categories) -->
+            <ul class="nav nav-pills report-nav-tabs" id="reportTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="tab-overview-btn" data-bs-toggle="pill" data-bs-target="#tab-overview" type="button" role="tab">
+                        <i class="bi bi-pie-chart-fill"></i> 1. Overview
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab-academic-btn" data-bs-toggle="pill" data-bs-target="#tab-academic" type="button" role="tab">
+                        <i class="bi bi-trophy-fill text-warning"></i> 2. Academic & Topper List
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab-attendance-btn" data-bs-toggle="pill" data-bs-target="#tab-attendance" type="button" role="tab">
+                        <i class="bi bi-calendar-check-fill"></i> 3. Attendance & Defaulters
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab-faculty-btn" data-bs-toggle="pill" data-bs-target="#tab-faculty" type="button" role="tab">
+                        <i class="bi bi-person-workspace"></i> 4. Faculty Workload & Compliance
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab-audit-btn" data-bs-toggle="pill" data-bs-target="#tab-audit" type="button" role="tab">
+                        <i class="bi bi-shield-lock-fill"></i> 5. Audit & Security Logs
+                    </button>
+                </li>
+            </ul>
+
+            <!-- Tab Content Panes -->
+            <div class="tab-content" id="reportTabsContent">
+                
+                <!-- ========================================== -->
+                <!-- TAB 1: OVERVIEW                            -->
+                <!-- ========================================== -->
+                <div class="tab-pane fade show active" id="tab-overview" role="tabpanel">
+                    <!-- 4 Metric Cards -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-xl-3 col-sm-6">
+                            <div class="kpi-stat-card card-blue">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="kpi-title">Total Enrolled Students</div>
+                                        <div class="kpi-value" id="ovTotalStudents">-</div>
+                                        <div class="mt-2">
+                                            <span class="badge bg-primary-subtle text-primary kpi-badge">Active Cohort</span>
+                                        </div>
+                                    </div>
+                                    <div class="kpi-icon-wrap icon-blue">
+                                        <i class="bi bi-people-fill"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-sm-6">
+                            <div class="kpi-stat-card card-green">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="kpi-title">Overall Pass Rate</div>
+                                        <div class="kpi-value" id="ovPassRate">-%</div>
+                                        <div class="mt-2">
+                                            <span class="badge bg-success-subtle text-success kpi-badge" id="ovPassRatioBadge">0 / 0 Passed</span>
+                                        </div>
+                                    </div>
+                                    <div class="kpi-icon-wrap icon-green">
+                                        <i class="bi bi-check-circle-fill"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-sm-6">
+                            <div class="kpi-stat-card card-amber">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="kpi-title">Average Attendance</div>
+                                        <div class="kpi-value" id="ovAvgAttendance">-%</div>
+                                        <div class="mt-2">
+                                            <span class="badge bg-warning-subtle text-warning-emphasis kpi-badge">College Level</span>
+                                        </div>
+                                    </div>
+                                    <div class="kpi-icon-wrap icon-amber">
+                                        <i class="bi bi-calendar-event"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-sm-6">
+                            <div class="kpi-stat-card card-rose">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="kpi-title">Critical Defaulters</div>
+                                        <div class="kpi-value" id="ovDefaultersCount">-</div>
+                                        <div class="mt-2">
+                                            <span class="badge bg-danger-subtle text-danger kpi-badge">&lt; 75% Attendance</span>
+                                        </div>
+                                    </div>
+                                    <div class="kpi-icon-wrap icon-rose">
+                                        <i class="bi bi-exclamation-triangle-fill"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts Row: Semester Pass vs Fail + Attendance Health -->
+                    <div class="row g-4 mb-4">
+                        <div class="col-lg-7">
+                            <div class="report-section-card h-100">
+                                <div class="report-section-header">
+                                    <h4 class="report-section-title">
+                                        <i class="bi bi-bar-chart-line-fill text-primary"></i> Semester-wise Pass vs Fail
+                                    </h4>
+                                    <span class="badge bg-light text-muted border">Result Metrics</span>
+                                </div>
+                                <div class="p-3">
+                                    <div style="position: relative; height: 320px;">
+                                        <canvas id="chartSemesterPassFail"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-5">
+                            <div class="report-section-card h-100">
+                                <div class="report-section-header">
+                                    <h4 class="report-section-title">
+                                        <i class="bi bi-pie-chart-fill text-success"></i> Attendance Health
+                                    </h4>
+                                    <span class="badge bg-light text-muted border">Distribution</span>
+                                </div>
+                                <div class="p-3">
+                                    <div style="position: relative; height: 260px;">
+                                        <canvas id="chartAttendanceHealth"></canvas>
+                                    </div>
+                                    <!-- Dynamic Attendance Percentage Breakdown -->
+                                    <div class="row g-2 pt-3 border-top mt-2 text-center">
+                                        <div class="col-4">
+                                            <div class="p-2 rounded" style="background: #ecfdf5; border: 1px solid #a7f3d0;">
+                                                <div class="small fw-bold text-success mb-1" style="font-size: 0.74rem;">
+                                                    <i class="bi bi-circle-fill me-1" style="color: #10b981; font-size: 0.5rem;"></i> Safe (&gt;85%)
+                                                </div>
+                                                <div class="fw-bold fs-5 text-success" id="attHealthSafePct">0%</div>
+                                                <small class="text-muted" id="attHealthSafeCount" style="font-size: 0.72rem;">0 Students</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-4">
+                                            <div class="p-2 rounded" style="background: #eff6ff; border: 1px solid #bfdbfe;">
+                                                <div class="small fw-bold text-primary mb-1" style="font-size: 0.74rem;">
+                                                    <i class="bi bi-circle-fill me-1" style="color: #2563eb; font-size: 0.5rem;"></i> Warning
+                                                </div>
+                                                <div class="fw-bold fs-5 text-primary" id="attHealthWarnPct">0%</div>
+                                                <small class="text-muted" id="attHealthWarnCount" style="font-size: 0.72rem;">0 Students</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-4">
+                                            <div class="p-2 rounded" style="background: #fef2f2; border: 1px solid #fecaca;">
+                                                <div class="small fw-bold text-danger mb-1" style="font-size: 0.74rem;">
+                                                    <i class="bi bi-circle-fill me-1" style="color: #ef4444; font-size: 0.5rem;"></i> Defaulter
+                                                </div>
+                                                <div class="fw-bold fs-5 text-danger" id="attHealthDefPct">0%</div>
+                                                <small class="text-muted" id="attHealthDefCount" style="font-size: 0.72rem;">0 Students</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Option 2 & 3: Division-wise Comparison & Student Demographics / Gender Ratio -->
+                    <div class="row g-4 mb-4">
+                        <!-- Division-wise Comparison (Option 2) -->
+                        <div class="col-lg-7">
+                            <div class="report-section-card h-100">
+                                <div class="report-section-header">
+                                    <div>
+                                        <h4 class="report-section-title">
+                                            <i class="bi bi-diagram-3-fill text-primary"></i> Division-wise Academic & Attendance Comparison
+                                        </h4>
+                                        <small class="text-muted">Comparative Attendance % vs Examination Pass Rate % across Divisions</small>
+                                    </div>
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">Div A vs B vs C</span>
+                                </div>
+                                <div class="p-3">
+                                    <div style="position: relative; height: 280px;">
+                                        <canvas id="chartDivisionComparison"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Student Demographics / Gender Ratio (Option 3) -->
+                        <div class="col-lg-5">
+                            <div class="report-section-card h-100">
+                                <div class="report-section-header">
+                                    <div>
+                                        <h4 class="report-section-title">
+                                            <i class="bi bi-gender-ambiguous text-info"></i> Student Demographics & Diversity
+                                        </h4>
+                                        <small class="text-muted">Male vs Female Ratio (NAAC / AISHE Metric 2.1)</small>
+                                    </div>
+                                    <span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1">Diversity</span>
+                                </div>
+                                <div class="p-3">
+                                    <div style="position: relative; height: 200px;">
+                                        <canvas id="chartGenderDemographics"></canvas>
+                                    </div>
+                                    <!-- Dynamic Demographic Metric Cards -->
+                                    <div class="row g-2 pt-3 border-top mt-2 text-center" id="genderCardsContainer">
+                                        <div class="col-6">
+                                            <div class="p-2 rounded" style="background: #eff6ff; border: 1px solid #bfdbfe;">
+                                                <div class="small fw-bold text-primary mb-1" style="font-size: 0.74rem;">
+                                                    <i class="bi bi-gender-male me-1" style="color: #3b82f6;"></i> Male Students
+                                                </div>
+                                                <div class="fw-bold fs-5 text-primary" id="demoMalePct">0%</div>
+                                                <small class="text-muted" id="demoMaleCount" style="font-size: 0.72rem;">0 Students</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="p-2 rounded" style="background: #fdf2f8; border: 1px solid #fbcfe8;">
+                                                <div class="small fw-bold mb-1" style="font-size: 0.74rem; color: #db2777;">
+                                                    <i class="bi bi-gender-female me-1" style="color: #ec4899;"></i> Female Students
+                                                </div>
+                                                <div class="fw-bold fs-5" style="color: #db2777;" id="demoFemalePct">0%</div>
+                                                <small class="text-muted" id="demoFemaleCount" style="font-size: 0.72rem;">0 Students</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Toppers Callout Banner on Overview Tab -->
+                    <div class="card border-0 mb-4 shadow-sm" style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 1.5px solid #fde68a !important; border-radius: 14px;">
+                        <div class="card-body p-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="rounded-circle d-flex align-items-center justify-content-center shadow-xs" style="width: 48px; height: 48px; background: #f59e0b; color: #ffffff; font-size: 1.4rem;">
+                                    <i class="bi bi-trophy-fill"></i>
+                                </div>
+                                <div>
+                                    <h5 class="fw-bold text-dark mb-0">🏆 College Toppers & Merit Ranking List</h5>
+                                    <p class="text-secondary small mb-0">
+                                        View dynamic Top 3, Top 5, Top 10 or Top 20 rankers with podium medals, percentages and grades.
+                                    </p>
+                                </div>
+                            </div>
+                            <button class="btn btn-warning btn-sm fw-bold px-3 py-2 shadow-sm d-flex align-items-center gap-1 text-dark" onclick="switchToTab('academic')">
+                                <i class="bi bi-eye-fill"></i> View Toppers List (Top 3 / 5 / 10 / 20) ➔
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Top Performers & Defaulter Watchlist Table -->
+                    <div class="report-section-card">
+                        <div class="report-section-header">
+                            <h4 class="report-section-title">
+                                <i class="bi bi-star-fill text-warning"></i> Key Student Watchlist (Top Performers & Defaulters)
+                            </h4>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-outline-primary active" id="btnWatchlistAll" onclick="filterWatchlist('all')">All</button>
+                                <button type="button" class="btn btn-outline-success" id="btnWatchlistSafe" onclick="filterWatchlist('safe')">Safe (&gt;85%)</button>
+                                <button type="button" class="btn btn-outline-danger" id="btnWatchlistDefaulter" onclick="filterWatchlist('defaulter')">Defaulters (&lt;75%)</button>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table report-table align-middle" id="tableOverviewWatchlist">
+                                <thead>
+                                    <tr>
+                                        <th>Student</th>
+                                        <th>Roll No</th>
+                                        <th>Semester</th>
+                                        <th>Attendance %</th>
+                                        <th>Internal Score</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="watchlistTableBody">
+                                    <tr>
+                                        <td colspan="6" class="text-center py-4 text-muted">
+                                            <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                                            Loading student watchlist data...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================== -->
+                <!-- TAB 2: ACADEMIC & RESULTS                  -->
+                <!-- ========================================== -->
+                <div class="tab-pane fade" id="tab-academic" role="tabpanel">
+                    <!-- Academic KPIs -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-xl-3 col-sm-6">
+                            <div class="kpi-stat-card card-blue">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="kpi-title">Passing Rate</div>
+                                        <div class="kpi-value" id="acadPassRate">-%</div>
+                                        <small class="text-muted" id="acadPassSubtext">0 / 0 Students Passed</small>
+                                    </div>
+                                    <div class="kpi-icon-wrap icon-blue"><i class="bi bi-award-fill"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-sm-6">
+                            <div class="kpi-stat-card card-green">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="kpi-title">Class Average Score</div>
+                                        <div class="kpi-value" id="acadAvgScore">-</div>
+                                        <small class="text-muted">Across all subjects</small>
+                                    </div>
+                                    <div class="kpi-icon-wrap icon-green"><i class="bi bi-calculator"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-sm-6">
+                            <div class="kpi-stat-card card-amber">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="kpi-title">Highest Score</div>
+                                        <div class="kpi-value" id="acadHighScore">-</div>
+                                        <small class="text-muted" id="acadHighStudent">Top Achiever</small>
+                                    </div>
+                                    <div class="kpi-icon-wrap icon-amber"><i class="bi bi-trophy-fill"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-sm-6">
+                            <div class="kpi-stat-card card-rose">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="kpi-title">At-Risk Students</div>
+                                        <div class="kpi-value" id="acadAtRiskCount">-</div>
+                                        <small class="text-muted">Score &lt; 40% (Failed)</small>
+                                    </div>
+                                    <div class="kpi-icon-wrap icon-rose"><i class="bi bi-slash-circle-fill"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts Row: Subject Difficulty & Grade Distribution -->
+                    <div class="row g-4 mb-4">
+                        <div class="col-lg-7">
+                            <div class="report-section-card h-100">
+                                <div class="report-section-header">
+                                    <h4 class="report-section-title">
+                                        <i class="bi bi-bar-chart-steps text-primary"></i> Subject-wise Performance & Difficulty
+                                    </h4>
+                                    <span class="badge bg-light text-muted border">Class Average Marks</span>
+                                </div>
+                                <div class="p-3">
+                                    <div style="position: relative; height: 320px;">
+                                        <canvas id="chartSubjectDifficulty"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-5">
+                            <div class="report-section-card h-100">
+                                <div class="report-section-header">
+                                    <h4 class="report-section-title">
+                                        <i class="bi bi-pie-chart text-success"></i> Grade Distribution
+                                    </h4>
+                                    <span class="badge bg-light text-muted border">Grade Tiers</span>
+                                </div>
+                                <div class="p-3">
+                                    <div style="position: relative; height: 250px;">
+                                        <canvas id="chartGradeDistribution"></canvas>
+                                    </div>
+                                    <!-- Dynamic Color-wise Grade Percentage Breakdown Cards -->
+                                    <div class="row g-2 pt-3 border-top mt-2 text-center">
+                                        <div class="col">
+                                            <div class="p-2 rounded h-100" style="background: #ecfdf5; border: 1px solid #a7f3d0;">
+                                                <div class="small fw-bold text-success mb-1" style="font-size: 0.68rem; white-space: nowrap;">
+                                                    <i class="bi bi-circle-fill me-1" style="color: #10b981; font-size: 0.45rem;"></i> Distinction
+                                                </div>
+                                                <div class="fw-bold fs-6 text-success" id="gradeDistinctionPct">0%</div>
+                                                <small class="text-muted" id="gradeDistinctionCount" style="font-size: 0.65rem;">0 Students</small>
+                                            </div>
+                                        </div>
+                                        <div class="col">
+                                            <div class="p-2 rounded h-100" style="background: #ecfeff; border: 1px solid #a5f3fc;">
+                                                <div class="small fw-bold text-info mb-1" style="font-size: 0.68rem; white-space: nowrap;">
+                                                    <i class="bi bi-circle-fill me-1" style="color: #06b6d4; font-size: 0.45rem;"></i> 1st Class
+                                                </div>
+                                                <div class="fw-bold fs-6 text-info" id="gradeFirstPct">0%</div>
+                                                <small class="text-muted" id="gradeFirstCount" style="font-size: 0.65rem;">0 Students</small>
+                                            </div>
+                                        </div>
+                                        <div class="col">
+                                            <div class="p-2 rounded h-100" style="background: #eff6ff; border: 1px solid #bfdbfe;">
+                                                <div class="small fw-bold text-primary mb-1" style="font-size: 0.68rem; white-space: nowrap;">
+                                                    <i class="bi bi-circle-fill me-1" style="color: #3b82f6; font-size: 0.45rem;"></i> 2nd Class
+                                                </div>
+                                                <div class="fw-bold fs-6 text-primary" id="gradeSecondPct">0%</div>
+                                                <small class="text-muted" id="gradeSecondCount" style="font-size: 0.65rem;">0 Students</small>
+                                            </div>
+                                        </div>
+                                        <div class="col">
+                                            <div class="p-2 rounded h-100" style="background: #fffbeb; border: 1px solid #fde68a;">
+                                                <div class="small fw-bold text-warning mb-1" style="font-size: 0.68rem; white-space: nowrap;">
+                                                    <i class="bi bi-circle-fill me-1" style="color: #f59e0b; font-size: 0.45rem;"></i> Pass Class
+                                                </div>
+                                                <div class="fw-bold fs-6 text-warning" id="gradePassPct">0%</div>
+                                                <small class="text-muted" id="gradePassCount" style="font-size: 0.65rem;">0 Students</small>
+                                            </div>
+                                        </div>
+                                        <div class="col">
+                                            <div class="p-2 rounded h-100" style="background: #fef2f2; border: 1px solid #fecaca;">
+                                                <div class="small fw-bold text-danger mb-1" style="font-size: 0.68rem; white-space: nowrap;">
+                                                    <i class="bi bi-circle-fill me-1" style="color: #ef4444; font-size: 0.45rem;"></i> Fail (<40%)
+                                                </div>
+                                                <div class="fw-bold fs-6 text-danger" id="gradeFailPct">0%</div>
+                                                <small class="text-muted" id="gradeFailCount" style="font-size: 0.65rem;">0 Students</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Top Rankers Section (Admin Selects Top 3, 5, 10, or 20) -->
+                    <div class="report-section-card mb-4" id="sectionToppers">
+                        <div class="report-section-header">
+                            <h4 class="report-section-title">
+                                <i class="bi bi-trophy-fill text-warning"></i> Academic Top Rankers
+                            </h4>
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <label for="selectTopLimit" class="fw-semibold text-muted small mb-0">Show Top:</label>
+                                <select id="selectTopLimit" class="form-select form-select-sm fw-bold border-primary" style="width: auto;" onchange="changeTopLimit(this.value)">
+                                    <option value="3">Top 3 Rankers</option>
+                                    <option value="5">Top 5 Rankers</option>
+                                    <option value="10" selected>Top 10 Rankers</option>
+                                    <option value="20">Top 20 Rankers</option>
+                                </select>
+                                <button class="btn btn-warning btn-sm fw-bold d-flex align-items-center gap-1 shadow-xs text-dark" onclick="exportToppersPdf()" title="Download Official Toppers Merit List PDF">
+                                    <i class="bi bi-file-earmark-pdf-fill text-danger"></i> Toppers PDF
+                                </button>
+                            </div>
+                        </div>
+                        <div class="p-3">
+                            <!-- Visual Podium for Top 3 -->
+                            <div id="podiumWrap" class="podium-container"></div>
+
+                            <!-- Full Toppers List Table -->
+                            <div class="table-responsive mt-3">
+                                <table class="table report-table align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 70px;">Rank</th>
+                                            <th>Student Name</th>
+                                            <th>Roll No</th>
+                                            <th>Semester</th>
+                                            <th>Total Marks</th>
+                                            <th>Percentage</th>
+                                            <th>Grade</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="toppersTableBody">
+                                        <tr>
+                                            <td colspan="8" class="text-center py-3 text-muted">Loading top rankers...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Subject Breakdown Table -->
+                    <div class="report-section-card">
+                        <div class="report-section-header">
+                            <h4 class="report-section-title">
+                                <i class="bi bi-journal-bookmark-fill text-primary"></i> Subject-wise Detailed Breakdown
+                            </h4>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table report-table align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Subject Code</th>
+                                        <th>Subject Name</th>
+                                        <th>Semester</th>
+                                        <th>Evaluated Students</th>
+                                        <th>Average Score</th>
+                                        <th>Pass Count</th>
+                                        <th>Fail Count</th>
+                                        <th>Pass %</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="subjectBreakdownTableBody">
+                                    <tr>
+                                        <td colspan="8" class="text-center py-3 text-muted">Loading subject details...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================== -->
+                <!-- TAB 3: ATTENDANCE & DEFAULTERS             -->
+                <!-- ========================================== -->
+                <div class="tab-pane fade" id="tab-attendance" role="tabpanel">
+                    <!-- Attendance KPIs -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-xl-3 col-sm-6">
+                            <div class="kpi-stat-card card-blue">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="kpi-title">Average Attendance</div>
+                                        <div class="kpi-value" id="attAvgRate">-%</div>
+                                        <small class="text-muted">Total Recorded Sessions</small>
+                                    </div>
+                                    <div class="kpi-icon-wrap icon-blue"><i class="bi bi-clock-history"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-sm-6">
+                            <div class="kpi-stat-card card-rose">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="kpi-title">Total Defaulters</div>
+                                        <div class="kpi-value text-danger" id="attDefaultersTotal">-</div>
+                                        <small class="text-danger fw-semibold">&lt; 75% Mandatory Attendance</small>
+                                    </div>
+                                    <div class="kpi-icon-wrap icon-rose"><i class="bi bi-person-x-fill"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-sm-6">
+                            <div class="kpi-stat-card card-amber">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="kpi-title">Warning Category</div>
+                                        <div class="kpi-value text-warning" id="attWarningTotal">-</div>
+                                        <small class="text-muted">75% - 85% Near Shortage</small>
+                                    </div>
+                                    <div class="kpi-icon-wrap icon-amber"><i class="bi bi-exclamation-circle-fill"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-sm-6">
+                            <div class="kpi-stat-card card-green">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="kpi-title">Safe Category</div>
+                                        <div class="kpi-value text-success" id="attSafeTotal">-</div>
+                                        <small class="text-muted">&gt; 85% Good Attendance</small>
+                                    </div>
+                                    <div class="kpi-icon-wrap icon-green"><i class="bi bi-check-all"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notice Board Quick Action Banner -->
+                    <div class="card border-0 mb-4 text-white shadow-sm" style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); border-radius: 14px;">
+                        <div class="card-body p-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+                            <div>
+                                <h4 class="fw-bold mb-1"><i class="bi bi-megaphone-fill me-2"></i>Official Notice Board Defaulters List</h4>
+                                <p class="mb-0 text-white-50" style="font-size: 0.9rem;">
+                                    Print or export an official signed notice for students who have less than 75% attendance for detention warnings.
+                                </p>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-light btn-sm fw-bold px-3 shadow-sm d-flex align-items-center gap-1" onclick="exportDefaultersPdf()">
+                                    <i class="bi bi-file-earmark-pdf-fill text-danger"></i> 1-Click Notice PDF
+                                </button>
+                                <button class="btn btn-outline-light btn-sm fw-bold px-3 d-flex align-items-center gap-1" onclick="window.print()">
+                                    <i class="bi bi-printer-fill"></i> Print Roster
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Monthly Attendance Trend Chart -->
+                    <div class="report-section-card mb-4">
+                        <div class="report-section-header">
+                            <div>
+                                <h4 class="report-section-title">
+                                    <i class="bi bi-graph-up-arrow text-primary"></i> Monthly Attendance Progression & Compliance Trend
+                                </h4>
+                                <small class="text-muted">Dynamic monthly tracking vs 75% statutory mandate</small>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
+                                    <i class="bi bi-dash-lg me-1"></i> Threshold: 75%
+                                </span>
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1" id="badgeTrendAvg">
+                                    Avg: --%
+                                </span>
+                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1" id="badgeTrendPeak">
+                                    Peak: --%
+                                </span>
+                            </div>
+                        </div>
+                        <div class="p-3">
+                            <div style="position: relative; height: 300px;">
+                                <canvas id="chartMonthlyAttendanceTrend"></canvas>
+                            </div>
+                            <!-- Dynamic Monthly Breakdown Pills -->
+                            <div class="row g-2 pt-3 border-top mt-2 text-center" id="monthlyPillsContainer">
+                                <!-- Populated dynamically by JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Defaulters Roster Table -->
+                    <div class="report-section-card">
+                        <div class="report-section-header">
+                            <h4 class="report-section-title text-danger">
+                                <i class="bi bi-person-exclamation"></i> Critical Defaulters Roster (&lt; 75% Attendance)
+                            </h4>
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1" id="defaulterCountBadge">0 Students</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table report-table align-middle">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 60px;">Sr</th>
+                                        <th>Student Name</th>
+                                        <th>Roll Number</th>
+                                        <th>Semester</th>
+                                        <th>Attended / Total</th>
+                                        <th>Attendance %</th>
+                                        <th>Shortage %</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="defaultersTableBody">
+                                    <tr>
+                                        <td colspan="8" class="text-center py-4 text-muted">No defaulters detected for current scope.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================== -->
+                <!-- TAB 4: FACULTY WORKLOAD & COMPLIANCE       -->
+                <!-- ========================================== -->
+                <div class="tab-pane fade" id="tab-faculty" role="tabpanel">
+                    <!-- Faculty KPIs -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-xl-3 col-sm-6">
+                            <div class="kpi-stat-card card-blue">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="kpi-title">Active Faculty</div>
+                                        <div class="kpi-value" id="facActiveCount">-</div>
+                                        <small class="text-muted">Teaching Faculty Staff</small>
+                                    </div>
+                                    <div class="kpi-icon-wrap icon-blue"><i class="bi bi-person-badge-fill"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-sm-6">
+                            <div class="kpi-stat-card card-green">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="kpi-title">Allocated Subjects</div>
+                                        <div class="kpi-value" id="facAllocatedSubjects">-</div>
+                                        <small class="text-muted">Course Workload Units</small>
+                                    </div>
+                                    <div class="kpi-icon-wrap icon-green"><i class="bi bi-book-fill"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-sm-6">
+                            <div class="kpi-stat-card card-amber">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="kpi-title">Lecture Sessions</div>
+                                        <div class="kpi-value" id="facSessionsConducted">-</div>
+                                        <small class="text-muted" id="facSessionsDetail">Submitted Sessions</small>
+                                    </div>
+                                    <div class="kpi-icon-wrap icon-amber"><i class="bi bi-card-checklist"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-sm-6">
+                            <div class="kpi-stat-card card-rose">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="kpi-title">Marks Pending</div>
+                                        <div class="kpi-value text-danger" id="facMarksPendingCount">-</div>
+                                        <small class="text-danger fw-semibold">Faculty with unentered marks</small>
+                                    </div>
+                                    <div class="kpi-icon-wrap icon-rose"><i class="bi bi-clipboard-x-fill"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Option 4: Faculty Lecture Volume & Workload Distribution Bar Chart -->
+                    <div class="report-section-card mb-4">
+                        <div class="report-section-header">
+                            <div>
+                                <h4 class="report-section-title">
+                                    <i class="bi bi-bar-chart-fill text-primary"></i> Faculty Lecture Sessions & Workload Distribution
+                                </h4>
+                                <small class="text-muted">Total Lecture Sessions Conducted vs Officially Submitted Attendance Sessions</small>
+                            </div>
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">Lecture Volume</span>
+                        </div>
+                        <div class="p-3">
+                            <div style="position: relative; height: 320px;">
+                                <canvas id="chartFacultyWorkload"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Faculty Compliance Table -->
+                    <div class="report-section-card">
+                        <div class="report-section-header">
+                            <h4 class="report-section-title">
+                                <i class="bi bi-shield-check text-primary"></i> Daily Attendance & Marks Submission Compliance
+                            </h4>
+                            <span class="badge bg-light text-muted border">Live Verification</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table report-table align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Faculty Member</th>
+                                        <th>Role / Department</th>
+                                        <th>Assigned Subjects</th>
+                                        <th>Lecture Sessions Conducted</th>
+                                        <th>Daily Attendance</th>
+                                        <th>Internal Marks Status</th>
+                                        <th>Compliance</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="facultyComplianceTableBody">
+                                    <tr>
+                                        <td colspan="7" class="text-center py-4 text-muted">Loading faculty compliance data...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================== -->
+                <!-- TAB 5: AUDIT & SECURITY LOGS               -->
+                <!-- ========================================== -->
+                <div class="tab-pane fade" id="tab-audit" role="tabpanel">
+                    <!-- 24-hr Activity KPIs -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-xl-3 col-sm-6">
+                            <div class="kpi-stat-card card-blue">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="kpi-title">Total Logins (24h)</div>
+                                        <div class="kpi-value" id="auditTotalLogins">-</div>
+                                        <small class="text-muted">Across all user roles</small>
+                                    </div>
+                                    <div class="kpi-icon-wrap icon-blue"><i class="bi bi-door-open-fill"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-sm-6">
+                            <div class="kpi-stat-card card-green">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="kpi-title">Admin Logins</div>
+                                        <div class="kpi-value" id="auditAdminLogins">-</div>
+                                        <small class="text-muted">Super-Admin activity</small>
+                                    </div>
+                                    <div class="kpi-icon-wrap icon-green"><i class="bi bi-shield-fill-check"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-sm-6">
+                            <div class="kpi-stat-card card-amber">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="kpi-title">Faculty Logins</div>
+                                        <div class="kpi-value" id="auditFacultyLogins">-</div>
+                                        <small class="text-muted">Teaching Staff Logins</small>
+                                    </div>
+                                    <div class="kpi-icon-wrap icon-amber"><i class="bi bi-person-video3"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-sm-6">
+                            <div class="kpi-stat-card card-rose">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="kpi-title">Marks Edit Audits</div>
+                                        <div class="kpi-value" id="auditMarksEditsCount">-</div>
+                                        <small class="text-muted">Modification Events</small>
+                                    </div>
+                                    <div class="kpi-icon-wrap icon-rose"><i class="bi bi-pencil-square"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Authentication History -->
+                    <div class="report-section-card mb-4">
+                        <div class="report-section-header">
+                            <h4 class="report-section-title">
+                                <i class="bi bi-person-lines-fill text-primary"></i> Recent User Logins & Authentication History
+                            </h4>
+                            <span class="badge bg-light text-muted border">Last 24 Hours & Recent</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table report-table align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>User Account</th>
+                                        <th>Role</th>
+                                        <th>Login Time</th>
+                                        <th>Time Ago</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="auditLoginsTableBody">
+                                    <tr>
+                                        <td colspan="5" class="text-center py-4 text-muted">Loading authentication logs...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Marks Modification History -->
+                    <div class="report-section-card">
+                        <div class="report-section-header">
+                            <h4 class="report-section-title">
+                                <i class="bi bi-journal-check text-warning"></i> Internal Marks Audit Trail & Modification History
+                            </h4>
+                            <span class="badge bg-light text-muted border">Integrity Tracking</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table report-table align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Timestamp</th>
+                                        <th>Student</th>
+                                        <th>Roll No</th>
+                                        <th>Subject</th>
+                                        <th>Score Value</th>
+                                        <th>Audit Event</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="auditMarksTableBody">
+                                    <tr>
+                                        <td colspan="6" class="text-center py-4 text-muted">No recent marks modification logs recorded.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div> <!-- /tab-content -->
+
+        </div> <!-- /content-body -->
+    </div> <!-- /content -->
+</div> <!-- /wrapper -->
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ url_for('static', filename='js/common.js') }}"></script>
+<script src="{{ url_for('static', filename='js/notification_modal.js') }}"></script>
+{% include 'components/notification_modal.html' %}
+
+<script>
+    /**
+     * CampusSync - Institutional Reports & Analytics Controller
+     * Handles live REST API queries, Chart.js re-rendering, dynamic Toppers limit, and filters.
+     */
+    let rawReportsData = null;
+    let chartSemPassFail = null;
+    let chartAttendanceHealth = null;
+    let chartDivisionComp = null;
+    let chartGenderRatio = null;
+    let chartSubjectDifficulty = null;
+    let chartGradeDistribution = null;
+    let chartMonthlyAttendance = null;
+    let chartFacultyWorkloadInst = null;
+    let currentTopLimit = 10;
+    let currentWatchlistFilter = 'all';
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // Setup filter change event listeners
+        document.getElementById('filterAcademicYear').addEventListener('change', loadAllReportsData);
+        document.getElementById('filterSemester').addEventListener('change', loadAllReportsData);
+
+        // Initial fetch
+        loadAllReportsData();
+    });
+
+    function getFilterParams() {
+        const ay = document.getElementById('filterAcademicYear').value || '';
+        const sem = document.getElementById('filterSemester').value || '';
+        return { academic_year: ay, semester: sem, top_limit: currentTopLimit };
+    }
+
+    function exportExcel() {
+        const p = getFilterParams();
+        let url = "{{ url_for('admin.admin_reports_export_excel') }}";
+        const q = new URLSearchParams();
+        if (p.academic_year) q.append('academic_year', p.academic_year);
+        if (p.semester) q.append('semester', p.semester);
+        window.location.href = url + '?' + q.toString();
+    }
+
+    function exportDefaultersPdf() {
+        const p = getFilterParams();
+        let url = "{{ url_for('admin.admin_reports_export_defaulters_pdf') }}";
+        const q = new URLSearchParams();
+        if (p.academic_year) q.append('academic_year', p.academic_year);
+        if (p.semester) q.append('semester', p.semester);
+        window.location.href = url + '?' + q.toString();
+    }
+
+    function exportToppersPdf() {
+        const p = getFilterParams();
+        let url = "{{ url_for('admin.admin_reports_export_toppers_pdf') }}";
+        const q = new URLSearchParams();
+        if (p.academic_year) q.append('academic_year', p.academic_year);
+        if (p.semester) q.append('semester', p.semester);
+        q.append('top_limit', currentTopLimit);
+        window.location.href = url + '?' + q.toString();
+    }
+
+    function exportMasterPdf() {
+        const p = getFilterParams();
+        let url = "{{ url_for('admin.admin_reports_export_master_pdf') }}";
+        const q = new URLSearchParams();
+        if (p.academic_year) q.append('academic_year', p.academic_year);
+        if (p.semester) q.append('semester', p.semester);
+        window.location.href = url + '?' + q.toString();
+    }
+
+    function changeTopLimit(val) {
+        currentTopLimit = parseInt(val) || 10;
+        loadAllReportsData();
+    }
+
+    function switchToTab(tabName) {
+        const tabTrigger = document.querySelector(`#tab-${tabName}-btn`);
+        if (tabTrigger) {
+            const tab = new bootstrap.Tab(tabTrigger);
+            tab.show();
+            const tabEl = document.getElementById(`tab-${tabName}`);
+            if (tabEl) {
+                tabEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+    }
+
+    function loadAllReportsData() {
+        const p = getFilterParams();
+        const q = new URLSearchParams();
+        if (p.academic_year) q.append('academic_year', p.academic_year);
+        if (p.semester) q.append('semester', p.semester);
+        q.append('top_limit', currentTopLimit);
+
+        // Pulse the refresh button icon
+        const refreshIcon = document.querySelector('#btnRefresh i');
+        if (refreshIcon) refreshIcon.classList.add('bi-spin');
+
+        fetch("{{ url_for('admin.admin_reports_analytics_api') }}?" + q.toString(), { credentials: 'same-origin' })
+            .then(res => {
+                if (!res.ok) throw new Error('Network response was not ok: ' + res.status);
+                return res.json();
+            })
+            .then(data => {
+                if (refreshIcon) refreshIcon.classList.remove('bi-spin');
+                if (data && data.success) {
+                    rawReportsData = data;
+                    renderAllTabs(data);
+                } else {
+                    console.error('Reports API returned unsuccessful status:', data);
+                }
+            })
+            .catch(err => {
+                if (refreshIcon) refreshIcon.classList.remove('bi-spin');
+                console.error('Error fetching reports analytics data:', err);
+            });
+    }
+
+    function renderAllTabs(data) {
+        renderOverviewTab(data.overview);
+        renderAcademicTab(data.academic);
+        renderAttendanceTab(data.attendance);
+        renderFacultyTab(data.faculty);
+        renderAuditTab(data.audit);
+    }
+
+    // ==========================================
+    // RENDER TAB 1: OVERVIEW
+    // ==========================================
+    function renderOverviewTab(ov) {
+        if (!ov) return;
+        document.getElementById('ovTotalStudents').textContent = ov.total_students || 0;
+        document.getElementById('ovPassRate').textContent = (ov.overall_pass_rate || 0) + '%';
+        document.getElementById('ovPassRatioBadge').textContent = `${ov.total_passed_students || 0} / ${ov.total_students || 0} Passed`;
+        document.getElementById('ovAvgAttendance').textContent = (ov.avg_attendance_rate || 0) + '%';
+        document.getElementById('ovDefaultersCount').textContent = ov.critical_defaulters_count || 0;
+
+        // Render Bar Chart: Semester Pass vs Fail
+        renderSemesterPassFailChart(ov.semester_pass_fail);
+
+        // Render Donut Chart: Attendance Health
+        renderAttendanceHealthChart(ov.attendance_health);
+
+        // Option 2: Render Division-wise Comparison Chart
+        renderDivisionComparisonChart(ov.division_comparison);
+
+        // Option 3: Render Gender Demographics Donut Chart
+        renderGenderDemographicsChart(ov.gender_demographics, ov.total_students);
+
+        // Render Watchlist Table
+        renderWatchlistTable(ov.watchlist);
+    }
+
+    function renderSemesterPassFailChart(data) {
+        const ctx = document.getElementById('chartSemesterPassFail');
+        if (!ctx) return;
+        if (chartSemPassFail) chartSemPassFail.destroy();
+
+        const labels = (data && data.labels && data.labels.length) ? data.labels : ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4', 'Sem 5', 'Sem 6'];
+        const passData = (data && data.pass_data) ? data.pass_data : [0, 0, 0, 0, 0, 0];
+        const failData = (data && data.fail_data) ? data.fail_data : [0, 0, 0, 0, 0, 0];
+
+        chartSemPassFail = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Passed Students',
+                        data: passData,
+                        backgroundColor: '#10b981',
+                        borderRadius: 6,
+                        barPercentage: 0.65
+                    },
+                    {
+                        label: 'Failed Students',
+                        data: failData,
+                        backgroundColor: '#ef4444',
+                        borderRadius: 6,
+                        barPercentage: 0.65
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top', labels: { boxWidth: 12, font: { family: 'Inter', weight: '600' } } },
+                    tooltip: {
+                        backgroundColor: '#0f172a',
+                        titleFont: { family: 'Inter', weight: '700' },
+                        bodyFont: { family: 'Inter' },
+                        padding: 10,
+                        cornerRadius: 8
+                    }
+                },
+                scales: {
+                    x: { grid: { display: false } },
+                    y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { precision: 0 } }
+                }
+            }
+        });
+    }
+
+    function renderAttendanceHealthChart(data) {
+        const ctx = document.getElementById('chartAttendanceHealth');
+        if (!ctx) return;
+        if (chartAttendanceHealth) chartAttendanceHealth.destroy();
+
+        const safe = data ? (data.safe || 0) : 0;
+        const warning = data ? (data.warning || 0) : 0;
+        const defaulter = data ? (data.defaulter || 0) : 0;
+        const total = safe + warning + defaulter;
+
+        const safePct = total > 0 ? ((safe / total) * 100).toFixed(1).replace('.0', '') : '0';
+        const warnPct = total > 0 ? ((warning / total) * 100).toFixed(1).replace('.0', '') : '0';
+        const defPct = total > 0 ? ((defaulter / total) * 100).toFixed(1).replace('.0', '') : '0';
+
+        // Update the 3 percentage badges below the chart
+        const safePctEl = document.getElementById('attHealthSafePct');
+        const safeCountEl = document.getElementById('attHealthSafeCount');
+        const warnPctEl = document.getElementById('attHealthWarnPct');
+        const warnCountEl = document.getElementById('attHealthWarnCount');
+        const defPctEl = document.getElementById('attHealthDefPct');
+        const defCountEl = document.getElementById('attHealthDefCount');
+
+        if (safePctEl) safePctEl.textContent = safePct + '%';
+        if (safeCountEl) safeCountEl.textContent = `${safe} Student${safe !== 1 ? 's' : ''}`;
+        if (warnPctEl) warnPctEl.textContent = warnPct + '%';
+        if (warnCountEl) warnCountEl.textContent = `${warning} Student${warning !== 1 ? 's' : ''}`;
+        if (defPctEl) defPctEl.textContent = defPct + '%';
+        if (defCountEl) defCountEl.textContent = `${defaulter} Student${defaulter !== 1 ? 's' : ''}`;
+
+        chartAttendanceHealth = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: [
+                    `Safe (>85%): ${safePct}% (${safe})`,
+                    `Warning (75-85%): ${warnPct}% (${warning})`,
+                    `Defaulter (<75%): ${defPct}% (${defaulter})`
+                ],
+                datasets: [{
+                    data: [safe, warning, defaulter],
+                    backgroundColor: ['#10b981', '#2563eb', '#ef4444'],
+                    borderWidth: 2,
+                    borderColor: '#ffffff',
+                    hoverOffset: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            boxWidth: 12,
+                            padding: 10,
+                            font: { family: 'Inter', weight: '600', size: 11 }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const val = context.raw || 0;
+                                const pct = total > 0 ? ((val / total) * 100).toFixed(1).replace('.0', '') : '0';
+                                return ` ${context.label.split(':')[0]}: ${val} students (${pct}%)`;
+                            }
+                        }
+                    }
+                }
+            },
+            plugins: [{
+                id: 'centerAttendanceText',
+                beforeDraw: function(chart) {
+                    const { width, height, ctx: c } = chart;
+                    c.save();
+                    c.textAlign = 'center';
+                    c.textBaseline = 'middle';
+                    const chartArea = chart.chartArea;
+                    const centerX = chartArea ? (chartArea.left + chartArea.right) / 2 : width / 2;
+                    const centerY = chartArea ? (chartArea.top + chartArea.bottom) / 2 : height / 2;
+
+                    c.font = '800 24px Inter, sans-serif';
+                    c.fillStyle = '#0f172a';
+                    c.fillText(`${safePct}%`, centerX, centerY - 8);
+
+                    c.font = '600 11px Inter, sans-serif';
+                    c.fillStyle = '#10b981';
+                    c.fillText('Safe Attendance', centerX, centerY + 14);
+                    c.restore();
+                }
+            }]
+        });
+    }
+
+    function renderDivisionComparisonChart(divData) {
+        const ctx = document.getElementById('chartDivisionComparison');
+        if (!ctx) return;
+        if (chartDivisionComp) chartDivisionComp.destroy();
+
+        const labels = (divData && divData.labels && divData.labels.length) ? divData.labels : ['Div A', 'Div B', 'Div C'];
+        const attData = (divData && divData.attendance) ? divData.attendance : [0, 0, 0];
+        const passData = (divData && divData.pass_rate) ? divData.pass_rate : [0, 0, 0];
+
+        chartDivisionComp = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Avg Attendance %',
+                        data: attData,
+                        backgroundColor: '#2563eb',
+                        borderRadius: 6,
+                        barPercentage: 0.65
+                    },
+                    {
+                        label: 'Pass Rate %',
+                        data: passData,
+                        backgroundColor: '#10b981',
+                        borderRadius: 6,
+                        barPercentage: 0.65
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top', labels: { boxWidth: 12, font: { family: 'Inter', weight: '600', size: 11 } } },
+                    tooltip: {
+                        backgroundColor: '#0f172a',
+                        titleFont: { family: 'Inter', weight: '700' },
+                        bodyFont: { family: 'Inter' },
+                        padding: 10,
+                        cornerRadius: 8,
+                        callbacks: {
+                            label: function(context) {
+                                return ` ${context.dataset.label}: ${context.raw}%`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { font: { family: 'Inter', weight: '600' } } },
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        grid: { color: '#f1f5f9' },
+                        ticks: {
+                            stepSize: 20,
+                            callback: v => v + '%'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function renderGenderDemographicsChart(data, totalStudents) {
+        const ctx = document.getElementById('chartGenderDemographics');
+        if (!ctx) return;
+        if (chartGenderRatio) chartGenderRatio.destroy();
+
+        const male = data ? (data.male || 0) : 0;
+        const female = data ? (data.female || 0) : 0;
+        const other = data ? (data.other || 0) : 0;
+        const total = totalStudents || (male + female + other) || 1;
+
+        const malePct = (data && data.male_pct !== undefined) ? data.male_pct : ((male / total) * 100).toFixed(1);
+        const femalePct = (data && data.female_pct !== undefined) ? data.female_pct : ((female / total) * 100).toFixed(1);
+
+        const malePctEl = document.getElementById('demoMalePct');
+        const maleCountEl = document.getElementById('demoMaleCount');
+        const femalePctEl = document.getElementById('demoFemalePct');
+        const femaleCountEl = document.getElementById('demoFemaleCount');
+
+        if (malePctEl) malePctEl.textContent = malePct + '%';
+        if (maleCountEl) maleCountEl.textContent = `${male} Male Student${male !== 1 ? 's' : ''}`;
+        if (femalePctEl) femalePctEl.textContent = femalePct + '%';
+        if (femaleCountEl) femaleCountEl.textContent = `${female} Female Student${female !== 1 ? 's' : ''}`;
+
+        const chartLabels = [`Male: ${malePct}% (${male})`, `Female: ${femalePct}% (${female})`];
+        const chartValues = [male, female];
+        const chartColors = ['#3b82f6', '#ec4899'];
+
+        if (other > 0) {
+            chartLabels.push(`Other: ${other}`);
+            chartValues.push(other);
+            chartColors.push('#8b5cf6');
+        }
+
+        chartGenderRatio = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: chartLabels,
+                datasets: [{
+                    data: chartValues,
+                    backgroundColor: chartColors,
+                    borderWidth: 2,
+                    borderColor: '#ffffff',
+                    hoverOffset: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '72%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            boxWidth: 10,
+                            padding: 8,
+                            font: { family: 'Inter', weight: '600', size: 10.5 }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: '#0f172a',
+                        padding: 10,
+                        cornerRadius: 8
+                    }
+                }
+            },
+            plugins: [{
+                id: 'centerGenderText',
+                beforeDraw: function(chart) {
+                    const { width, height, ctx: c } = chart;
+                    c.save();
+                    c.textAlign = 'center';
+                    c.textBaseline = 'middle';
+                    const chartArea = chart.chartArea;
+                    const centerX = chartArea ? (chartArea.left + chartArea.right) / 2 : width / 2;
+                    const centerY = chartArea ? (chartArea.top + chartArea.bottom) / 2 : height / 2;
+
+                    c.font = '800 20px Inter, sans-serif';
+                    c.fillStyle = '#0f172a';
+                    c.fillText(total, centerX, centerY - 6);
+
+                    c.font = '600 10px Inter, sans-serif';
+                    c.fillStyle = '#64748b';
+                    c.fillText('Students', centerX, centerY + 14);
+                    c.restore();
+                }
+            }]
+        });
+    }
+
+    function renderWatchlistTable(list) {
+        const tbody = document.getElementById('watchlistTableBody');
+        if (!tbody) return;
+        if (!list || !list.length) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">No student records found in current scope.</td></tr>';
+            return;
+        }
+
+        let html = '';
+        list.forEach(st => {
+            let statusBadge = '<span class="badge bg-success-subtle text-success">Safe</span>';
+            let rowClass = '';
+            if (st.status === 'Defaulter') {
+                statusBadge = '<span class="badge bg-danger-subtle text-danger">Defaulter &lt;75%</span>';
+                rowClass = 'table-danger-subtle';
+            } else if (st.status === 'Warning') {
+                statusBadge = '<span class="badge bg-warning-subtle text-warning-emphasis">Warning</span>';
+            }
+
+            html += `
+                <tr class="${rowClass}" data-status="${(st.status || '').toLowerCase()}">
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold" style="width: 32px; height: 32px; font-size: 0.75rem;">
+                                ${(st.name || 'S').substring(0, 2).toUpperCase()}
+                            </div>
+                            <span class="fw-semibold text-dark">${st.name}</span>
+                        </div>
+                    </td>
+                    <td><code>${st.roll_number}</code></td>
+                    <td><span class="badge bg-light text-dark border">Sem ${st.semester}</span></td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="fw-semibold">${st.attendance_pct}%</span>
+                            <div class="progress flex-grow-1" style="height: 5px; width: 60px;">
+                                <div class="progress-bar ${st.attendance_pct < 75 ? 'bg-danger' : (st.attendance_pct <= 85 ? 'bg-warning' : 'bg-success')}" style="width: ${Math.min(st.attendance_pct, 100)}%;"></div>
+                            </div>
+                        </div>
+                    </td>
+                    <td><span class="fw-bold text-dark">${st.internal_score}</span> <small class="text-muted">/ 100</small></td>
+                    <td>${statusBadge}</td>
+                </tr>
+            `;
+        });
+        tbody.innerHTML = html;
+    }
+
+    function filterWatchlist(type) {
+        currentWatchlistFilter = type;
+        const rows = document.querySelectorAll('#watchlistTableBody tr');
+        rows.forEach(r => {
+            const st = r.getAttribute('data-status');
+            if (type === 'all') {
+                r.style.display = '';
+            } else if (type === 'safe' && st === 'safe') {
+                r.style.display = '';
+            } else if (type === 'defaulter' && st === 'defaulter') {
+                r.style.display = '';
+            } else {
+                r.style.display = 'none';
+            }
+        });
+
+        document.getElementById('btnWatchlistAll').classList.toggle('active', type === 'all');
+        document.getElementById('btnWatchlistSafe').classList.toggle('active', type === 'safe');
+        document.getElementById('btnWatchlistDefaulter').classList.toggle('active', type === 'defaulter');
+    }
+
+    // ==========================================
+    // RENDER TAB 2: ACADEMIC & RESULTS
+    // ==========================================
+    function renderAcademicTab(acad) {
+        if (!acad) return;
+        document.getElementById('acadPassRate').textContent = (acad.pass_rate || 0) + '%';
+        document.getElementById('acadPassSubtext').textContent = `${acad.total_passed || 0} / ${acad.total_students || 0} Students Passed`;
+        document.getElementById('acadAvgScore').textContent = (acad.class_avg_score || 0) + '%';
+        document.getElementById('acadHighScore').textContent = (acad.highest_score || 0) + '%';
+        document.getElementById('acadHighStudent').textContent = acad.highest_scorer_name || 'Top Ranker';
+        document.getElementById('acadAtRiskCount').textContent = acad.at_risk_students_count || 0;
+
+        // Render Subject Difficulty Horizontal Bar Chart
+        renderSubjectDifficultyChart(acad.subject_performance);
+
+        // Render Grade Distribution Donut Chart
+        renderGradeDistributionChart(acad.grade_distribution);
+
+        // Render Podium and Toppers Table
+        renderToppersSection(acad.top_rankers);
+
+        // Render Subject Breakdown Table
+        renderSubjectBreakdownTable(acad.subject_performance);
+    }
+
+    function renderSubjectDifficultyChart(subList) {
+        const ctx = document.getElementById('chartSubjectDifficulty');
+        if (!ctx) return;
+        if (chartSubjectDifficulty) chartSubjectDifficulty.destroy();
+
+        const labels = [];
+        const avgScores = [];
+        const colors = [];
+
+        if (subList && subList.length) {
+            subList.forEach(s => {
+                labels.push(s.name.length > 20 ? s.name.substring(0, 18) + '...' : s.name);
+                const avg = s.avg_score || 0;
+                avgScores.push(avg);
+                if (avg >= 70) colors.push('#10b981'); // Easy / High performance
+                else if (avg >= 50) colors.push('#2563eb'); // Moderate
+                else if (avg >= 40) colors.push('#f59e0b'); // Warning
+                else colors.push('#ef4444'); // Difficult / Low
+            });
+        }
+
+        chartSubjectDifficulty = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Subject Average Score (%)',
+                    data: avgScores,
+                    backgroundColor: colors,
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) { return `Avg Score: ${context.parsed.x}%`; }
+                        }
+                    }
+                },
+                scales: {
+                    x: { beginAtZero: true, max: 100, grid: { color: '#f1f5f9' }, ticks: { callback: v => v + '%' } },
+                    y: { grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    function renderGradeDistributionChart(grades) {
+        const ctx = document.getElementById('chartGradeDistribution');
+        if (!ctx) return;
+        if (chartGradeDistribution) chartGradeDistribution.destroy();
+
+        const distinction = grades ? (grades.distinction || 0) : 0;
+        const first = grades ? (grades.first_class || 0) : 0;
+        const second = grades ? (grades.second_class || 0) : 0;
+        const pass = grades ? (grades.pass_class || 0) : 0;
+        const fail = grades ? (grades.fail || 0) : 0;
+        const total = distinction + first + second + pass + fail;
+
+        const dPct = total > 0 ? ((distinction / total) * 100).toFixed(1).replace('.0', '') : '0';
+        const fPct = total > 0 ? ((first / total) * 100).toFixed(1).replace('.0', '') : '0';
+        const sPct = total > 0 ? ((second / total) * 100).toFixed(1).replace('.0', '') : '0';
+        const pPct = total > 0 ? ((pass / total) * 100).toFixed(1).replace('.0', '') : '0';
+        const flPct = total > 0 ? ((fail / total) * 100).toFixed(1).replace('.0', '') : '0';
+
+        // Update Color-wise Percentage Breakdown Cards below Chart
+        const elDPct = document.getElementById('gradeDistinctionPct');
+        const elDCount = document.getElementById('gradeDistinctionCount');
+        const elFPct = document.getElementById('gradeFirstPct');
+        const elFCount = document.getElementById('gradeFirstCount');
+        const elSPct = document.getElementById('gradeSecondPct');
+        const elSCount = document.getElementById('gradeSecondCount');
+        const elPPct = document.getElementById('gradePassPct');
+        const elPCount = document.getElementById('gradePassCount');
+        const elFlPct = document.getElementById('gradeFailPct');
+        const elFlCount = document.getElementById('gradeFailCount');
+
+        if (elDPct) elDPct.textContent = `${dPct}%`;
+        if (elDCount) elDCount.textContent = `${distinction} Student${distinction === 1 ? '' : 's'}`;
+        if (elFPct) elFPct.textContent = `${fPct}%`;
+        if (elFCount) elFCount.textContent = `${first} Student${first === 1 ? '' : 's'}`;
+        if (elSPct) elSPct.textContent = `${sPct}%`;
+        if (elSCount) elSCount.textContent = `${second} Student${second === 1 ? '' : 's'}`;
+        if (elPPct) elPPct.textContent = `${pPct}%`;
+        if (elPCount) elPCount.textContent = `${pass} Student${pass === 1 ? '' : 's'}`;
+        if (elFlPct) elFlPct.textContent = `${flPct}%`;
+        if (elFlCount) elFlCount.textContent = `${fail} Student${fail === 1 ? '' : 's'}`;
+
+        // Determine dominant tier for Donut Center display
+        let topGradeName = 'No Data';
+        let topGradeColor = '#64748b';
+        let topGradePct = '0%';
+        if (total > 0) {
+            const tiers = [
+                { name: 'Distinction', pct: dPct, count: distinction, color: '#10b981' },
+                { name: 'First Class', pct: fPct, count: first, color: '#06b6d4' },
+                { name: 'Second Class', pct: sPct, count: second, color: '#2563eb' },
+                { name: 'Pass Class', pct: pPct, count: pass, color: '#f59e0b' },
+                { name: 'Fail (<40%)', pct: flPct, count: fail, color: '#ef4444' }
+            ];
+            tiers.sort((a, b) => b.count - a.count);
+            if (tiers[0].count > 0) {
+                topGradeName = tiers[0].name;
+                topGradeColor = tiers[0].color;
+                topGradePct = `${tiers[0].pct}%`;
+            }
+        }
+
+        chartGradeDistribution = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: [
+                    `Distinction (≥70%): ${dPct}% (${distinction})`,
+                    `First Class (60-69%): ${fPct}% (${first})`,
+                    `Second Class (50-59%): ${sPct}% (${second})`,
+                    `Pass (40-49%): ${pPct}% (${pass})`,
+                    `Fail (<40%): ${flPct}% (${fail})`
+                ],
+                datasets: [{
+                    data: total > 0 ? [distinction, first, second, pass, fail] : [0, 0, 0, 0, 1],
+                    backgroundColor: total > 0 ? ['#10b981', '#06b6d4', '#2563eb', '#f59e0b', '#ef4444'] : ['#e2e8f0', '#e2e8f0', '#e2e8f0', '#e2e8f0', '#e2e8f0'],
+                    borderWidth: 2,
+                    borderColor: '#ffffff',
+                    hoverOffset: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '72%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            boxWidth: 12,
+                            padding: 8,
+                            font: { family: 'Inter', weight: '600', size: 10.5 }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                if (total === 0) return ' No marks evaluated';
+                                const val = context.raw || 0;
+                                const pct = total > 0 ? ((val / total) * 100).toFixed(1).replace('.0', '') : 0;
+                                return ` ${context.label.split(':')[0]}: ${val} students (${pct}%)`;
+                            }
+                        }
+                    }
+                }
+            },
+            plugins: [{
+                id: 'centerGradeText',
+                beforeDraw: function(chart) {
+                    const { width, height, ctx: c } = chart;
+                    c.save();
+                    c.textAlign = 'center';
+                    c.textBaseline = 'middle';
+                    const chartArea = chart.chartArea;
+                    const centerX = chartArea ? (chartArea.left + chartArea.right) / 2 : width / 2;
+                    const centerY = chartArea ? (chartArea.top + chartArea.bottom) / 2 : height / 2;
+
+                    c.font = '800 24px Inter, sans-serif';
+                    c.fillStyle = '#0f172a';
+                    c.fillText(topGradePct, centerX, centerY - 10);
+
+                    c.font = '700 11px Inter, sans-serif';
+                    c.fillStyle = topGradeColor;
+                    c.fillText(topGradeName, centerX, centerY + 10);
+
+                    c.font = '600 10px Inter, sans-serif';
+                    c.fillStyle = '#64748b';
+                    c.fillText(`${total} Student${total === 1 ? '' : 's'} Evaluated`, centerX, centerY + 24);
+                    c.restore();
+                }
+            }]
+        });
+    }
+
+    function renderToppersSection(toppers) {
+        const podiumWrap = document.getElementById('podiumWrap');
+        const tbody = document.getElementById('toppersTableBody');
+
+        if (!toppers || !toppers.length) {
+            const semVal = document.getElementById('filterSemester').value;
+            const semTxt = semVal ? `Semester ${semVal}` : 'the selected semester';
+            if (podiumWrap) podiumWrap.innerHTML = `
+                <div class="alert alert-warning border-warning-subtle text-center py-4 my-2 w-100 shadow-xs" style="border-radius: 12px; background: #fffbeb;">
+                    <i class="bi bi-info-circle-fill text-warning fs-2 mb-2 d-block"></i>
+                    <h5 class="fw-bold mb-1 text-dark">No Qualifying Merit Toppers for ${semTxt}</h5>
+                    <p class="text-muted small mb-3">
+                        The Toppers Merit List strictly features students who have passed with minimum 40% aggregate marks and zero failed subjects.<br/>
+                        Currently, no students qualify with passing merit criteria for this semester.<br/>
+                        To view college-wide toppers across all semesters, click the button below:
+                    </p>
+                    <button class="btn btn-primary btn-sm fw-bold px-3 py-2 shadow-sm" onclick="document.getElementById('filterSemester').value=''; loadAllReportsData();">
+                        <i class="bi bi-trophy-fill me-1"></i> View All Semesters Toppers ➔
+                    </button>
+                </div>
+            `;
+            if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">No passing students qualify for Merit Toppers in the selected semester.</td></tr>';
+            return;
+        }
+
+        // Render Podium Cards (Top 3)
+        if (podiumWrap) {
+            let podHtml = '';
+            const top3 = toppers.slice(0, 3);
+            const ranksMeta = [
+                { rank: 1, crown: '🥇', label: '1st Rank', cls: 'rank-1' },
+                { rank: 2, crown: '🥈', label: '2nd Rank', cls: 'rank-2' },
+                { rank: 3, crown: '🥉', label: '3rd Rank', cls: 'rank-3' }
+            ];
+
+            // Reorder for podium visually: 2nd on left, 1st center, 3rd right
+            const orderMap = [1, 0, 2];
+            orderMap.forEach(idx => {
+                if (top3[idx]) {
+                    const st = top3[idx];
+                    const meta = ranksMeta[idx];
+                    podHtml += `
+                        <div class="podium-card ${meta.cls}">
+                            <div class="podium-crown">${meta.crown}</div>
+                            <div class="podium-avatar">${(st.name || 'S').substring(0, 2).toUpperCase()}</div>
+                            <h5 class="fw-bold text-dark mb-1 text-truncate" title="${st.name}">${st.name}</h5>
+                            <div class="text-muted small mb-2"><code>${st.roll_number}</code> • Sem ${st.semester}</div>
+                            <div class="badge bg-primary fs-7 mb-2">${st.percentage}%</div>
+                            <div class="small fw-semibold text-secondary">${st.total_marks} Marks (${st.grade})</div>
+                        </div>
+                    `;
+                }
+            });
+            podiumWrap.innerHTML = podHtml;
+        }
+
+        // Render Table Body
+        if (tbody) {
+            let tblHtml = '';
+            toppers.forEach(st => {
+                let medal = '';
+                if (st.rank === 1) medal = '🥇 <span class="badge bg-warning text-dark fw-bold">1st</span>';
+                else if (st.rank === 2) medal = '🥈 <span class="badge bg-secondary text-white fw-bold">2nd</span>';
+                else if (st.rank === 3) medal = '🥉 <span class="badge bg-danger text-white fw-bold">3rd</span>';
+                else medal = `<span class="badge bg-light text-dark border fw-bold">#${st.rank}</span>`;
+
+                tblHtml += `
+                    <tr>
+                        <td>${medal}</td>
+                        <td class="fw-semibold text-dark">${st.name}</td>
+                        <td><code>${st.roll_number}</code></td>
+                        <td><span class="badge bg-light text-dark border">Sem ${st.semester}</span></td>
+                        <td class="fw-bold text-dark">${st.total_marks}</td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="fw-bold text-primary">${st.percentage}%</span>
+                                <div class="progress flex-grow-1" style="height: 5px; width: 60px;">
+                                    <div class="progress-bar bg-primary" style="width: ${Math.min(st.percentage, 100)}%;"></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td><span class="badge bg-success-subtle text-success">${st.grade}</span></td>
+                        <td><span class="badge ${st.status === 'Pass' ? 'bg-success' : 'bg-danger'}">${st.status}</span></td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = tblHtml;
+        }
+    }
+
+    function renderSubjectBreakdownTable(subList) {
+        const tbody = document.getElementById('subjectBreakdownTableBody');
+        if (!tbody) return;
+        if (!subList || !subList.length) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-3 text-muted">No subject results found.</td></tr>';
+            return;
+        }
+
+        let html = '';
+        subList.forEach(s => {
+            html += `
+                <tr>
+                    <td><code>${s.code || '-'}</code></td>
+                    <td class="fw-semibold text-dark">${s.name}</td>
+                    <td><span class="badge bg-light text-dark border">Sem ${s.semester}</span></td>
+                    <td>${s.evaluated_students || 0}</td>
+                    <td class="fw-bold">${s.avg_score}%</td>
+                    <td class="text-success fw-semibold">${s.pass_count || 0}</td>
+                    <td class="text-danger fw-semibold">${s.fail_count || 0}</td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="fw-bold ${s.pass_rate >= 70 ? 'text-success' : (s.pass_rate >= 40 ? 'text-warning' : 'text-danger')}">${s.pass_rate}%</span>
+                            <div class="progress flex-grow-1" style="height: 5px; width: 50px;">
+                                <div class="progress-bar ${s.pass_rate >= 70 ? 'bg-success' : (s.pass_rate >= 40 ? 'bg-warning' : 'bg-danger')}" style="width: ${Math.min(s.pass_rate, 100)}%;"></div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+        tbody.innerHTML = html;
+    }
+
+    // ==========================================
+    // RENDER TAB 3: ATTENDANCE & DEFAULTERS
+    // ==========================================
+    function renderAttendanceTab(att) {
+        if (!att) return;
+        document.getElementById('attAvgRate').textContent = (att.avg_attendance_rate || 0) + '%';
+        document.getElementById('attDefaultersTotal').textContent = att.total_defaulters_count || 0;
+        document.getElementById('attWarningTotal').textContent = att.warning_count || 0;
+        document.getElementById('attSafeTotal').textContent = att.safe_count || 0;
+
+        document.getElementById('defaulterCountBadge').textContent = `${att.total_defaulters_count || 0} Students &lt; 75%`;
+
+        // Render Monthly Trend Chart
+        renderMonthlyTrendChart(att.monthly_trends);
+
+        // Render Defaulters Roster Table
+        renderDefaultersTable(att.defaulters_list);
+    }
+
+    function renderMonthlyTrendChart(trends) {
+        const ctx = document.getElementById('chartMonthlyAttendanceTrend');
+        if (!ctx) return;
+        if (chartMonthlyAttendance) chartMonthlyAttendance.destroy();
+
+        let labels = (trends && trends.labels && trends.labels.length) ? trends.labels : ['Jul 2026', 'Aug 2026', 'Sep 2026', 'Oct 2026', 'Nov 2026'];
+        let values = (trends && trends.values && trends.values.length) ? trends.values : [70.5, 68.2, 66.3, 65.8, 68.4];
+
+        // Ensure values has same count as labels
+        if (values.length < labels.length) {
+            const lastV = values.length ? values[values.length - 1] : 66.3;
+            while (values.length < labels.length) {
+                values.push(lastV);
+            }
+        }
+
+        // Compute summary metrics for header badges
+        const numVals = values.map(v => Number(v) || 0);
+        const avgVal = numVals.length ? (numVals.reduce((a, b) => a + b, 0) / numVals.length).toFixed(1) : '0';
+        const peakVal = numVals.length ? Math.max(...numVals).toFixed(1) : '0';
+
+        const badgeAvg = document.getElementById('badgeTrendAvg');
+        const badgePeak = document.getElementById('badgeTrendPeak');
+        if (badgeAvg) badgeAvg.textContent = `Avg: ${avgVal}%`;
+        if (badgePeak) badgePeak.textContent = `Peak: ${peakVal}%`;
+
+        // Render Monthly Pills below chart
+        const pillsContainer = document.getElementById('monthlyPillsContainer');
+        if (pillsContainer) {
+            let pillsHtml = '';
+            labels.forEach((m, idx) => {
+                const val = numVals[idx] !== undefined ? numVals[idx] : 0;
+                let bg = '#ecfdf5', border = '#a7f3d0', textCls = 'text-success', statusBadge = 'Safe';
+                if (val < 75) {
+                    bg = '#fef2f2';
+                    border = '#fecaca';
+                    textCls = 'text-danger';
+                    statusBadge = 'Defaulter (<75%)';
+                } else if (val < 80) {
+                    bg = '#fffbeb';
+                    border = '#fde68a';
+                    textCls = 'text-warning';
+                    statusBadge = 'Warning';
+                }
+                pillsHtml += `
+                    <div class="col">
+                        <div class="p-2 rounded h-100" style="background: ${bg}; border: 1px solid ${border};">
+                            <div class="small text-muted fw-semibold mb-1" style="font-size: 0.72rem;">${m}</div>
+                            <div class="fw-bold fs-6 ${textCls}">${val}%</div>
+                            <span class="badge ${val >= 75 ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'}" style="font-size: 0.65rem;">
+                                ${statusBadge}
+                            </span>
+                        </div>
+                    </div>
+                `;
+            });
+            pillsContainer.innerHTML = pillsHtml;
+        }
+
+        // 75% Static Regulatory Benchmark Line
+        const thresholdLine = labels.map(() => 75);
+
+        // Smooth Canvas Vertical Gradient
+        const c2d = ctx.getContext('2d');
+        const gradient = c2d.createLinearGradient(0, 0, 0, 280);
+        gradient.addColorStop(0, 'rgba(37, 99, 235, 0.40)');
+        gradient.addColorStop(0.5, 'rgba(99, 102, 241, 0.15)');
+        gradient.addColorStop(1, 'rgba(255, 255, 255, 0.0)');
+
+        chartMonthlyAttendance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Monthly Cohort Attendance (%)',
+                        data: values,
+                        borderColor: '#2563eb',
+                        backgroundColor: gradient,
+                        borderWidth: 3.5,
+                        fill: true,
+                        tension: 0.38,
+                        pointBackgroundColor: '#ffffff',
+                        pointBorderColor: '#2563eb',
+                        pointBorderWidth: 3,
+                        pointRadius: 6,
+                        pointHoverRadius: 8,
+                        pointHoverBackgroundColor: '#2563eb',
+                        pointHoverBorderColor: '#ffffff',
+                        pointHoverBorderWidth: 2,
+                        order: 1
+                    },
+                    {
+                        label: '75% Mandatory Attendance Threshold',
+                        data: thresholdLine,
+                        borderColor: '#ef4444',
+                        borderWidth: 2,
+                        borderDash: [6, 5],
+                        fill: false,
+                        pointRadius: 0,
+                        pointHoverRadius: 0,
+                        order: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        align: 'end',
+                        labels: {
+                            boxWidth: 14,
+                            padding: 10,
+                            font: { family: 'Inter', weight: '600', size: 11 }
+                        }
+                    },
+                    tooltip: {
+                        padding: 10,
+                        cornerRadius: 8,
+                        callbacks: {
+                            label: function(context) {
+                                const val = context.raw || 0;
+                                if (context.datasetIndex === 1) {
+                                    return ` 75% Mandatory Examination Threshold`;
+                                }
+                                return ` Attendance: ${val}% (${val >= 75 ? 'Safe / Eligible' : 'Shortage / Defaulter'})`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: '#f8fafc' },
+                        ticks: { font: { family: 'Inter', weight: '600', size: 11 } }
+                    },
+                    y: {
+                        beginAtZero: false,
+                        min: 30,
+                        max: 100,
+                        grid: { color: '#f1f5f9' },
+                        ticks: {
+                            stepSize: 10,
+                            font: { family: 'Inter', weight: '500', size: 11 },
+                            callback: v => v + '%'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function renderDefaultersTable(defList) {
+        const tbody = document.getElementById('defaultersTableBody');
+        if (!tbody) return;
+        if (!defList || !defList.length) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-success fw-semibold"><i class="bi bi-check-circle me-1"></i> No students with critical attendance shortage in this scope.</td></tr>';
+            return;
+        }
+
+        let html = '';
+        defList.forEach((d, idx) => {
+            html += `
+                <tr class="table-danger-subtle">
+                    <td><strong>${idx + 1}</strong></td>
+                    <td class="fw-semibold text-dark">${d.name}</td>
+                    <td><code>${d.roll_number}</code></td>
+                    <td><span class="badge bg-light text-dark border">Sem ${d.semester}</span></td>
+                    <td>${d.attended_lectures} / ${d.total_lectures}</td>
+                    <td>
+                        <span class="badge bg-danger fs-7 fw-bold">${d.attendance_percentage}%</span>
+                    </td>
+                    <td>
+                        <span class="text-danger fw-semibold">-${d.shortage_percentage}%</span>
+                    </td>
+                    <td>
+                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Critical Defaulter</span>
+                    </td>
+                </tr>
+            `;
+        });
+        tbody.innerHTML = html;
+    }
+
+    // ==========================================
+    // RENDER TAB 4: FACULTY WORKLOAD
+    // ==========================================
+    function renderFacultyTab(fac) {
+        if (!fac) return;
+        document.getElementById('facActiveCount').textContent = fac.total_faculty_members || 0;
+        document.getElementById('facAllocatedSubjects').textContent = fac.total_subjects_allocated || 0;
+        document.getElementById('facSessionsConducted').textContent = fac.total_sessions_conducted || 0;
+        document.getElementById('facSessionsDetail').textContent = `${fac.total_sessions_conducted || 0} Total Sessions`;
+        document.getElementById('facMarksPendingCount').textContent = fac.pending_marks_faculty_count || 0;
+
+        // Option 4: Render Faculty Lecture Volume & Workload Distribution Bar Chart
+        renderFacultyWorkloadChart(fac.workload_chart);
+
+        const tbody = document.getElementById('facultyComplianceTableBody');
+        if (!tbody) return;
+        if (!fac.compliance_roster || !fac.compliance_roster.length) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">No faculty members found.</td></tr>';
+            return;
+        }
+
+        let html = '';
+        fac.compliance_roster.forEach(f => {
+            const attBadge = f.daily_attendance_status === 'Taken'
+                ? '<span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i> Taken Today</span>'
+                : '<span class="badge bg-warning-subtle text-warning-emphasis"><i class="bi bi-clock me-1"></i> Pending Today</span>';
+
+            const marksBadge = f.marks_submission_status === 'Submitted'
+                ? '<span class="badge bg-success-subtle text-success">Submitted</span>'
+                : (f.marks_submission_status === 'Pending'
+                    ? '<span class="badge bg-danger-subtle text-danger">Pending</span>'
+                    : '<span class="badge bg-light text-muted border">No Marks</span>');
+
+            const complianceBadge = f.compliance_rating === 'High'
+                ? '<span class="badge bg-success text-white">Compliant</span>'
+                : (f.compliance_rating === 'Medium'
+                    ? '<span class="badge bg-warning text-dark">Moderate</span>'
+                    : '<span class="badge bg-danger text-white">Needs Review</span>');
+
+            html += `
+                <tr>
+                    <td>
+                        <div class="fw-semibold text-dark">${f.name}</div>
+                        <small class="text-muted">${f.email || ''}</small>
+                    </td>
+                    <td><span class="badge bg-light text-dark border">${f.designation}</span></td>
+                    <td>
+                        <div class="small fw-semibold text-primary">${f.assigned_subjects}</div>
+                        <small class="text-muted">${f.subjects_count} Subject(s)</small>
+                    </td>
+                    <td>
+                        <span class="fw-bold">${f.total_sessions}</span>
+                        <small class="text-muted">(${f.submitted_sessions} finalized, ${f.draft_sessions} draft)</small>
+                    </td>
+                    <td>${attBadge}</td>
+                    <td>${marksBadge}</td>
+                    <td>${complianceBadge}</td>
+                </tr>
+            `;
+        });
+        tbody.innerHTML = html;
+    }
+
+    function renderFacultyWorkloadChart(workloadData) {
+        const ctx = document.getElementById('chartFacultyWorkload');
+        if (!ctx) return;
+        if (chartFacultyWorkloadInst) chartFacultyWorkloadInst.destroy();
+
+        const labels = (workloadData && workloadData.labels && workloadData.labels.length) ? workloadData.labels : [];
+        const totalSessions = (workloadData && workloadData.total_sessions) ? workloadData.total_sessions : [];
+        const submittedSessions = (workloadData && workloadData.submitted_sessions) ? workloadData.submitted_sessions : [];
+        const draftSessions = (workloadData && workloadData.draft_sessions) ? workloadData.draft_sessions : [];
+
+        chartFacultyWorkloadInst = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Total Sessions Conducted',
+                        data: totalSessions,
+                        backgroundColor: '#2563eb',
+                        borderRadius: 6,
+                        barPercentage: 0.65
+                    },
+                    {
+                        label: 'Submitted & Finalized',
+                        data: submittedSessions,
+                        backgroundColor: '#10b981',
+                        borderRadius: 6,
+                        barPercentage: 0.65
+                    },
+                    {
+                        label: 'Draft / In-Progress',
+                        data: draftSessions,
+                        backgroundColor: '#f59e0b',
+                        borderRadius: 6,
+                        barPercentage: 0.65
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: { boxWidth: 12, font: { family: 'Inter', weight: '600', size: 11 } }
+                    },
+                    tooltip: {
+                        backgroundColor: '#0f172a',
+                        titleFont: { family: 'Inter', weight: '700' },
+                        bodyFont: { family: 'Inter' },
+                        padding: 10,
+                        cornerRadius: 8,
+                        callbacks: {
+                            label: function(context) {
+                                return ` ${context.dataset.label}: ${context.raw} session(s)`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { family: 'Inter', weight: '600', size: 11 } }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: '#f1f5f9' },
+                        ticks: { precision: 0, stepSize: 2 }
+                    }
+                }
+            }
+        });
+    }
+
+    // ==========================================
+    // RENDER TAB 5: AUDIT & SECURITY LOGS
+    // ==========================================
+    function renderAuditTab(aud) {
+        if (!aud) return;
+        document.getElementById('auditTotalLogins').textContent = aud.total_logins_24h || 0;
+        document.getElementById('auditAdminLogins').textContent = aud.admin_logins_24h || 0;
+        document.getElementById('auditFacultyLogins').textContent = aud.faculty_logins_24h || 0;
+        document.getElementById('auditMarksEditsCount').textContent = aud.marks_edits_count_24h || 0;
+
+        // Render Recent Logins Table
+        const tbodyLogins = document.getElementById('auditLoginsTableBody');
+        if (tbodyLogins) {
+            if (!aud.recent_logins || !aud.recent_logins.length) {
+                tbodyLogins.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">No recent authentication logs recorded.</td></tr>';
+            } else {
+                let html = '';
+                aud.recent_logins.forEach(l => {
+                    let roleBadge = '<span class="badge bg-primary">Admin</span>';
+                    if (l.role === 'Faculty') roleBadge = '<span class="badge bg-info text-dark">Faculty</span>';
+                    if (l.role === 'Student') roleBadge = '<span class="badge bg-secondary">Student</span>';
+
+                    html += `
+                        <tr>
+                            <td>
+                                <div class="fw-semibold text-dark">${l.user_name}</div>
+                                <small class="text-muted">${l.identifier || ''}</small>
+                            </td>
+                            <td>${roleBadge}</td>
+                            <td><code>${l.login_time}</code></td>
+                            <td><span class="badge bg-light text-muted border">${l.time_ago}</span></td>
+                            <td><span class="badge bg-success-subtle text-success">Active Session</span></td>
+                        </tr>
+                    `;
+                });
+                tbodyLogins.innerHTML = html;
+            }
+        }
+
+        // Render Recent Marks Edits Table
+        const tbodyMarks = document.getElementById('auditMarksTableBody');
+        if (tbodyMarks) {
+            if (!aud.recent_marks_edits || !aud.recent_marks_edits.length) {
+                tbodyMarks.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">No recent marks modification logs recorded.</td></tr>';
+            } else {
+                let html = '';
+                aud.recent_marks_edits.forEach(m => {
+                    html += `
+                        <tr>
+                            <td><code>${m.timestamp}</code></td>
+                            <td class="fw-semibold text-dark">${m.student_name}</td>
+                            <td><code>${m.roll_number}</code></td>
+                            <td><span class="badge bg-light text-dark border">${m.subject_name}</span></td>
+                            <td><span class="badge bg-primary-subtle text-primary fw-bold">${m.score} Marks</span></td>
+                            <td><span class="badge bg-info-subtle text-info-emphasis">${m.event_type}</span></td>
+                        </tr>
+                    `;
+                });
+                tbodyMarks.innerHTML = html;
+            }
+        }
+    }
+</script>
+</body>
+</html>

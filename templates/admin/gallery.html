@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campus Gallery Management – Admin Panel – CampusSync</title>
+    <!-- Google Fonts & Bootstrap Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Custom Theme Stylesheets -->
+    <link href="{{ url_for('static', filename='css/common.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/admin.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/notification_modal.css') }}" rel="stylesheet">
+    <style>
+        .gallery-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 1.25rem;
+            overflow: hidden;
+            background: #ffffff;
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+        }
+        .gallery-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 16px 32px -8px rgba(15, 23, 42, 0.12);
+            border-color: #cbd5e1;
+        }
+        .gallery-thumb-wrapper {
+            position: relative;
+            width: 100%;
+            height: 220px;
+            background: #f1f5f9;
+            overflow: hidden;
+        }
+        .gallery-thumb-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.35s ease;
+        }
+        .gallery-card:hover .gallery-thumb-wrapper img {
+            transform: scale(1.04);
+        }
+        .gallery-category-pill {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.35rem 0.75rem;
+            border-radius: 2rem;
+            backdrop-filter: blur(8px);
+            background: rgba(15, 23, 42, 0.75);
+            color: #ffffff;
+            letter-spacing: 0.02em;
+            z-index: 2;
+        }
+        .gallery-featured-pill {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 0.3rem 0.65rem;
+            border-radius: 2rem;
+            background: #f59e0b;
+            color: #ffffff;
+            box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+            z-index: 2;
+        }
+        .upload-dropzone {
+            border: 2px dashed #cbd5e1;
+            border-radius: 1rem;
+            padding: 2.2rem 1.5rem;
+            text-align: center;
+            background: #f8fafc;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .upload-dropzone:hover, .upload-dropzone.dragover {
+            border-color: #10b981;
+            background: #ecfdf5;
+        }
+        .filter-tab-pill {
+            border: 1px solid #e2e8f0;
+            border-radius: 2rem;
+            padding: 0.4rem 1rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #475569;
+            background: #ffffff;
+            text-decoration: none;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+        .filter-tab-pill:hover {
+            background: #f1f5f9;
+            color: #0f172a;
+        }
+        .filter-tab-pill.active {
+            background: #10b981;
+            color: #ffffff;
+            border-color: #10b981;
+            box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
+        }
+    </style>
+</head>
+<body class="admin-theme">
+<div class="wrapper">
+    <!-- Sidebar Navigation -->
+    {% include 'components/sidebar.html' %}
+
+    <div id="content">
+        <!-- Topbar Navigation -->
+        {% include 'components/topbar.html' %}
+
+        <div class="content-body">
+            <!-- Flash Alerts -->
+            <div id="flashContainer" class="flash-container">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ 'success' if category == 'success' else 'danger' if category == 'danger' else 'warning' }} alert-dismissible fade show shadow-sm" role="alert">
+                                <i class="bi {{ 'bi-check-circle-fill' if category == 'success' else 'bi-exclamation-triangle-fill' }} me-2"></i>
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+            </div>
+
+            <!-- Page Header -->
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+                <div>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb mb-1 small">
+                            <li class="breadcrumb-item"><a href="{{ url_for('admin_dashboard') }}" class="text-decoration-none">Dashboard</a></li>
+                            <li class="breadcrumb-item"><a href="{{ url_for('admin_website') }}" class="text-decoration-none">Website</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Campus Gallery</li>
+                        </ol>
+                    </nav>
+                    <h2 class="fw-bold mb-1 text-dark" style="font-size: 1.65rem;">
+                        <i class="bi bi-images text-success me-2"></i>Campus Gallery Management
+                    </h2>
+                    <p class="text-muted small mb-0">Upload event photographs, campus views, and achievements for the public website showcase.</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('admin_website') }}" class="btn btn-outline-secondary btn-sm px-3">
+                        <i class="bi bi-arrow-left me-1"></i> Back to Website
+                    </a>
+                    <a href="{{ url_for('gallery') }}" target="_blank" class="btn btn-outline-primary btn-sm px-3">
+                        <i class="bi bi-box-arrow-up-right me-1"></i> View Public Gallery
+                    </a>
+                    <button type="button" class="btn btn-success btn-sm px-3 fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#uploadPhotoModal">
+                        <i class="bi bi-plus-circle-fill me-1"></i> Upload New Photo
+                    </button>
+                </div>
+            </div>
+
+            <!-- Summary Statistics Cards -->
+            <div class="row g-3 mb-4">
+                <div class="col-sm-6 col-lg-3">
+                    <div class="card shadow-sm border-0 rounded-4 p-3 d-flex flex-row align-items-center gap-3">
+                        <div class="stat-icon icon-bg-success rounded-4 d-flex align-items-center justify-content-center" style="width: 52px; height: 52px; font-size: 1.4rem;">
+                            <i class="bi bi-images"></i>
+                        </div>
+                        <div>
+                            <div class="text-muted small fw-semibold text-uppercase" style="letter-spacing: 0.05em; font-size: 0.72rem;">Total Photos</div>
+                            <div class="fs-4 fw-bold text-dark">{{ stats.total }}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <div class="card shadow-sm border-0 rounded-4 p-3 d-flex flex-row align-items-center gap-3">
+                        <div class="stat-icon icon-bg-primary rounded-4 d-flex align-items-center justify-content-center" style="width: 52px; height: 52px; font-size: 1.4rem;">
+                            <i class="bi bi-check2-circle"></i>
+                        </div>
+                        <div>
+                            <div class="text-muted small fw-semibold text-uppercase" style="letter-spacing: 0.05em; font-size: 0.72rem;">Active Photos</div>
+                            <div class="fs-4 fw-bold text-success">{{ stats.active }}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <div class="card shadow-sm border-0 rounded-4 p-3 d-flex flex-row align-items-center gap-3">
+                        <div class="stat-icon icon-bg-warning rounded-4 d-flex align-items-center justify-content-center" style="width: 52px; height: 52px; font-size: 1.4rem;">
+                            <i class="bi bi-star-fill text-warning"></i>
+                        </div>
+                        <div>
+                            <div class="text-muted small fw-semibold text-uppercase" style="letter-spacing: 0.05em; font-size: 0.72rem;">Featured on Home</div>
+                            <div class="fs-4 fw-bold text-dark">{{ stats.featured }}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <div class="card shadow-sm border-0 rounded-4 p-3 d-flex flex-row align-items-center gap-3">
+                        <div class="stat-icon rounded-4 d-flex align-items-center justify-content-center" style="width: 52px; height: 52px; font-size: 1.4rem; background: #e0f2fe; color: #0284c7;">
+                            <i class="bi bi-eye-fill"></i>
+                        </div>
+                        <div>
+                            <div class="text-muted small fw-semibold text-uppercase" style="letter-spacing: 0.05em; font-size: 0.72rem;">Total Views</div>
+                            <div class="fs-4 fw-bold text-dark">{{ stats.total_views }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter & Search Toolbar -->
+            <div class="card shadow-sm border-0 rounded-4 p-3 mb-4">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                    <!-- Category Tabs -->
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <a href="{{ url_for('admin_gallery', category='All', q=search_query, sort=sort_option) }}" class="filter-tab-pill {% if selected_category == 'All' %}active{% endif %}">
+                            All Photos ({{ stats.total }})
+                        </a>
+                        {% for cat in categories %}
+                            <a href="{{ url_for('admin_gallery', category=cat, q=search_query, sort=sort_option) }}" class="filter-tab-pill {% if selected_category == cat %}active{% endif %}">
+                                {{ cat }} ({{ stats.category_counts.get(cat, 0) if stats.category_counts else 0 }})
+                            </a>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Search & Sort Box -->
+                    <form method="GET" action="{{ url_for('admin_gallery') }}" class="d-flex align-items-center gap-2">
+                        <input type="hidden" name="category" value="{{ selected_category }}">
+                        <div class="input-group input-group-sm" style="max-width: 240px;">
+                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                            <input type="text" name="q" class="form-control border-start-0" placeholder="Search title..." value="{{ search_query }}">
+                        </div>
+                        <select name="sort" class="form-select form-select-sm" style="width: auto;" onchange="this.form.submit()">
+                            <option value="newest" {% if sort_option == 'newest' %}selected{% endif %}>Newest First</option>
+                            <option value="oldest" {% if sort_option == 'oldest' %}selected{% endif %}>Oldest First</option>
+                            <option value="featured" {% if sort_option == 'featured' %}selected{% endif %}>Featured First</option>
+                            <option value="title" {% if sort_option == 'title' %}selected{% endif %}>Title A-Z</option>
+                        </select>
+                        {% if search_query %}
+                            <a href="{{ url_for('admin_gallery', category=selected_category) }}" class="btn btn-sm btn-outline-secondary" title="Clear Search">
+                                <i class="bi bi-x-circle"></i>
+                            </a>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+
+            <!-- Gallery Cards Grid -->
+            <div class="row g-4 mb-4">
+                {% if items %}
+                    {% for item in items %}
+                        <div class="col-sm-6 col-md-6 col-lg-4 col-xxl-3">
+                            <div class="gallery-card shadow-sm h-100 d-flex flex-column">
+                                <!-- Thumbnail Container -->
+                                <div class="gallery-thumb-wrapper" style="height: 220px;">
+                                    <span class="gallery-category-pill">
+                                        <i class="bi bi-tag-fill me-1"></i>{{ item.category }}
+                                    </span>
+                                    {% if item.is_featured %}
+                                        <span class="gallery-featured-pill">
+                                            <i class="bi bi-star-fill me-1"></i>Featured
+                                        </span>
+                                    {% endif %}
+                                    <img src="{{ url_for('global_serve_uploads', filename='gallery/' + item.image_file) }}" alt="{{ item.title }}" loading="lazy">
+                                </div>
+
+                                <!-- Card Content -->
+                                <div class="p-4 d-flex flex-column flex-grow-1">
+                                    <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                                        <h5 class="fw-bold text-dark text-truncate mb-0" style="font-size: 1.1rem;" title="{{ item.title }}">{{ item.title }}</h5>
+                                        <span class="badge {% if item.status == 'Active' %}bg-success-subtle text-success border border-success-subtle{% else %}bg-secondary-subtle text-secondary border border-secondary-subtle{% endif %} px-2 py-1" style="font-size: 0.72rem;">
+                                            {{ item.status }}
+                                        </span>
+                                    </div>
+
+                                    <!-- Date & Category Subtitle with Views -->
+                                    <div class="d-flex flex-wrap align-items-center gap-2 text-muted small mb-3">
+                                        <span><i class="bi bi-calendar3 me-1 text-primary"></i>{{ item.created_at.strftime('%d %b, %Y') if item.created_at else '' }}</span>
+                                        <span>&bull;</span>
+                                        <span class="text-secondary"><i class="bi bi-tag me-1"></i>{{ item.category }}</span>
+                                        <span class="badge bg-light text-dark border ms-auto"><i class="bi bi-eye-fill text-info me-1"></i>{{ item.views_count }} views</span>
+                                    </div>
+
+                                    <p class="text-secondary small mb-4 flex-grow-1" style="font-size: 0.85rem; line-height: 1.5; min-height: 2.2em;">
+                                        {% if item.description %}
+                                            {{ item.description[:85] }}{% if item.description|length > 85 %}...{% endif %}
+                                        {% else %}
+                                            <span class="text-muted fst-italic">No caption or description added</span>
+                                        {% endif %}
+                                    </p>
+
+                                    <!-- Actions Footer -->
+                                    <div class="pt-3 border-top mt-auto d-flex align-items-center justify-content-between gap-2">
+                                        <!-- Quick Toggles (Left) -->
+                                        <div class="d-flex align-items-center gap-1">
+                                            <!-- Preview Full Image -->
+                                            <button type="button" class="btn btn-sm btn-light border text-secondary" title="View Full Photo" onclick="previewImage('{{ url_for('global_serve_uploads', filename='gallery/' + item.image_file) }}', '{{ item.title }}', '{{ item.category }}', '{{ item.description|default('', true) }}', {{ item.views_count }})">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+
+                                            <!-- Toggle Featured Status -->
+                                            <form action="{{ url_for('admin_gallery_featured', item_id=item.id) }}" method="POST" class="d-inline">
+                                                <button type="submit" class="btn btn-sm {% if item.is_featured %}btn-warning text-white{% else %}btn-light border text-secondary{% endif %}" title="{% if item.is_featured %}Featured on Home (Click to remove){% else %}Mark as Featured on Home{% endif %}">
+                                                    <i class="bi bi-star-fill"></i>
+                                                </button>
+                                            </form>
+
+                                            <!-- Toggle Active/Inactive Status -->
+                                            <form action="{{ url_for('admin_gallery_toggle', item_id=item.id) }}" method="POST" class="d-inline">
+                                                <button type="submit" class="btn btn-sm {% if item.status == 'Active' %}btn-success-subtle text-success border border-success-subtle{% else %}btn-light border text-muted{% endif %}" title="{% if item.status == 'Active' %}Active (Click to Hide){% else %}Inactive (Click to Show){% endif %}">
+                                                    <i class="bi {% if item.status == 'Active' %}bi-toggle-on fs-6{% else %}bi-toggle-off fs-6{% endif %}"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+
+                                        <!-- Edit & Delete Buttons (Right) -->
+                                        <div class="d-flex align-items-center gap-2">
+                                            <!-- Edit Photo Details -->
+                                            <button type="button" class="btn btn-sm btn-outline-primary px-2 d-inline-flex align-items-center gap-1" title="Edit Photo" onclick="openEditModal({{ item.id }}, '{{ item.title|replace("'", "\\'") }}', '{{ item.category }}', '{{ item.description|default('', true)|replace("'", "\\'") }}', {{ 'true' if item.is_featured else 'false' }}, '{{ item.status }}', '{{ url_for('global_serve_uploads', filename='gallery/' + item.image_file) }}')">
+                                                <i class="bi bi-pencil-square"></i> <span class="d-none d-sm-inline">Edit</span>
+                                            </button>
+
+                                            <!-- Delete Photo (HTML Modal Confirmation) -->
+                                            <button type="button" class="btn btn-sm btn-outline-danger px-2" title="Delete Photo" onclick="openDeletePhotoModal({{ item.id }}, '{{ item.title|replace("'", "\\'") }}', '{{ url_for('global_serve_uploads', filename='gallery/' + item.image_file) }}', '{{ item.category }}')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="col-12 text-center py-5">
+                        <div class="py-5">
+                            <i class="bi bi-images text-secondary display-4 d-block mb-3"></i>
+                            <h5 class="fw-bold text-dark">No gallery photos found</h5>
+                            <p class="text-muted small">No photos uploaded under "{{ selected_category }}" category yet. Click below to add one!</p>
+                            <button type="button" class="btn btn-success btn-sm px-4 fw-semibold mt-2" data-bs-toggle="modal" data-bs-target="#uploadPhotoModal">
+                                <i class="bi bi-plus-circle-fill me-1"></i> Upload First Photo
+                            </button>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ==================== UPLOAD PHOTO MODAL ==================== -->
+<div class="modal fade" id="uploadPhotoModal" tabindex="-1" aria-labelledby="uploadPhotoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header border-bottom py-3 px-4 bg-light rounded-top-4">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="stat-icon icon-bg-success rounded-3 d-flex align-items-center justify-content-center" style="width: 38px; height: 38px; font-size: 1.15rem;">
+                        <i class="bi bi-cloud-arrow-up-fill"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark mb-0" id="uploadPhotoModalLabel">Upload Campus Photo</h5>
+                        <small class="text-muted">Add new event, infrastructure, or sports photograph to the gallery</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('admin_gallery') }}" method="POST" enctype="multipart/form-data">
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <!-- Photo Title -->
+                        <div class="col-md-7">
+                            <label class="form-label fw-semibold small text-secondary">Photo Title <span class="text-danger">*</span></label>
+                            <input type="text" name="title" class="form-control" placeholder="e.g. Annual Cultural Fest 2026, Computer Science Lab" required>
+                        </div>
+
+                        <!-- Category Selector -->
+                        <div class="col-md-5">
+                            <label class="form-label fw-semibold small text-secondary">Category / Album <span class="text-danger">*</span></label>
+                            <select name="category" class="form-select" required>
+                                {% for cat in categories %}
+                                    <option value="{{ cat }}">{{ cat }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Drag & Drop Upload Zone -->
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small text-secondary">Select Image File <span class="text-danger">*</span></label>
+                            <div class="upload-dropzone" id="dropzoneUpload" onclick="document.getElementById('photoInput').click()">
+                                <i class="bi bi-cloud-arrow-up-fill text-success fs-1 d-block mb-1"></i>
+                                <span class="fw-semibold text-dark">Click or Drag &amp; Drop Photo Here</span>
+                                <div class="text-muted small mt-1">Supports JPG, PNG, WEBP up to 10MB</div>
+                                <input type="file" name="photo" id="photoInput" class="d-none" accept="image/*" required onchange="previewUploadImage(this)">
+                            </div>
+
+                            <!-- Live Selected Preview -->
+                            <div id="uploadPreviewWrapper" class="mt-3 text-center p-2 bg-light rounded-3 border" style="display: none;">
+                                <img id="uploadPreviewImg" src="" alt="Selected Preview" class="img-fluid rounded border shadow-sm" style="max-height: 220px; object-fit: contain;">
+                                <div class="mt-2 small text-muted">
+                                    <span id="uploadFileName" class="fw-semibold text-dark">image.jpg</span>
+                                    <button type="button" class="btn btn-link btn-sm text-danger p-0 ms-2 text-decoration-none" onclick="clearUploadPreview()"><i class="bi bi-trash"></i> Remove</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Description / Caption -->
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small text-secondary">Description / Caption (Optional)</label>
+                            <textarea name="description" rows="2" class="form-control" placeholder="Add details about the event, location, participants, or department..."></textarea>
+                        </div>
+
+                        <!-- Featured Checkbox -->
+                        <div class="col-12">
+                            <div class="form-check form-switch p-3 bg-light rounded-3 border">
+                                <input class="form-check-input ms-0 me-3" type="checkbox" role="switch" name="is_featured" id="featuredSwitch">
+                                <label class="form-check-label fw-semibold text-dark" for="featuredSwitch">
+                                    <i class="bi bi-star-fill text-warning me-1"></i> Feature this photo on College Homepage
+                                </label>
+                                <div class="text-muted small ps-5">Featured photographs appear directly in the public showcase on the main landing page.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top py-3 px-4 bg-light rounded-bottom-4">
+                    <button type="button" class="btn btn-outline-secondary px-3" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success px-4 fw-semibold shadow-sm">
+                        <i class="bi bi-cloud-arrow-up-fill me-1"></i> Upload Photo
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== EDIT PHOTO MODAL ==================== -->
+<div class="modal fade" id="editPhotoModal" tabindex="-1" aria-labelledby="editPhotoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header border-bottom py-3 px-4 bg-light rounded-top-4">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="stat-icon icon-bg-primary rounded-3 d-flex align-items-center justify-content-center" style="width: 38px; height: 38px; font-size: 1.15rem;">
+                        <i class="bi bi-pencil-square"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark mb-0" id="editPhotoModalLabel">Edit Photo Details</h5>
+                        <small class="text-muted">Update photograph title, album category, or replace image</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="editPhotoForm" method="POST" enctype="multipart/form-data">
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-7">
+                            <label class="form-label fw-semibold small text-secondary">Photo Title <span class="text-danger">*</span></label>
+                            <input type="text" name="title" id="editTitle" class="form-control" required>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label fw-semibold small text-secondary">Category / Album <span class="text-danger">*</span></label>
+                            <select name="category" id="editCategory" class="form-select" required>
+                                {% for cat in categories %}
+                                    <option value="{{ cat }}">{{ cat }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Current Image Display & Optional Replace -->
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small text-secondary">Current Photograph</label>
+                            <div class="p-3 bg-light rounded-3 border d-flex flex-wrap align-items-center gap-3">
+                                <img id="editCurrentImg" src="" alt="Current" class="rounded border" style="width: 120px; height: 80px; object-fit: cover;">
+                                <div>
+                                    <label class="btn btn-sm btn-outline-primary" for="editPhotoInput">
+                                        <i class="bi bi-arrow-repeat me-1"></i> Replace Photo File
+                                    </label>
+                                    <input type="file" name="photo" id="editPhotoInput" class="d-none" accept="image/*" onchange="previewEditNewImage(this)">
+                                    <div id="editNewFileNotice" class="small text-success mt-1" style="display: none;"><i class="bi bi-check-circle"></i> New photo chosen</div>
+                                    <small class="text-muted d-block mt-1">Leave empty to keep existing image</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small text-secondary">Description / Caption</label>
+                            <textarea name="description" id="editDescription" rows="2" class="form-control"></textarea>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-secondary">Visibility Status</label>
+                            <select name="status" id="editStatus" class="form-select">
+                                <option value="Active">Active (Visible on Website)</option>
+                                <option value="Inactive">Inactive (Hidden from Website)</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6 d-flex align-items-end">
+                            <div class="form-check form-switch p-2 ps-5 bg-light rounded-3 border w-100">
+                                <input class="form-check-input" type="checkbox" role="switch" name="is_featured" id="editFeaturedSwitch">
+                                <label class="form-check-label fw-semibold text-dark small" for="editFeaturedSwitch">
+                                    <i class="bi bi-star-fill text-warning me-1"></i> Featured on Homepage
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top py-3 px-4 bg-light rounded-bottom-4">
+                    <button type="button" class="btn btn-outline-secondary px-3" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary px-4 fw-semibold shadow-sm">
+                        <i class="bi bi-check2-circle me-1"></i> Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== DELETE PHOTO CONFIRMATION MODAL ==================== -->
+<div class="modal fade" id="deletePhotoModal" tabindex="-1" aria-labelledby="deletePhotoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
+        <div class="modal-content rounded-4 border-0 shadow-lg overflow-hidden">
+            <div class="modal-header border-0 pb-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center bg-danger-subtle text-danger" style="width: 44px; height: 44px; font-size: 1.25rem;">
+                        <i class="bi bi-trash3-fill"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark mb-0" id="deletePhotoModalLabel">Delete Photograph</h5>
+                        <small class="text-danger fw-semibold">Permanent Action</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="text-secondary small mb-3">
+                    Are you sure you want to permanently delete this photograph from the gallery? This action cannot be undone.
+                </p>
+
+                <!-- Preview of Photo to be Deleted -->
+                <div class="d-flex align-items-center gap-3 p-3 bg-light rounded-3 border">
+                    <img id="deleteModalThumb" src="" alt="Thumbnail" class="rounded object-fit-cover border shadow-xs" style="width: 68px; height: 68px;">
+                    <div class="overflow-hidden">
+                        <span id="deleteModalCategory" class="badge bg-secondary-subtle text-dark small mb-1">Category</span>
+                        <div id="deleteModalTitle" class="fw-bold text-dark text-truncate small" style="max-width: 250px;">Photo Title</div>
+                        <small class="text-muted d-block mt-1"><i class="bi bi-exclamation-triangle text-danger me-1"></i>File will be removed from server</small>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-top py-3 px-4 bg-light d-flex justify-content-end gap-2">
+                <button type="button" class="btn btn-outline-secondary px-3" data-bs-dismiss="modal">
+                    Cancel
+                </button>
+                <form id="deletePhotoForm" method="POST" class="d-inline m-0">
+                    <button type="submit" class="btn btn-danger px-4 fw-semibold shadow-sm d-inline-flex align-items-center gap-1">
+                        <i class="bi bi-trash3-fill"></i> Delete Photo
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== LIGHTBOX PREVIEW MODAL ==================== -->
+<div class="modal fade" id="lightboxModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content bg-dark border-0 rounded-4 overflow-hidden shadow-2xl">
+            <div class="modal-header border-bottom border-secondary py-3 px-4 bg-black bg-opacity-50 text-white">
+                <div>
+                    <span id="lightboxCategory" class="badge bg-success px-2 py-1 mb-1">Category</span>
+                    <span id="lightboxViews" class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1 mb-1 ms-1"><i class="bi bi-eye-fill me-1"></i><span id="lightboxViewsCount">0</span> Views</span>
+                    <h5 class="modal-title fw-bold mb-0 text-white" id="lightboxTitle">Photo Title</h5>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0 text-center bg-black d-flex align-items-center justify-content-center" style="min-height: 480px; max-height: 80vh;">
+                <img id="lightboxImage" src="" alt="Full View" class="img-fluid" style="max-height: 75vh; object-fit: contain;">
+            </div>
+            <div class="modal-footer border-top border-secondary py-2 px-4 bg-black bg-opacity-50 text-white d-flex justify-content-between">
+                <p id="lightboxDescription" class="small mb-0 text-secondary"></p>
+                <button type="button" class="btn btn-sm btn-outline-light px-3" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ url_for('static', filename='js/common.js') }}"></script>
+<script src="{{ url_for('static', filename='js/notification_modal.js') }}"></script>
+<script>
+    // Preview selected image before uploading
+    function previewUploadImage(input) {
+        if (input.files && input.files[0]) {
+            const file = input.files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('uploadPreviewImg').src = e.target.result;
+                document.getElementById('uploadFileName').textContent = file.name + ' (' + (file.size / (1024 * 1024)).toFixed(2) + ' MB)';
+                document.getElementById('uploadPreviewWrapper').style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function clearUploadPreview() {
+        const input = document.getElementById('photoInput');
+        input.value = '';
+        document.getElementById('uploadPreviewWrapper').style.display = 'none';
+        document.getElementById('uploadPreviewImg').src = '';
+    }
+
+    // Lightbox modal preview
+    function previewImage(imgUrl, title, category, description, views) {
+        document.getElementById('lightboxImage').src = imgUrl;
+        document.getElementById('lightboxTitle').textContent = title;
+        document.getElementById('lightboxCategory').textContent = category;
+        document.getElementById('lightboxViewsCount').textContent = views || 0;
+        document.getElementById('lightboxDescription').textContent = description || 'No caption provided.';
+        const modal = new bootstrap.Modal(document.getElementById('lightboxModal'));
+        modal.show();
+    }
+
+    // Open Edit modal
+    function openEditModal(id, title, category, description, isFeatured, status, imgUrl) {
+        const form = document.getElementById('editPhotoForm');
+        form.action = '/admin/gallery/edit/' + id;
+        document.getElementById('editTitle').value = title;
+        document.getElementById('editCategory').value = category;
+        document.getElementById('editDescription').value = description;
+        document.getElementById('editFeaturedSwitch').checked = isFeatured;
+        document.getElementById('editStatus').value = status;
+        document.getElementById('editCurrentImg').src = imgUrl;
+        document.getElementById('editPhotoInput').value = '';
+        document.getElementById('editNewFileNotice').style.display = 'none';
+
+        const modal = new bootstrap.Modal(document.getElementById('editPhotoModal'));
+        modal.show();
+    }
+
+    function openDeletePhotoModal(itemId, title, imageUrl, category) {
+        const deleteForm = document.getElementById('deletePhotoForm');
+        deleteForm.action = "{{ url_for('admin_gallery_delete', item_id=0) }}".replace('/0', '/' + itemId);
+        document.getElementById('deleteModalTitle').textContent = title || 'Untitled Photo';
+        document.getElementById('deleteModalThumb').src = imageUrl || '';
+        document.getElementById('deleteModalCategory').textContent = category || 'Gallery';
+        const deleteModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('deletePhotoModal'));
+        deleteModal.show();
+    }
+
+    function previewEditNewImage(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('editCurrentImg').src = e.target.result;
+                document.getElementById('editNewFileNotice').style.display = 'block';
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    // Drag and drop dropzone behavior
+    const dropzone = document.getElementById('dropzoneUpload');
+    if (dropzone) {
+        ['dragenter', 'dragover'].forEach(evt => {
+            dropzone.addEventListener(evt, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropzone.classList.add('dragover');
+            });
+        });
+        ['dragleave', 'drop'].forEach(evt => {
+            dropzone.addEventListener(evt, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropzone.classList.remove('dragover');
+            });
+        });
+        dropzone.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files && files.length > 0) {
+                const input = document.getElementById('photoInput');
+                input.files = files;
+                previewUploadImage(input);
+            }
+        });
+    }
+</script>
+
+{% include 'components/notification_modal.html' %}
+</body>
+</html>

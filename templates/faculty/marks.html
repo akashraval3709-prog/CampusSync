@@ -1,0 +1,1480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bulk Internal Marks Entry – {{ college.college_short_name if college and college.college_short_name else 'CampusSync' }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/common.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/faculty.css') }}" rel="stylesheet">
+    <style>
+        /* Excel Grid Custom Styling */
+        .excel-table-container {
+            max-height: 680px;
+            overflow: auto;
+            border-radius: 8px;
+            box-shadow: inset 0 0 0 1px #e2e8f0;
+        }
+
+        .excel-table {
+            border-collapse: separate;
+            border-spacing: 0;
+            width: 100%;
+            font-size: 0.85rem;
+        }
+
+        .excel-table th {
+            background-color: #f1f5f9;
+            color: #334155;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.72rem;
+            letter-spacing: 0.5px;
+            padding: 10px 8px;
+            border-bottom: 2px solid #cbd5e1;
+            border-right: 1px solid #e2e8f0;
+            white-space: nowrap;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .excel-table td {
+            padding: 4px 6px;
+            border-bottom: 1px solid #e2e8f0;
+            border-right: 1px solid #e2e8f0;
+            vertical-align: middle;
+            background-color: #ffffff;
+            white-space: nowrap;
+        }
+
+        /* Sticky Left Columns for Stable Identification */
+        .excel-table .sticky-col-0 {
+            position: sticky;
+            left: 0;
+            z-index: 15;
+            min-width: 40px;
+            max-width: 40px;
+            background-color: #f8fafc;
+            text-align: center;
+        }
+        .excel-table .sticky-col-1 {
+            position: sticky;
+            left: 40px;
+            z-index: 15;
+            min-width: 70px;
+            max-width: 70px;
+            background-color: #f8fafc;
+        }
+        .excel-table .sticky-col-2 {
+            position: sticky;
+            left: 110px;
+            z-index: 15;
+            min-width: 135px;
+            max-width: 135px;
+            background-color: #f8fafc;
+        }
+        .excel-table .sticky-col-3 {
+            position: sticky;
+            left: 245px;
+            z-index: 15;
+            min-width: 175px;
+            max-width: 215px;
+            background-color: #f8fafc;
+            border-right: 2px solid #cbd5e1 !important;
+        }
+
+        .excel-table th.sticky-col-0,
+        .excel-table th.sticky-col-1,
+        .excel-table th.sticky-col-2,
+        .excel-table th.sticky-col-3 {
+            z-index: 25;
+            background-color: #e2e8f0;
+        }
+
+        /* Grid Input Box Styling */
+        .grid-input {
+            width: 100%;
+            min-width: 58px;
+            max-width: 65px;
+            padding: 4px 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-align: center;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            background-color: #ffffff;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        /* View Mode vs Edit Mode Rules */
+        .excel-table.view-mode .grid-input {
+            display: none !important;
+        }
+        .excel-table.view-mode .mark-view-val {
+            display: inline-block;
+            padding: 4px 8px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: #1e293b;
+            min-width: 42px;
+            text-align: center;
+        }
+        .excel-table.edit-mode .mark-view-val {
+            display: none !important;
+        }
+        .excel-table.edit-mode .grid-input {
+            display: block !important;
+            margin: 0 auto;
+        }
+
+        .grid-input:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+            background-color: #eff6ff;
+            z-index: 2;
+            position: relative;
+        }
+
+        .grid-input.is-invalid {
+            border-color: #ef4444 !important;
+            background-color: #fef2f2 !important;
+            color: #dc2626 !important;
+        }
+
+        .grid-input[readonly] {
+            background-color: #f1f5f9 !important;
+            cursor: not-allowed;
+            color: #475569;
+        }
+
+        .readonly-calc-box {
+            font-weight: 700;
+            color: #1e40af;
+            background-color: #eff6ff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid #bfdbfe;
+            display: inline-block;
+            min-width: 55px;
+            text-align: center;
+        }
+
+        .row-dirty td {
+            background-color: #fffbeb !important;
+        }
+        .row-dirty td.sticky-col-0,
+        .row-dirty td.sticky-col-1,
+        .row-dirty td.sticky-col-2,
+        .row-dirty td.sticky-col-3 {
+            background-color: #fef3c7 !important;
+        }
+
+        .summary-pill {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 6px 14px;
+        }
+
+        /* Blurred Background Overlay for Attendance Warning Modal */
+        .modal-backdrop.show {
+            backdrop-filter: blur(6px) !important;
+            -webkit-backdrop-filter: blur(6px) !important;
+            background-color: rgba(15, 23, 42, 0.55) !important;
+        }
+    </style>
+</head>
+<body class="faculty-theme">
+<div class="wrapper">
+    {% include 'components/sidebar.html' %}
+    <div id="content">
+        {% include 'components/topbar.html' %}
+        <div class="content-body">
+
+            <!-- Page Header -->
+            <div class="page-header d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 pb-3 border-bottom mb-3">
+                <div>
+                    <nav aria-label="breadcrumb" class="mb-1">
+                        <ol class="breadcrumb mb-0" style="font-size:.8rem;">
+                            <li class="breadcrumb-item"><a href="{{ url_for('faculty_students') }}" class="text-decoration-none">Students</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Internal Marks</li>
+                        </ol>
+                    </nav>
+                    <h2 class="h3 fw-bold mb-1">Add Internal Marks</h2>
+                    <p class="text-muted mb-0">Enter internal assessment marks for students assigned to your subject and division.</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('faculty_dashboard') }}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-left me-1"></i> Dashboard
+                    </a>
+                </div>
+            </div>
+
+            <!-- Toast / Alert Container -->
+            <div id="globalAlert" class="alert alert-dismissible fade show d-none" role="alert">
+                <span id="globalAlertMessage"></span>
+                <button type="button" class="btn-close" onclick="hideGlobalAlert()"></button>
+            </div>
+
+            <!-- Filter Controls Card -->
+            <div class="card shadow-sm mb-3">
+                <div class="card-body py-3">
+                    <form method="GET" action="{{ url_for('faculty_marks') }}" class="row g-2 align-items-end" id="filterForm">
+                        <div class="col-6 col-md-2">
+                            <label for="academic_year" class="form-label fw-semibold fs-7 mb-1">Academic Year</label>
+                            <select name="academic_year" id="academic_year" class="form-select form-select-sm">
+                                {% for year in available_years %}
+                                <option value="{{ year }}" {% if selected_year == year %}selected{% endif %}>{{ year }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-6 col-md-2">
+                            <label for="semester_filter" class="form-label fw-semibold fs-7 mb-1">Semester</label>
+                            <select id="semester_filter" class="form-select form-select-sm" onchange="onSemesterFilterChange()">
+                                <option value="">All Semesters</option>
+                                {% set sem_set = [] %}
+                                {% for asub in assigned_subjects %}
+                                    {% if asub.semester not in sem_set %}
+                                        {% if sem_set.append(asub.semester) %}{% endif %}
+                                        <option value="{{ asub.semester }}" {% if selected_semester == asub.semester %}selected{% endif %}>Sem {{ asub.semester }}</option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                            <label for="subject_id" class="form-label fw-semibold fs-7 mb-1">Subject</label>
+                            <select name="subject_id" id="subject_id" class="form-select form-select-sm" onchange="onSubjectChange()">
+                                {% if assigned_subjects %}
+                                    {% for asub in assigned_subjects %}
+                                        <option value="{{ asub.subject_id }}" 
+                                                data-division="{{ asub.division }}"
+                                                data-semester="{{ asub.semester }}"
+                                                {% if selected_subject_id == asub.subject_id and selected_division == asub.division %}selected{% endif %}>
+                                            [{{ asub.subject_code }}] {{ asub.subject_name }} (Div {{ asub.division }} · {{ asub.subject_type }})
+                                        </option>
+                                    {% endfor %}
+                                {% else %}
+                                    <option value="">No subjects assigned</option>
+                                {% endif %}
+                            </select>
+                        </div>
+
+                        <div class="col-6 col-md-2">
+                            <label for="division" class="form-label fw-semibold fs-7 mb-1">Division</label>
+                            <input type="text" name="division" id="division" class="form-control form-control-sm bg-light text-center fw-bold" value="{{ selected_division or '' }}" readonly>
+                            <input type="hidden" name="semester" id="semester" value="{{ selected_semester or '' }}">
+                        </div>
+
+                        <div class="col-12 col-md-2">
+                            <button type="submit" class="btn btn-primary btn-sm w-100" {% if not assigned_subjects %}disabled{% endif %}>
+                                <i class="bi bi-people-fill me-1"></i> Load Students
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Subject Header & Bulk Actions Toolbar -->
+            {% if student_data %}
+            <div class="card shadow-sm mb-3 border-0 bg-white">
+                <div class="card-body p-3 d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <span class="fs-6 fw-bold text-dark">
+                            <i class="bi bi-journal-text text-primary me-1"></i>{{ student_data.subject.subject_code }} - {{ student_data.subject.subject_name }}
+                        </span>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                            Sem {{ student_data.semester }} · Div {{ student_data.division }}
+                        </span>
+                        {% if student_data.subject.subject_type == 'Theory' %}
+                        <span class="badge bg-info-subtle text-info border border-info-subtle">
+                            Theory (Max Internal: {{ student_data.subject.internal_marks }})
+                        </span>
+                        {% else %}
+                        <span class="badge bg-success-subtle text-success border border-success-subtle">
+                            Practical (Max Internal: {{ student_data.subject.internal_marks }})
+                        </span>
+                        {% endif %}
+                        <span class="badge bg-light text-secondary border ms-1">
+                            Year: {{ student_data.academic_year }}
+                        </span>
+                    </div>
+
+                    <!-- Action Buttons Toolbar -->
+                    <div class="d-flex flex-wrap align-items-center gap-2 ms-auto">
+                        <div class="btn-group btn-group-sm">
+                            <button type="button" class="btn btn-outline-secondary shadow-xs" onclick="toggleSelectAllBtn()">
+                                <i class="bi bi-check2-all me-1"></i> Select All
+                            </button>
+                            <button type="button" class="btn btn-info text-white shadow-xs fw-semibold" id="btnFillAttendance" onclick="fillAttendance()">
+                                <i class="bi bi-calendar-check-fill me-1"></i> FILL ATTENDANCE
+                            </button>
+                        </div>
+
+                        <div class="btn-group btn-group-sm ms-1">
+                            <button type="button" class="btn btn-outline-success shadow-xs fw-semibold" id="btnExportExcel" onclick="triggerExport('excel')" title="Download official Excel marksheet">
+                                <i class="bi bi-file-earmark-excel me-1"></i> Download Excel
+                            </button>
+                            <button type="button" class="btn btn-outline-danger shadow-xs fw-semibold" id="btnExportPdf" onclick="triggerExport('pdf')" title="Download official PDF marksheet">
+                                <i class="bi bi-file-earmark-pdf me-1"></i> Download PDF
+                            </button>
+                        </div>
+
+                        <div class="summary-pill fs-7 d-none d-xl-block me-1">
+                            Saved: <strong class="text-success" id="countSaved">0</strong> | 
+                            Pending: <strong class="text-warning" id="countPending">0</strong>
+                        </div>
+
+                        <!-- View Mode Edit Toggle Button -->
+                        <button type="button" class="btn btn-primary btn-md fw-bold shadow-sm px-3" id="btnEditMarks" onclick="toggleEditMode(true)">
+                            <i class="bi bi-pencil-square me-1"></i> Add / Edit Marks
+                        </button>
+
+                        <!-- Edit Mode Action Buttons (Draft & Final Save) -->
+                        <div id="editModeButtonGroup" class="d-none align-items-center gap-2">
+                            <button type="button" class="btn btn-outline-warning text-dark fw-bold shadow-sm px-3" id="btnSaveDraft" onclick="saveBulkMarks('draft')">
+                                <i class="bi bi-file-earmark-text me-1"></i> Save Draft
+                            </button>
+                            <button type="button" class="btn btn-success fw-bold shadow-sm px-3" id="btnFinalSave" onclick="saveBulkMarks('final')">
+                                <i class="bi bi-check2-circle me-1"></i> Final Save
+                                <span id="dirtyBadge" class="badge bg-light text-dark ms-1 d-none">0 unsaved</span>
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary fw-semibold shadow-xs" id="btnCancelEdit" onclick="cancelEditMode()" title="Cancel and return to view mode">
+                                <i class="bi bi-x-lg me-1"></i> Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- EXCEL BULK GRID TABLE -->
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-0">
+                    <div class="excel-table-container">
+                        <table class="excel-table view-mode" id="bulkGridTable">
+                            <thead>
+                                <tr>
+                                    <th class="sticky-col-0">
+                                        <input type="checkbox" id="masterSelectCheckbox" class="form-check-input mt-0" onclick="toggleSelectAll(this)" title="Select/Deselect All">
+                                    </th>
+                                    <th class="sticky-col-1">Roll</th>
+                                    <th class="sticky-col-2">Enrollment No</th>
+                                    <th class="sticky-col-3">Student Name</th>
+
+                                    {% if student_data.subject.subject_type == 'Theory' %}
+                                        <!-- Theory Evaluation Headers -->
+                                        <th title="Class Test 1 (Max {{ student_data.subject.maxes.test1 }})">Test 1<br><small class="text-muted">/{{ student_data.subject.maxes.test1|int if student_data.subject.maxes.test1 % 1 == 0 else student_data.subject.maxes.test1 }}</small></th>
+                                        <th title="Class Test 2 (Max {{ student_data.subject.maxes.test2 }})">Test 2<br><small class="text-muted">/{{ student_data.subject.maxes.test2|int if student_data.subject.maxes.test2 % 1 == 0 else student_data.subject.maxes.test2 }}</small></th>
+                                        <th title="Class Test 3 (Max {{ student_data.subject.maxes.test3 }})">Test 3<br><small class="text-muted">/{{ student_data.subject.maxes.test3|int if student_data.subject.maxes.test3 % 1 == 0 else student_data.subject.maxes.test3 }}</small></th>
+                                        <th class="bg-primary-subtle text-primary" title="Best 2 of 3 Class Tests Converted to /{{ student_data.subject.maxes.best2 }}">Best 2<br><small>/{{ student_data.subject.maxes.best2|int if student_data.subject.maxes.best2 % 1 == 0 else student_data.subject.maxes.best2 }}</small></th>
+
+                                        <th title="Internal Exam (Max {{ student_data.subject.maxes.internal_exam }})">Internal Exam<br><small class="text-muted">/{{ student_data.subject.maxes.internal_exam|int if student_data.subject.maxes.internal_exam % 1 == 0 else student_data.subject.maxes.internal_exam }}</small></th>
+
+                                        <th title="Active Learning (Max {{ student_data.subject.maxes.active_learning }})">Active Lrn<br><small class="text-muted">/{{ student_data.subject.maxes.active_learning|int if student_data.subject.maxes.active_learning % 1 == 0 else student_data.subject.maxes.active_learning }}</small></th>
+                                        <th title="Class Assignment (Max {{ student_data.subject.maxes.class_assignment }})">Class Assign<br><small class="text-muted">/{{ student_data.subject.maxes.class_assignment|int if student_data.subject.maxes.class_assignment % 1 == 0 else student_data.subject.maxes.class_assignment }}</small></th>
+                                        <th title="Home Assignment (Max {{ student_data.subject.maxes.home_assignment }})">Home Assign<br><small class="text-muted">/{{ student_data.subject.maxes.home_assignment|int if student_data.subject.maxes.home_assignment % 1 == 0 else student_data.subject.maxes.home_assignment }}</small></th>
+                                        
+                                        <!-- Readonly Auto Attendance Column -->
+                                        <th class="bg-info-subtle text-dark" title="System Generated Attendance Component (Converted to /{{ student_data.subject.maxes.attendance }} from Attendance Module)">ATTEND.<br><small class="text-muted">/{{ student_data.subject.maxes.attendance|int if student_data.subject.maxes.attendance % 1 == 0 else student_data.subject.maxes.attendance }} AUTO</small></th>
+
+                                        <th class="bg-success-subtle text-success fw-extrabold" title="Theory Total Internal Marks">Total<br><small>/{{ student_data.subject.internal_marks|int if student_data.subject.internal_marks % 1 == 0 else student_data.subject.internal_marks }}</small></th>
+                                    {% else %}
+                                        <!-- Practical Evaluation Headers -->
+                                        {% for comp in student_data.subject.components %}
+                                            <th title="{{ comp.label }} (Max {{ comp.max }})">
+                                                {{ comp.short_label }}<br><small class="text-muted">/{{ comp.max|int if comp.max % 1 == 0 else comp.max }}</small>
+                                            </th>
+                                        {% endfor %}
+                                        <th class="bg-success-subtle text-success fw-extrabold" title="Practical Total Internal Marks">Total<br><small>/{{ student_data.subject.internal_marks|int if student_data.subject.internal_marks % 1 == 0 else student_data.subject.internal_marks }}</small></th>
+                                    {% endif %}
+
+                                    <th>Status</th>
+                                    <th class="text-center">Details</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if student_data.students and student_data.students|length > 0 %}
+                                    {% for st in student_data.students %}
+                                    {% set student_idx = loop.index0 %}
+                                    {% set bd = st.breakdown or {} %}
+                                    <tr id="row-{{ st.id }}" data-student-id="{{ st.id }}" data-student-roll="{{ st.roll_number }}" data-student-name="{{ st.full_name }}">
+                                        <!-- Sticky Identity Columns -->
+                                        <td class="sticky-col-0">
+                                            <input type="checkbox" class="form-check-input row-checkbox mt-0" value="{{ st.id }}" onchange="updateMasterCheckboxState()">
+                                        </td>
+                                        <td class="sticky-col-1 fw-bold text-primary">#{{ st.roll_number }}</td>
+                                        <td class="sticky-col-2 font-monospace text-secondary fs-7">{{ st.enrollment_no }}</td>
+                                        <td class="sticky-col-3 fw-semibold text-dark text-truncate" title="{{ st.full_name }}">{{ st.full_name }}</td>
+                                        {% if student_data.subject.subject_type == 'Theory' %}
+                                            <!-- Class Test Inputs -->
+                                            <td class="text-center">
+                                                <span class="mark-view-val" data-field="test1">{{ bd.test1 if bd.test1 is not none else '-' }}</span>
+                                                <input type="number" step="0.5" min="0" max="{{ student_data.subject.maxes.test1 }}" class="grid-input" data-field="test1" data-row="{{ student_idx }}" data-col="0" value="{{ bd.test1 if bd.test1 is not none else '' }}" oninput="onGridInputChanged(this, {{ st.id }})">
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="mark-view-val" data-field="test2">{{ bd.test2 if bd.test2 is not none else '-' }}</span>
+                                                <input type="number" step="0.5" min="0" max="{{ student_data.subject.maxes.test2 }}" class="grid-input" data-field="test2" data-row="{{ student_idx }}" data-col="1" value="{{ bd.test2 if bd.test2 is not none else '' }}" oninput="onGridInputChanged(this, {{ st.id }})">
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="mark-view-val" data-field="test3">{{ bd.test3 if bd.test3 is not none else '-' }}</span>
+                                                <input type="number" step="0.5" min="0" max="{{ student_data.subject.maxes.test3 }}" class="grid-input" data-field="test3" data-row="{{ student_idx }}" data-col="2" value="{{ bd.test3 if bd.test3 is not none else '' }}" oninput="onGridInputChanged(this, {{ st.id }})">
+                                            </td>
+                                            <td class="bg-primary-subtle text-center">
+                                                <span class="readonly-calc-box" id="calc-best2-{{ st.id }}">0.00</span>
+                                            </td>
+
+                                            <!-- Internal Exam Input -->
+                                            <td class="text-center">
+                                                <span class="mark-view-val" data-field="internal_exam">{{ bd.internal_exam if bd.internal_exam is not none else '-' }}</span>
+                                                <input type="number" step="0.5" min="0" max="{{ student_data.subject.maxes.internal_exam }}" class="grid-input" data-field="internal_exam" data-row="{{ student_idx }}" data-col="3" value="{{ bd.internal_exam if bd.internal_exam is not none else '' }}" oninput="onGridInputChanged(this, {{ st.id }})">
+                                            </td>
+
+                                            <!-- CCE Component Inputs -->
+                                            <td class="text-center">
+                                                <span class="mark-view-val" data-field="active_learning">{{ bd.active_learning if bd.active_learning is not none else '-' }}</span>
+                                                <input type="number" step="0.5" min="0" max="{{ student_data.subject.maxes.active_learning }}" class="grid-input" data-field="active_learning" data-row="{{ student_idx }}" data-col="4" value="{{ bd.active_learning if bd.active_learning is not none else '' }}" oninput="onGridInputChanged(this, {{ st.id }})">
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="mark-view-val" data-field="class_assignment">{{ bd.class_assignment if bd.class_assignment is not none else '-' }}</span>
+                                                <input type="number" step="0.5" min="0" max="{{ student_data.subject.maxes.class_assignment }}" class="grid-input" data-field="class_assignment" data-row="{{ student_idx }}" data-col="5" value="{{ bd.class_assignment if bd.class_assignment is not none else '' }}" oninput="onGridInputChanged(this, {{ st.id }})">
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="mark-view-val" data-field="home_assignment">{{ bd.home_assignment if bd.home_assignment is not none else '-' }}</span>
+                                                <input type="number" step="0.5" min="0" max="{{ student_data.subject.maxes.home_assignment }}" class="grid-input" data-field="home_assignment" data-row="{{ student_idx }}" data-col="6" value="{{ bd.home_assignment if bd.home_assignment is not none else '' }}" oninput="onGridInputChanged(this, {{ st.id }})">
+                                            </td>
+
+                                            <!-- Readonly System Attendance Column -->
+                                            <td class="bg-info-subtle text-center">
+                                                <small id="att-pct-{{ st.id }}" class="text-muted d-block fs-8" style="font-size: 0.7rem;">--</small>
+                                                <span class="mark-view-val fw-bold text-info" data-field="attendance">{{ bd.attendance if bd.attendance is not none else '-' }}</span>
+                                                <input type="number" step="0.01" min="0" max="{{ student_data.subject.maxes.attendance }}" readonly class="grid-input bg-light cursor-not-allowed mx-auto" data-field="attendance" value="{{ bd.attendance if bd.attendance is not none else '' }}" tabindex="-1">
+                                            </td>
+
+                                            <!-- Internal Total Column -->
+                                            <td class="bg-success-subtle text-center">
+                                                <strong class="fs-6 text-success" id="calc-total-{{ st.id }}">0.00</strong>
+                                            </td>
+                                        {% else %}
+                                            <!-- Practical Inputs -->
+                                            {% for comp in student_data.subject.components %}
+                                                {% if comp.field == 'attendance' %}
+                                                    <td class="bg-info-subtle text-center">
+                                                        <small id="att-pct-{{ st.id }}" class="text-muted d-block fs-8" style="font-size: 0.7rem;">--</small>
+                                                        <span class="mark-view-val fw-bold text-info" data-field="attendance">{{ bd.attendance if bd.attendance is not none else '-' }}</span>
+                                                        <input type="number" step="0.01" min="0" max="{{ comp.max }}" readonly class="grid-input bg-light cursor-not-allowed mx-auto" data-field="attendance" value="{{ bd.attendance if bd.attendance is not none else '' }}" tabindex="-1">
+                                                    </td>
+                                                {% else %}
+                                                    <td class="text-center">
+                                                        <span class="mark-view-val" data-field="{{ comp.field }}">{{ bd[comp.field] if bd[comp.field] is not none else '-' }}</span>
+                                                        <input type="number" step="0.5" min="0" max="{{ comp.max }}" class="grid-input" data-field="{{ comp.field }}" data-row="{{ student_idx }}" data-col="{{ loop.index0 }}" value="{{ bd[comp.field] if bd[comp.field] is not none else '' }}" oninput="onGridInputChanged(this, {{ st.id }})">
+                                                    </td>
+                                                {% endif %}
+                                            {% endfor %}
+
+                                            <!-- Practical Total Column -->
+                                            <td class="bg-success-subtle text-center">
+                                                <strong class="fs-6 text-success" id="calc-total-{{ st.id }}">0.00</strong>
+                                            </td>
+                                        {% endif %}
+
+                                        <!-- Status Badge -->
+                                        <td id="status-cell-{{ st.id }}" class="text-center">
+                                            {% if st.marks_status == 'Saved' %}
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                                                <i class="bi bi-check-circle-fill me-1"></i>Saved
+                                            </span>
+                                            {% elif st.marks_status == 'Partially Entered' %}
+                                            <span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1">
+                                                <i class="bi bi-pencil-fill me-1"></i>Partial
+                                            </span>
+                                            {% else %}
+                                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">
+                                                <i class="bi bi-hourglass-split me-1"></i>Not Entered
+                                            </span>
+                                            {% endif %}
+                                        </td>
+
+                                        <!-- Single-Student Modal Action -->
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-sm btn-light border shadow-xs text-secondary"
+                                                    onclick='openMarksModal({{ st | tojson | safe }})' title="Open single-student form view">
+                                                <i class="bi bi-box-arrow-up-right"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="19" class="text-center py-5 text-muted">
+                                            <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary opacity-50"></i>
+                                            No registered students found for the selected subject and division.
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+</div>
+
+<!-- Optional Single-Student Modal (Retained as Secondary Details View) -->
+<div class="modal fade" id="hnguMarksModal" tabindex="-1" aria-labelledby="hnguMarksModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-primary text-white py-3">
+                <div>
+                    <h5 class="modal-title fw-bold fs-5" id="hnguMarksModalLabel">
+                        <i class="bi bi-journal-check me-2"></i>Single Student Assessment Form
+                    </h5>
+                    <div class="fs-7 opacity-90" id="modalSubTitle">
+                        Student: <span id="modalStudentName" class="fw-semibold"></span> | Roll: <span id="modalRollNo"></span>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="singleMarksForm" onsubmit="saveSingleStudentMarks(event)">
+                <div class="modal-body p-4">
+                    <input type="hidden" id="form_student_id" name="student_id">
+                    <input type="hidden" id="form_subject_id" name="subject_id">
+                    <input type="hidden" id="form_semester" name="semester">
+                    <input type="hidden" id="form_academic_year" name="academic_year">
+                    <input type="hidden" id="form_division" name="division">
+
+                    <div id="modalAlertBox" class="alert alert-danger d-none" role="alert"></div>
+
+                    <!-- Subject Info Header -->
+                    <div class="p-3 mb-3 rounded bg-light border d-flex align-items-center justify-content-between">
+                        <div>
+                            <span class="fw-bold text-dark" id="modalSubjectInfo"></span>
+                            <span class="badge bg-secondary ms-2" id="modalSubjectTypeBadge"></span>
+                        </div>
+                        <div class="fs-7 text-muted">
+                            Max Internal Marks: <strong id="modalMaxMarks" class="text-dark">50</strong>
+                        </div>
+                    </div>
+
+                    <!-- Theory Modal Form -->
+                    <div id="modalTheorySection">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <label for="m_test1" class="form-label fs-7 fw-semibold">Class Test 1 (/{{ student_data.subject.maxes.test1 if student_data and student_data.subject and student_data.subject.maxes and 'test1' in student_data.subject.maxes else 20 }})</label>
+                                <input type="number" step="0.5" min="0" max="{{ student_data.subject.maxes.test1 if student_data and student_data.subject and student_data.subject.maxes and 'test1' in student_data.subject.maxes else 20 }}" id="m_test1" name="test1" class="form-control form-control-sm" oninput="syncModalToGrid()">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="m_test2" class="form-label fs-7 fw-semibold">Class Test 2 (/{{ student_data.subject.maxes.test2 if student_data and student_data.subject and student_data.subject.maxes and 'test2' in student_data.subject.maxes else 20 }})</label>
+                                <input type="number" step="0.5" min="0" max="{{ student_data.subject.maxes.test2 if student_data and student_data.subject and student_data.subject.maxes and 'test2' in student_data.subject.maxes else 20 }}" id="m_test2" name="test2" class="form-control form-control-sm" oninput="syncModalToGrid()">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="m_test3" class="form-label fs-7 fw-semibold">Class Test 3 (/{{ student_data.subject.maxes.test3 if student_data and student_data.subject and student_data.subject.maxes and 'test3' in student_data.subject.maxes else 20 }})</label>
+                                <input type="number" step="0.5" min="0" max="{{ student_data.subject.maxes.test3 if student_data and student_data.subject and student_data.subject.maxes and 'test3' in student_data.subject.maxes else 20 }}" id="m_test3" name="test3" class="form-control form-control-sm" oninput="syncModalToGrid()">
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label for="m_internal_exam" class="form-label fs-7 fw-semibold">Internal Exam / Subject Marks (/{{ student_data.subject.maxes.internal_exam if student_data and student_data.subject and student_data.subject.maxes and 'internal_exam' in student_data.subject.maxes else 15 }})</label>
+                                <input type="number" step="0.5" min="0" max="{{ student_data.subject.maxes.internal_exam if student_data and student_data.subject and student_data.subject.maxes and 'internal_exam' in student_data.subject.maxes else 15 }}" id="m_internal_exam" name="internal_exam" class="form-control form-control-sm" oninput="syncModalToGrid()">
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-6 col-md-4">
+                                <label for="m_active_learning" class="form-label fs-7 fw-semibold">Active Learning (/5)</label>
+                                <input type="number" step="0.5" min="0" max="5" id="m_active_learning" name="active_learning" class="form-control form-control-sm" oninput="syncModalToGrid()">
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <label for="m_class_assignment" class="form-label fs-7 fw-semibold">Class Assign. (/5)</label>
+                                <input type="number" step="0.5" min="0" max="5" id="m_class_assignment" name="class_assignment" class="form-control form-control-sm" oninput="syncModalToGrid()">
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <label for="m_home_assignment" class="form-label fs-7 fw-semibold">Home Assign. (/5)</label>
+                                <input type="number" step="0.5" min="0" max="5" id="m_home_assignment" name="home_assignment" class="form-control form-control-sm" oninput="syncModalToGrid()">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Practical Modal Form -->
+                    <div id="modalPracticalSection" class="d-none">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-3">
+                                <label for="m_internal_exam" class="form-label fs-7 fw-semibold">Viva / Interview (/{{ student_data.subject.maxes.internal_exam if student_data and student_data.subject.maxes and 'internal_exam' in student_data.subject.maxes else 10 }})</label>
+                                <input type="number" step="0.5" min="0" max="{{ student_data.subject.maxes.internal_exam if student_data and student_data.subject.maxes and 'internal_exam' in student_data.subject.maxes else 10 }}" id="m_internal_exam_prac" name="internal_exam" class="form-control form-control-sm" oninput="syncModalToGrid()">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="m_practical_eval" class="form-label fs-7 fw-semibold">Coding / Practical (/{{ student_data.subject.maxes.practical_eval if student_data and student_data.subject.maxes and 'practical_eval' in student_data.subject.maxes else 10 }})</label>
+                                <input type="number" step="0.5" min="0" max="{{ student_data.subject.maxes.practical_eval if student_data and student_data.subject.maxes and 'practical_eval' in student_data.subject.maxes else 10 }}" id="m_practical_eval" name="practical_eval" class="form-control form-control-sm" oninput="syncModalToGrid()">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="m_viva" class="form-label fs-7 fw-semibold">Viva Score (/{{ student_data.subject.maxes.viva if student_data and student_data.subject.maxes and 'viva' in student_data.subject.maxes else 10 }})</label>
+                                <input type="number" step="0.5" min="0" max="{{ student_data.subject.maxes.viva if student_data and student_data.subject.maxes and 'viva' in student_data.subject.maxes else 10 }}" id="m_viva" name="viva" class="form-control form-control-sm" oninput="syncModalToGrid()">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="m_journal" class="form-label fs-7 fw-semibold">Journal (/{{ student_data.subject.maxes.journal if student_data and student_data.subject.maxes and 'journal' in student_data.subject.maxes else 5 }})</label>
+                                <input type="number" step="0.5" min="0" max="{{ student_data.subject.maxes.journal if student_data and student_data.subject.maxes and 'journal' in student_data.subject.maxes else 5 }}" id="m_journal" name="journal" class="form-control form-control-sm" oninput="syncModalToGrid()">
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="modal-footer bg-light py-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary btn-sm px-4" id="btnSingleSave">Save Record</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Attendance Warning HTML Modal (with Blurred Background) -->
+<div class="modal fade" id="attendanceWarningModal" tabindex="-1" aria-labelledby="attendanceWarningModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 420px;">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+            <div class="modal-body text-center p-4">
+                <div class="mb-3">
+                    <div class="rounded-circle bg-warning-subtle text-warning d-inline-flex align-items-center justify-content-center mx-auto" style="width: 70px; height: 70px;">
+                        <i class="bi bi-exclamation-triangle-fill" style="font-size: 2.2rem;"></i>
+                    </div>
+                </div>
+                <h4 class="fw-bold text-dark mb-2" id="attendanceWarningModalTitle">Attendance Not Filled</h4>
+                <p class="text-secondary fs-7 mb-4 px-2" id="attendanceWarningModalMessage">
+                    Please click "FILL ATTENDANCE" first before saving internal marks.
+                </p>
+                <button type="button" class="btn btn-warning btn-md w-100 fw-bold shadow-sm text-dark" data-bs-dismiss="modal" style="border-radius: 8px;">
+                    OK
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ url_for('static', filename='js/common.js') }}"></script>
+
+<script>
+    // Context State variables
+    const currentSubjectType = "{{ student_data.subject.subject_type if student_data else 'Theory' }}";
+    const currentConfiguredMax = parseFloat("{{ student_data.subject.internal_marks if student_data else (50 if currentSubjectType == 'Theory' else 25) }}");
+    const currentMaxes = {{ student_data.subject.maxes|tojson|safe if (student_data and student_data.subject and student_data.subject.maxes) else '{}' }};
+    const dirtyRows = new Set();
+    let singleModalInstance = null;
+    let activeModalStudentId = null;
+    let attendanceWarningModalInstance = null;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const modalEl = document.getElementById('hnguMarksModal');
+        if (modalEl) {
+            singleModalInstance = new bootstrap.Modal(modalEl);
+        }
+        const attModalEl = document.getElementById('attendanceWarningModal');
+        if (attModalEl) {
+            attendanceWarningModalInstance = new bootstrap.Modal(attModalEl);
+        }
+        syncSubjectSelector();
+
+        // Calculate initial grid values for all loaded rows
+        const rows = document.querySelectorAll('#bulkGridTable tbody tr[data-student-id]');
+        rows.forEach(r => {
+            const stId = r.getAttribute('data-student-id');
+            recalculateRow(stId);
+        });
+
+        // Initialize Keyboard Navigation Engine
+        initExcelKeyboardNavigation();
+        updateSummaryCounters();
+        setAttendanceReadyState(false);
+        toggleEditMode(false);
+    });
+
+    function showAttendanceWarningModal(messageContext) {
+        const msgEl = document.getElementById('attendanceWarningModalMessage');
+        if (msgEl) {
+            msgEl.innerText = messageContext;
+        }
+        if (attendanceWarningModalInstance) {
+            attendanceWarningModalInstance.show();
+        }
+    }
+
+    let isAttendanceReady = false;
+
+    function setAttendanceReadyState(ready) {
+        isAttendanceReady = ready;
+    }
+
+    function onSubjectChange() {
+        setAttendanceReadyState(false);
+        syncSubjectSelector();
+        document.getElementById('filterForm').submit();
+    }
+
+    function syncSubjectSelector() {
+        const select = document.getElementById('subject_id');
+        if (!select || !select.options.length) return;
+        const selectedOption = select.options[select.selectedIndex];
+        if (selectedOption) {
+            document.getElementById('division').value = selectedOption.getAttribute('data-division') || 'A';
+            document.getElementById('semester').value = selectedOption.getAttribute('data-semester') || '1';
+        }
+    }
+
+    // Semester filter: show/hide subject options based on selected semester
+    function onSemesterFilterChange() {
+        const semFilter = document.getElementById('semester_filter');
+        const subjectSelect = document.getElementById('subject_id');
+        if (!semFilter || !subjectSelect) return;
+
+        const selectedSem = semFilter.value;
+        let firstVisible = null;
+
+        for (let i = 0; i < subjectSelect.options.length; i++) {
+            const opt = subjectSelect.options[i];
+            const optSem = opt.getAttribute('data-semester');
+            if (!selectedSem || optSem === selectedSem) {
+                opt.style.display = '';
+                opt.disabled = false;
+                if (!firstVisible) firstVisible = opt;
+            } else {
+                opt.style.display = 'none';
+                opt.disabled = true;
+                opt.selected = false;
+            }
+        }
+
+        // Auto-select first visible option
+        if (firstVisible) {
+            firstVisible.selected = true;
+        }
+        syncSubjectSelector();
+    }
+
+    // Apply semester filter on page load to respect initial selection
+    (function initSemesterFilter() {
+        const semFilter = document.getElementById('semester_filter');
+        if (semFilter && semFilter.value) {
+            onSemesterFilterChange();
+        }
+    })();
+
+    // CHECKBOX SELECTION FUNCTIONS
+    function toggleSelectAll(masterCheckbox) {
+        const checkboxes = document.querySelectorAll('.row-checkbox');
+        checkboxes.forEach(cb => {
+            cb.checked = masterCheckbox.checked;
+        });
+    }
+
+    function toggleSelectAllBtn() {
+        const master = document.getElementById('masterSelectCheckbox');
+        if (!master) return;
+        master.checked = !master.checked;
+        toggleSelectAll(master);
+    }
+
+    function updateMasterCheckboxState() {
+        const master = document.getElementById('masterSelectCheckbox');
+        const checkboxes = document.querySelectorAll('.row-checkbox');
+        if (!master || !checkboxes.length) return;
+
+        const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+        master.checked = (checkedCount === checkboxes.length);
+        master.indeterminate = (checkedCount > 0 && checkedCount < checkboxes.length);
+    }
+
+    function getSelectedStudentIds() {
+        const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
+        return Array.from(checkedBoxes).map(cb => parseInt(cb.value)).filter(id => !isNaN(id));
+    }
+
+    // FILL ATTENDANCE ACTION
+    async function fillAttendance() {
+        hideGlobalAlert();
+
+        let selectedIds = getSelectedStudentIds();
+        if (selectedIds.length === 0) {
+            const masterCb = document.getElementById('masterSelectCheckbox');
+            if (masterCb) {
+                masterCb.checked = true;
+                toggleSelectAll(masterCb);
+            }
+            selectedIds = getSelectedStudentIds();
+        }
+
+        if (selectedIds.length === 0) {
+            showGlobalAlert("No student records found in the grid to fill attendance.", "warning");
+            setAttendanceReadyState(false);
+            return;
+        }
+
+        const btn = document.getElementById('btnFillAttendance');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> FETCHING...';
+
+        const payload = {
+            subject_id: parseInt("{{ student_data.subject.id if student_data else 0 }}"),
+            semester: parseInt("{{ student_data.semester if student_data else 0 }}"),
+            division: "{{ student_data.division if student_data else 'A' }}",
+            academic_year: "{{ student_data.academic_year if student_data else '2026-27' }}",
+            student_ids: selectedIds
+        };
+
+        try {
+            const response = await fetch("{{ url_for('faculty_marks_fetch_attendance') }}", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await response.json();
+
+            if (!response.ok || !result.success) {
+                showGlobalAlert(result.message || "Failed to fetch student attendance.", "danger");
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-calendar-check-fill me-1"></i> FILL ATTENDANCE';
+                setAttendanceReadyState(false);
+                return;
+            }
+
+            const summaryMap = result.attendance || {};
+            let updatedCount = 0;
+            const missingStudents = [];
+
+            selectedIds.forEach(stId => {
+                const info = summaryMap[stId] || summaryMap[stId.toString()];
+                const row = document.getElementById(`row-${stId}`);
+                if (!row) return;
+
+                const roll = row.getAttribute('data-student-roll');
+                const name = row.getAttribute('data-student-name');
+                const attInput = row.querySelector('input[data-field="attendance"]');
+                const attSpan = row.querySelector('.mark-view-val[data-field="attendance"]');
+                const pctEl = document.getElementById(`att-pct-${stId}`);
+
+                if (info && info.has_attendance && info.score !== null) {
+                    if (attInput) {
+                        attInput.value = info.score.toFixed(2);
+                        onGridInputChanged(attInput, stId);
+                    }
+                    if (attSpan) {
+                        attSpan.innerText = info.score.toFixed(2);
+                    }
+                    if (pctEl) {
+                        pctEl.innerText = `${info.percentage}%`;
+                        pctEl.className = 'badge bg-success-subtle text-success border border-success-subtle fs-8 mb-1';
+                    }
+                    updatedCount++;
+                } else {
+                    if (pctEl) {
+                        pctEl.innerText = "N/A";
+                        pctEl.className = 'badge bg-secondary-subtle text-secondary border border-secondary-subtle fs-8 mb-1';
+                    }
+                    missingStudents.push(`Roll #${roll} (${name})`);
+                }
+            });
+
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-calendar-check-fill me-1"></i> FILL ATTENDANCE';
+
+            // Attendance successfully fetched and populated for the grid
+            setAttendanceReadyState(true);
+
+            if (missingStudents.length > 0) {
+                showGlobalAlert(`Attendance populated for ${updatedCount} students. <br><strong>Attendance unavailable for:</strong> ${missingStudents.join(', ')}. Existing valid marks were preserved.`, "warning");
+            } else {
+                showGlobalAlert(`Successfully fetched and populated system attendance for all ${updatedCount} selected students!`, "success");
+            }
+
+        } catch (err) {
+            showGlobalAlert("Network/server error while fetching attendance: " + err.message, "danger");
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-calendar-check-fill me-1"></i> FILL ATTENDANCE';
+            setAttendanceReadyState(false);
+        }
+    }
+
+    // Helper: parse cell value
+    function getCellValue(stId, field, maxVal) {
+        const row = document.getElementById(`row-${stId}`);
+        if (!row) return null;
+        const input = row.querySelector(`input[data-field="${field}"]`);
+        if (!input) return null;
+        const valStr = input.value.trim();
+        if (valStr === '') {
+            input.classList.remove('is-invalid');
+            return null;
+        }
+        const num = parseFloat(valStr);
+        if (isNaN(num) || num < 0 || num > maxVal) {
+            input.classList.add('is-invalid');
+            return NaN;
+        } else {
+            input.classList.remove('is-invalid');
+            return num;
+        }
+    }
+
+    function onGridInputChanged(input, studentId) {
+        const row = document.getElementById(`row-${studentId}`);
+        if (row) {
+            row.classList.add('row-dirty');
+            dirtyRows.add(studentId);
+            updateDirtyBadge();
+        }
+        recalculateRow(studentId);
+    }
+
+    function recalculateRow(studentId) {
+        const row = document.getElementById(`row-${studentId}`);
+        if (!row) return;
+
+        let totalScore = 0.0;
+        let isInvalidRow = false;
+        let hasAnyInput = false;
+
+        if (currentSubjectType === 'Theory') {
+            const t1Max = currentMaxes.test1 || 20;
+            const t2Max = currentMaxes.test2 || 20;
+            const t3Max = currentMaxes.test3 || 20;
+            const b2Max = currentMaxes.best2 || 20;
+            const ieMax = currentMaxes.internal_exam || 50;
+            const alMax = currentMaxes.active_learning || 5;
+            const caMax = currentMaxes.class_assignment || 5;
+            const haMax = currentMaxes.home_assignment || 5;
+            const attMax = currentMaxes.attendance || 5;
+
+            const t1 = getCellValue(studentId, 'test1', t1Max);
+            const t2 = getCellValue(studentId, 'test2', t2Max);
+            const t3 = getCellValue(studentId, 'test3', t3Max);
+
+            const ie = getCellValue(studentId, 'internal_exam', ieMax);
+
+            const al = getCellValue(studentId, 'active_learning', alMax);
+            const ca = getCellValue(studentId, 'class_assignment', caMax);
+            const ha = getCellValue(studentId, 'home_assignment', haMax);
+            const att = getCellValue(studentId, 'attendance', attMax);
+
+            const allVals = [t1, t2, t3, ie, al, ca, ha, att];
+            if (allVals.some(v => v !== null && isNaN(v))) {
+                isInvalidRow = true;
+            }
+
+            if (allVals.some(v => v !== null)) {
+                hasAnyInput = true;
+            }
+
+            // Best 2 of 3 Tests
+            const testsSorted = [(t1 !== null && !isNaN(t1)) ? t1 : 0, 
+                                 (t2 !== null && !isNaN(t2)) ? t2 : 0, 
+                                 (t3 !== null && !isNaN(t3)) ? t3 : 0].sort((a, b) => b - a);
+            const best2Sum = testsSorted[0] + testsSorted[1];
+            const testDenominator = t1Max + t2Max;
+            const calcClassTest = testDenominator > 0 ? ((best2Sum / testDenominator) * b2Max) : 0;
+
+            const ieVal = (ie !== null && !isNaN(ie)) ? ie : 0;
+            const alVal = (al !== null && !isNaN(al)) ? al : 0;
+            const caVal = (ca !== null && !isNaN(ca)) ? ca : 0;
+            const haVal = (ha !== null && !isNaN(ha)) ? ha : 0;
+            const attVal = (att !== null && !isNaN(att)) ? att : 0;
+
+            const rawSum = calcClassTest + ieVal + alVal + caVal + haVal + attVal;
+            const maxSum = b2Max + ieMax + alMax + caMax + haMax + attMax;
+
+            if (currentConfiguredMax === maxSum || maxSum === 0) {
+                totalScore = rawSum;
+            } else {
+                totalScore = (rawSum / maxSum) * currentConfiguredMax;
+            }
+
+            // Update readonly elements in row
+            const b2El = document.getElementById(`calc-best2-${studentId}`);
+            if (b2El) b2El.innerText = calcClassTest.toFixed(2);
+
+        } else {
+            // Practical
+            let rawSum = 0.0;
+            let maxSum = 0.0;
+            let allVals = [];
+
+            for (const [field, maxVal] of Object.entries(currentMaxes)) {
+                const val = getCellValue(studentId, field, maxVal);
+                allVals.push(val);
+                if (val !== null && !isNaN(val)) {
+                    rawSum += val;
+                }
+                maxSum += maxVal;
+            }
+
+            if (allVals.some(v => v !== null && isNaN(v))) {
+                isInvalidRow = true;
+            }
+            if (allVals.some(v => v !== null)) {
+                hasAnyInput = true;
+            }
+
+            if (currentConfiguredMax === maxSum || maxSum === 0) {
+                totalScore = rawSum;
+            } else {
+                totalScore = (rawSum / maxSum) * currentConfiguredMax;
+            }
+        }
+
+        const totalEl = document.getElementById(`calc-total-${studentId}`);
+        if (totalEl) totalEl.innerText = totalScore.toFixed(2);
+
+        // Update status badge dynamically
+        const statusCell = document.getElementById(`status-cell-${studentId}`);
+        if (statusCell) {
+            if (isInvalidRow) {
+                statusCell.innerHTML = `<span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1"><i class="bi bi-x-circle-fill me-1"></i>Invalid</span>`;
+            } else if (row.classList.contains('row-dirty')) {
+                statusCell.innerHTML = `<span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1"><i class="bi bi-exclamation-circle-fill me-1"></i>Unsaved</span>`;
+            } else if (hasAnyInput) {
+                statusCell.innerHTML = `<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="bi bi-check-circle-fill me-1"></i>Saved</span>`;
+            } else {
+                statusCell.innerHTML = `<span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1"><i class="bi bi-hourglass-split me-1"></i>Not Entered</span>`;
+            }
+        }
+
+        updateSummaryCounters();
+    }
+
+    function updateDirtyBadge() {
+        const badge = document.getElementById('dirtyBadge');
+        if (!badge) return;
+        if (dirtyRows.size > 0) {
+            badge.innerText = `${dirtyRows.size} unsaved`;
+            badge.classList.remove('d-none');
+        } else {
+            badge.classList.add('d-none');
+        }
+    }
+
+    function updateSummaryCounters() {
+        const rows = document.querySelectorAll('#bulkGridTable tbody tr[data-student-id]');
+        let savedCount = 0;
+        let pendingCount = 0;
+
+        rows.forEach(r => {
+            const stId = r.getAttribute('data-student-id');
+            if (dirtyRows.has(stId)) {
+                pendingCount++;
+            } else {
+                const totalEl = document.getElementById(`calc-total-${stId}`);
+                if (totalEl && parseFloat(totalEl.innerText) > 0) {
+                    savedCount++;
+                } else {
+                    pendingCount++;
+                }
+            }
+        });
+
+        const sEl = document.getElementById('countSaved');
+        const pEl = document.getElementById('countPending');
+        if (sEl) sEl.innerText = savedCount;
+        if (pEl) pEl.innerText = pendingCount;
+    }
+
+    // EXCEL KEYBOARD NAVIGATION ENGINE
+    function initExcelKeyboardNavigation() {
+        const inputs = document.querySelectorAll('.grid-input:not([readonly])');
+
+        inputs.forEach(input => {
+            input.addEventListener('keydown', function(e) {
+                const row = parseInt(this.getAttribute('data-row'));
+                const col = parseInt(this.getAttribute('data-col'));
+
+                let targetRow = row;
+                let targetCol = col;
+                let shouldFocus = false;
+
+                if (e.key === 'Tab') {
+                    e.preventDefault();
+                    if (e.shiftKey) {
+                        // Move left
+                        targetCol = col - 1;
+                        if (targetCol < 0) {
+                            targetRow = row - 1;
+                            const prevRowInputs = document.querySelectorAll(`.grid-input:not([readonly])[data-row="${targetRow}"]`);
+                            if (prevRowInputs.length > 0) {
+                                targetCol = prevRowInputs.length - 1;
+                            }
+                        }
+                    } else {
+                        // Move right
+                        targetCol = col + 1;
+                        const rowInputs = document.querySelectorAll(`.grid-input:not([readonly])[data-row="${row}"]`);
+                        if (targetCol >= rowInputs.length) {
+                            targetRow = row + 1;
+                            targetCol = 0;
+                        }
+                    }
+                    shouldFocus = true;
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    targetRow = row + 1;
+                    shouldFocus = true;
+                } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    targetRow = row + 1;
+                    shouldFocus = true;
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    targetRow = row - 1;
+                    shouldFocus = true;
+                }
+
+                if (shouldFocus) {
+                    const targetInput = document.querySelector(`.grid-input:not([readonly])[data-row="${targetRow}"][data-col="${targetCol}"]`);
+                    if (targetInput) {
+                        targetInput.focus();
+                        targetInput.select();
+                    }
+                }
+            });
+        });
+    }
+
+    let isEditMode = false;
+
+    function toggleEditMode(enable) {
+        isEditMode = !!enable;
+        const table = document.getElementById('bulkGridTable');
+        const btnEdit = document.getElementById('btnEditMarks');
+        const btnGroup = document.getElementById('editModeButtonGroup');
+
+        if (!table) return;
+
+        if (isEditMode) {
+            table.classList.remove('view-mode');
+            table.classList.add('edit-mode');
+            if (btnEdit) btnEdit.classList.add('d-none');
+            if (btnGroup) {
+                btnGroup.classList.remove('d-none');
+                btnGroup.classList.add('d-flex');
+            }
+            // Focus first available editable input
+            const firstInput = table.querySelector('.grid-input:not([readonly])');
+            if (firstInput) {
+                firstInput.focus();
+            }
+        } else {
+            table.classList.remove('edit-mode');
+            table.classList.add('view-mode');
+            if (btnEdit) btnEdit.classList.remove('d-none');
+            if (btnGroup) {
+                btnGroup.classList.add('d-none');
+                btnGroup.classList.remove('d-flex');
+            }
+        }
+    }
+
+    function cancelEditMode() {
+        if (dirtyRows && dirtyRows.size > 0) {
+            if (!confirm("You have unsaved mark changes. Are you sure you want to discard them and return to table view?")) {
+                return;
+            }
+        }
+
+        // Revert input values back from .mark-view-val spans
+        const rows = document.querySelectorAll('#bulkGridTable tbody tr[data-student-id]');
+        rows.forEach(r => {
+            const stId = r.getAttribute('data-student-id');
+            r.classList.remove('row-dirty');
+            
+            const inputs = r.querySelectorAll('input.grid-input');
+            inputs.forEach(inp => {
+                const field = inp.getAttribute('data-field');
+                const span = r.querySelector(`.mark-view-val[data-field="${field}"]`);
+                if (span) {
+                    const text = span.innerText.trim();
+                    inp.value = (text === '-' || text === '') ? '' : text;
+                    inp.classList.remove('is-invalid');
+                }
+            });
+            recalculateRow(stId);
+        });
+
+        dirtyRows.clear();
+        updateDirtyBadge();
+        toggleEditMode(false);
+    }
+
+    // SAVE MARKS (DRAFT OR FINAL) BATCH AJAX SUBMIT
+    async function saveBulkMarks(saveType = 'final') {
+        hideGlobalAlert();
+
+        if (!isAttendanceReady) {
+            showAttendanceWarningModal("Please click \"FILL ATTENDANCE\" first before saving internal marks.");
+            return;
+        }
+
+        // Check invalid inputs first
+        const invalidInputs = document.querySelectorAll('.grid-input.is-invalid');
+        if (invalidInputs.length > 0) {
+            const firstErrRow = invalidInputs[0].closest('tr');
+            const roll = firstErrRow ? firstErrRow.getAttribute('data-student-roll') : '';
+            const name = firstErrRow ? firstErrRow.getAttribute('data-student-name') : '';
+            showGlobalAlert(`Cannot save: Invalid mark entry found for Roll #${roll} (${name}). Marks must be numeric within allowed bounds.`, 'danger');
+            invalidInputs[0].focus();
+            return;
+        }
+
+        const rows = document.querySelectorAll('#bulkGridTable tbody tr[data-student-id]');
+        if (!rows || rows.length === 0) {
+            showGlobalAlert("No student records found to save.", "warning");
+            return;
+        }
+
+        const marksPayload = [];
+        rows.forEach(r => {
+            const stId = r.getAttribute('data-student-id');
+            const dataObj = { student_id: parseInt(stId) };
+
+            const fieldInputs = r.querySelectorAll('input.grid-input');
+            fieldInputs.forEach(inp => {
+                const fieldName = inp.getAttribute('data-field');
+                const valStr = inp.value.trim();
+                dataObj[fieldName] = valStr !== '' ? parseFloat(valStr) : null;
+            });
+
+            marksPayload.push(dataObj);
+        });
+
+        const btnDraft = document.getElementById('btnSaveDraft');
+        const btnFinal = document.getElementById('btnFinalSave');
+        const btnCancel = document.getElementById('btnCancelEdit');
+
+        if (btnDraft) btnDraft.disabled = true;
+        if (btnFinal) btnFinal.disabled = true;
+        if (btnCancel) btnCancel.disabled = true;
+
+        const activeBtn = (saveType === 'draft') ? btnDraft : btnFinal;
+        const originalHtml = activeBtn ? activeBtn.innerHTML : '';
+        if (activeBtn) {
+            activeBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Saving ${saveType === 'draft' ? 'Draft' : 'Final'}...`;
+        }
+
+        const payload = {
+            subject_id: parseInt("{{ student_data.subject.id if student_data else 0 }}"),
+            semester: parseInt("{{ student_data.semester if student_data else 0 }}"),
+            division: "{{ student_data.division if student_data else 'A' }}",
+            academic_year: "{{ student_data.academic_year if student_data else '2026-27' }}",
+            save_type: saveType,
+            marks: marksPayload
+        };
+
+        try {
+            const response = await fetch("{{ url_for('faculty_marks_bulk_save') }}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await response.json();
+
+            if (!response.ok || !result.success) {
+                showGlobalAlert(result.message || "Failed to save internal marks.", "danger");
+                if (btnDraft) btnDraft.disabled = false;
+                if (btnFinal) btnFinal.disabled = false;
+                if (btnCancel) btnCancel.disabled = false;
+                if (activeBtn) activeBtn.innerHTML = originalHtml;
+                return;
+            }
+
+            // Sync updated input values into .mark-view-val spans
+            rows.forEach(r => {
+                const fieldInputs = r.querySelectorAll('input.grid-input');
+                fieldInputs.forEach(inp => {
+                    const fieldName = inp.getAttribute('data-field');
+                    const span = r.querySelector(`.mark-view-val[data-field="${fieldName}"]`);
+                    if (span) {
+                        const valStr = inp.value.trim();
+                        span.innerText = valStr !== '' ? valStr : '-';
+                    }
+                });
+                r.classList.remove('row-dirty');
+                const stId = r.getAttribute('data-student-id');
+                recalculateRow(stId);
+            });
+
+            // Success! Remove dirty states
+            dirtyRows.clear();
+            updateDirtyBadge();
+
+            // Reset buttons
+            if (btnDraft) {
+                btnDraft.disabled = false;
+                btnDraft.innerHTML = '<i class="bi bi-file-earmark-text me-1"></i> Save Draft';
+            }
+            if (btnFinal) {
+                btnFinal.disabled = false;
+                btnFinal.innerHTML = `<i class="bi bi-check2-circle me-1"></i> Final Save <span id="dirtyBadge" class="badge bg-light text-dark ms-1 d-none">0 unsaved</span>`;
+            }
+            if (btnCancel) btnCancel.disabled = false;
+
+            // Switch to Table View Mode as requested!
+            toggleEditMode(false);
+
+            const successMsg = (saveType === 'draft')
+                ? "Marks saved as draft successfully! Displayed in table view."
+                : (result.message || "All student internal marks finalized and saved successfully! Displayed in table view.");
+            showGlobalAlert(successMsg, "success");
+
+        } catch (err) {
+            showGlobalAlert("Network or server error while saving marks: " + err.message, "danger");
+            if (btnDraft) btnDraft.disabled = false;
+            if (btnFinal) btnFinal.disabled = false;
+            if (btnCancel) btnCancel.disabled = false;
+            if (activeBtn) activeBtn.innerHTML = originalHtml;
+        }
+    }
+
+    function showGlobalAlert(message, type) {
+        const box = document.getElementById('globalAlert');
+        const msgSpan = document.getElementById('globalAlertMessage');
+        if (!box || !msgSpan) return;
+
+        box.className = `alert alert-${type} alert-dismissible fade show mb-3 shadow-sm`;
+        msgSpan.innerHTML = `<i class="bi bi-${type === 'success' ? 'check-circle-fill' : 'exclamation-triangle-fill'} me-2"></i>${message}`;
+        box.classList.remove('d-none');
+
+        if (type === 'success') {
+            setTimeout(hideGlobalAlert, 5000);
+        }
+    }
+
+    function hideGlobalAlert() {
+        const box = document.getElementById('globalAlert');
+        if (box) box.classList.add('d-none');
+    }
+
+    // Optional Single-Student Modal Population
+    function openMarksModal(student) {
+        activeModalStudentId = student.id;
+        document.getElementById('modalStudentName').innerText = student.full_name;
+        document.getElementById('modalRollNo').innerText = student.roll_number;
+
+        const subInfo = "{{ student_data.subject.subject_code if student_data else '' }} - {{ student_data.subject.subject_name if student_data else '' }}";
+        document.getElementById('modalSubjectInfo').innerText = subInfo;
+        
+        const typeBadge = document.getElementById('modalSubjectTypeBadge');
+        typeBadge.innerText = currentSubjectType;
+        if (currentSubjectType === 'Theory') {
+            typeBadge.className = 'badge bg-info-subtle text-info border border-info-subtle ms-2';
+            document.getElementById('modalMaxMarks').innerText = currentConfiguredMax;
+            document.getElementById('modalTheorySection').classList.remove('d-none');
+            document.getElementById('modalPracticalSection').classList.add('d-none');
+        } else {
+            typeBadge.className = 'badge bg-success-subtle text-success border border-success-subtle ms-2';
+            document.getElementById('modalMaxMarks').innerText = currentConfiguredMax;
+            document.getElementById('modalTheorySection').classList.add('d-none');
+            document.getElementById('modalPracticalSection').classList.remove('d-none');
+        }
+
+        document.getElementById('form_student_id').value = student.id;
+        document.getElementById('form_subject_id').value = "{{ student_data.subject.id if student_data else '' }}";
+        document.getElementById('form_semester').value = "{{ student_data.semester if student_data else '' }}";
+        document.getElementById('form_academic_year').value = "{{ student_data.academic_year if student_data else '2026-27' }}";
+        document.getElementById('form_division').value = "{{ student_data.division if student_data else 'A' }}";
+
+        // Read values from grid row
+        const row = document.getElementById(`row-${student.id}`);
+        if (row) {
+            const inputs = row.querySelectorAll('input.grid-input');
+            inputs.forEach(inp => {
+                const fName = inp.getAttribute('data-field');
+                const mInps = document.querySelectorAll(`#singleMarksForm input[name="${fName}"]`);
+                mInps.forEach(mInp => mInp.value = inp.value);
+            });
+        }
+
+        if (singleModalInstance) singleModalInstance.show();
+    }
+
+    function syncModalToGrid() {
+        if (!activeModalStudentId) return;
+        const row = document.getElementById(`row-${activeModalStudentId}`);
+        if (!row) return;
+
+        const mInputs = document.querySelectorAll('#singleMarksForm input[name]');
+        mInputs.forEach(mInp => {
+            const fName = mInp.getAttribute('name');
+            const gInp = row.querySelector(`input[data-field="${fName}"]`);
+            if (gInp) {
+                gInp.value = mInp.value;
+                onGridInputChanged(gInp, activeModalStudentId);
+            }
+        });
+    }
+
+    async function saveSingleStudentMarks(event) {
+        event.preventDefault();
+        syncModalToGrid();
+        if (singleModalInstance) singleModalInstance.hide();
+        await saveBulkMarks();
+    }
+
+    function triggerExport(format) {
+        if (!isAttendanceReady) {
+            const contextMsg = (format === 'excel')
+                ? 'Please click "FILL ATTENDANCE" first before downloading Excel.'
+                : 'Please click "FILL ATTENDANCE" first before downloading PDF.';
+            showAttendanceWarningModal(contextMsg);
+            return;
+        }
+
+        if (typeof dirtyRows !== 'undefined' && dirtyRows.size > 0) {
+            const msg = `You have unsaved changes (${dirtyRows.size} student record${dirtyRows.size > 1 ? 's' : ''}). Please save your changes before downloading.`;
+            showGlobalAlert(msg, "warning");
+            alert(msg);
+            return;
+        }
+
+        const academicYearEl = document.getElementById('academic_year');
+        const academicYear = academicYearEl ? academicYearEl.value : "{{ selected_year or '2026-27' }}";
+
+        const subjectSelect = document.getElementById('subject_id');
+        let subjectId = subjectSelect ? subjectSelect.value : "{{ selected_subject_id or '' }}";
+
+        let division = document.getElementById('division')?.value || "{{ selected_division or '' }}";
+        let semester = document.getElementById('semester')?.value || "{{ selected_semester or '' }}";
+
+        // Sync division and semester directly from selected dropdown option if present
+        if (subjectSelect && subjectSelect.selectedIndex >= 0) {
+            const opt = subjectSelect.options[subjectSelect.selectedIndex];
+            if (opt && opt.value) {
+                subjectId = opt.value;
+                const optDiv = opt.getAttribute('data-division');
+                const optSem = opt.getAttribute('data-semester');
+                if (optDiv) division = optDiv;
+                if (optSem) semester = optSem;
+            }
+        }
+
+        if (!subjectId || !division) {
+            showGlobalAlert("Please select Academic Year, Subject, and Division first.", "warning");
+            return;
+        }
+
+        const endpoint = (format === 'excel') 
+            ? "{{ url_for('faculty_marks_export_excel') }}" 
+            : "{{ url_for('faculty_marks_export_pdf') }}";
+
+        const exportUrl = `${endpoint}?academic_year=${encodeURIComponent(academicYear)}&semester=${encodeURIComponent(semester)}&subject_id=${encodeURIComponent(subjectId)}&division=${encodeURIComponent(division)}`;
+        
+        window.location.href = exportUrl;
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,433 @@
+{% extends 'public/base_public.html' %}
+
+{% block title %}Campus Photo Gallery – {{ college.college_name if college else 'CampusSync College' }}{% endblock %}
+
+{% block content %}
+<style>
+    /* Public Gallery Specific Enhancements */
+    .pub-gallery-card {
+        border-radius: 1.25rem;
+        overflow: hidden;
+        position: relative;
+        background: #0f172a;
+        box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08);
+        transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        cursor: pointer;
+        height: 290px;
+    }
+    .pub-gallery-card:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 20px 35px -10px rgba(14, 116, 144, 0.25);
+    }
+    .pub-gallery-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.5s ease;
+    }
+    .pub-gallery-card:hover .pub-gallery-img {
+        transform: scale(1.08);
+    }
+    .pub-gallery-overlay {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(15, 23, 42, 0.2) 0%, rgba(15, 23, 42, 0.85) 100%);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 1.25rem;
+        transition: opacity 0.3s ease;
+    }
+    .pub-category-tag {
+        align-self: flex-start;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        padding: 0.35rem 0.8rem;
+        border-radius: 2rem;
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: #ffffff;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    .pub-featured-tag {
+        font-size: 0.72rem;
+        font-weight: 700;
+        padding: 0.35rem 0.75rem;
+        border-radius: 2rem;
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        color: #ffffff;
+        box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+    }
+    .pub-gallery-info {
+        color: #ffffff;
+    }
+    .pub-gallery-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        margin-bottom: 0.35rem;
+        line-height: 1.35;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+    }
+    .pub-gallery-meta {
+        font-size: 0.8rem;
+        color: #cbd5e1;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    .pub-zoom-btn {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.25);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        color: #ffffff;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        margin-left: auto;
+    }
+    .pub-gallery-card:hover .pub-zoom-btn {
+        background: #0284c7;
+        border-color: #0284c7;
+        transform: scale(1.1);
+    }
+    .pub-filter-btn {
+        border: 1px solid #cbd5e1;
+        border-radius: 2rem;
+        padding: 0.5rem 1.25rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #475569;
+        background: #ffffff;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        text-decoration: none;
+    }
+    .pub-filter-btn:hover {
+        background: #f1f5f9;
+        color: #0f172a;
+        border-color: #94a3b8;
+    }
+    .pub-filter-btn.active {
+        background: #0284c7;
+        color: #ffffff;
+        border-color: #0284c7;
+        box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);
+    }
+</style>
+
+<!-- ==================== HERO SECTION ==================== -->
+<section class="pub-hero">
+    <div class="container position-relative" style="z-index: 1;">
+        <div class="pub-hero-pill">
+            <i class="bi bi-camera-fill me-1"></i> Campus Memories &amp; Visual Showcase
+        </div>
+        <h1 class="pub-hero-title">Life at {{ college.college_short_name if college and college.college_short_name else 'CampusSync' }}</h1>
+        <p class="pub-hero-subtitle">
+            Explore the vibrant moments, student celebrations, national hackathons, sports championships, and campus milestones that define our community.
+        </p>
+        <div class="pub-breadcrumb">
+            <a href="{{ url_for('home') }}"><i class="bi bi-house-door-fill me-1"></i> Home</a>
+            <span>/</span>
+            <span class="text-white fw-semibold">Photo Gallery</span>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== GALLERY FILTER BAR ==================== -->
+<section class="py-4 bg-white border-bottom shadow-xs sticky-top" style="top: 60px; z-index: 100;">
+    <div class="container">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <!-- Filter Pills -->
+            <div class="d-flex flex-wrap align-items-center gap-2" id="galleryFilterGroup">
+                <button type="button" class="pub-filter-btn {% if selected_category == 'All' %}active{% endif %}" onclick="filterGallery('All', this)">
+                    <i class="bi bi-grid-fill"></i> All Moments
+                </button>
+                {% for cat in categories %}
+                    <button type="button" class="pub-filter-btn {% if selected_category == cat %}active{% endif %}" onclick="filterGallery('{{ cat }}', this)">
+                        {% if cat == 'Campus Life' %}
+                            <i class="bi bi-buildings"></i>
+                        {% elif cat == 'Events & Fests' %}
+                            <i class="bi bi-stars"></i>
+                        {% elif cat == 'Sports' %}
+                            <i class="bi bi-trophy-fill"></i>
+                        {% elif cat == 'Academic & Seminars' %}
+                            <i class="bi bi-mortarboard-fill"></i>
+                        {% elif cat == 'Achievements' %}
+                            <i class="bi bi-award-fill"></i>
+                        {% elif cat == 'Celebrations' %}
+                            <i class="bi bi-balloon-heart-fill"></i>
+                        {% else %}
+                            <i class="bi bi-tag-fill"></i>
+                        {% endif %}
+                        {{ cat }}
+                    </button>
+                {% endfor %}
+            </div>
+
+            <!-- Photos Counter Badge -->
+            <div class="d-none d-md-flex align-items-center gap-2 text-muted small">
+                <i class="bi bi-images text-primary fs-5"></i>
+                <span>Showing <strong id="visiblePhotoCount" class="text-dark">{{ photos|length }}</strong> Photographs</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== GALLERY GRID ==================== -->
+<section class="py-5" style="background: #f8fafc; min-height: 50vh;">
+    <div class="container">
+        {% if photos %}
+            <div class="row g-4" id="galleryItemsContainer">
+                {% for p in photos %}
+                    <div class="col-sm-6 col-lg-4 gallery-item-col" data-id="{{ p.id }}" data-views="{{ p.views_count }}" data-category="{{ p.category }}" data-title="{{ p.title }}" data-desc="{{ p.description|default('', true) }}" data-img="{{ url_for('global_serve_uploads', filename='gallery/' + p.image_file) }}" data-date="{{ p.created_at.strftime('%d %b %Y') if p.created_at else '' }}">
+                        <div class="pub-gallery-card" onclick="openPublicLightbox({{ loop.index0 }})">
+                            <img src="{{ url_for('global_serve_uploads', filename='gallery/' + p.image_file) }}" alt="{{ p.title }}" class="pub-gallery-img" loading="lazy">
+                            
+                            <div class="pub-gallery-overlay">
+                                <div class="d-flex justify-content-between align-items-center w-100">
+                                    <span class="pub-category-tag">
+                                        {{ p.category }}
+                                    </span>
+                                    <div class="d-flex align-items-center gap-1">
+                                        {% if p.is_featured %}
+                                            <span class="pub-featured-tag">
+                                                <i class="bi bi-star-fill me-1"></i>Featured
+                                            </span>
+                                        {% endif %}
+                                        <span class="pub-category-tag" style="background: rgba(0,0,0,0.55); font-size: 0.72rem; padding: 0.3rem 0.65rem;">
+                                            <i class="bi bi-eye-fill me-1 text-info"></i><span class="photo-views-{{ p.id }}">{{ p.views_count }}</span>
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div class="pub-gallery-info">
+                                    <div class="d-flex align-items-end justify-content-between">
+                                        <div>
+                                            <h5 class="pub-gallery-title">{{ p.title }}</h5>
+                                            <div class="pub-gallery-meta">
+                                                <span><i class="bi bi-calendar3 me-1"></i>{{ p.created_at.strftime('%d %B, %Y') if p.created_at else '' }}</span>
+                                                <span>&bull;</span>
+                                                <span><i class="bi bi-eye me-1"></i><span class="photo-views-{{ p.id }}">{{ p.views_count }}</span> views</span>
+                                            </div>
+                                        </div>
+                                        <div class="pub-zoom-btn">
+                                            <i class="bi bi-zoom-in"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <!-- Filter Empty State -->
+            <div id="filterEmptyMessage" class="text-center py-5" style="display: none;">
+                <div class="p-5 bg-white rounded-4 border shadow-xs max-w-md mx-auto" style="max-width: 480px;">
+                    <i class="bi bi-search text-secondary display-4 d-block mb-3"></i>
+                    <h5 class="fw-bold text-dark">No photos found in this category</h5>
+                    <p class="text-muted small mb-3">Please choose another category pill or view All Moments to browse the entire collection.</p>
+                    <button type="button" class="btn btn-outline-primary btn-sm px-4 rounded-pill" onclick="resetGalleryFilter()">
+                        <i class="bi bi-arrow-repeat me-1"></i> View All Photos
+                    </button>
+                </div>
+            </div>
+
+        {% else %}
+            <!-- Initial Empty State -->
+            <div class="text-center py-5">
+                <div class="p-5 bg-white rounded-4 border shadow-sm mx-auto" style="max-width: 520px;">
+                    <i class="bi bi-camera text-secondary display-3 d-block mb-3"></i>
+                    <h4 class="fw-bold text-dark">Campus Gallery Coming Soon</h4>
+                    <p class="text-muted small mb-4">The college administration is currently curating photographs of campus events, achievements, and infrastructure. Please check back soon!</p>
+                    <a href="{{ url_for('home') }}" class="btn btn-primary px-4 py-2 rounded-pill fw-semibold shadow-sm">
+                        <i class="bi bi-house-door-fill me-1"></i> Return to Homepage
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</section>
+
+<!-- ==================== FULLSCREEN LIGHTBOX MODAL WITH SLIDER ==================== -->
+<div class="modal fade" id="publicLightboxModal" tabindex="-1" aria-hidden="true" style="z-index: 1090;">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content bg-black border-0 rounded-4 overflow-hidden shadow-2xl text-white">
+            <!-- Modal Header -->
+            <div class="modal-header border-bottom border-secondary border-opacity-50 py-3 px-4 bg-dark bg-opacity-75">
+                <div class="d-flex align-items-center gap-2">
+                    <span id="modalCategoryBadge" class="pub-category-tag" style="background: rgba(2, 132, 199, 0.4); border-color: #0284c7;">Category</span>
+                    <span class="badge bg-dark bg-opacity-75 border border-secondary text-info px-2 py-1"><i class="bi bi-eye-fill me-1"></i><span id="modalPhotoViews">0</span> views</span>
+                    <h5 class="modal-title fw-bold text-white mb-0" id="modalPhotoTitle">Photo Title</h5>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <!-- Modal Image Body with Prev/Next Controls -->
+            <div class="modal-body p-0 position-relative d-flex align-items-center justify-content-center bg-black" style="min-height: 520px; max-height: 80vh;">
+                <!-- Previous Button -->
+                <button type="button" class="btn btn-dark bg-opacity-50 text-white rounded-circle position-absolute start-0 top-50 translate-middle-y ms-3 border-0 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; z-index: 10;" onclick="prevPhoto()">
+                    <i class="bi bi-chevron-left fs-4"></i>
+                </button>
+
+                <!-- Full Photo -->
+                <img id="modalPhotoImage" src="" alt="Full Campus Moment" class="img-fluid" style="max-height: 75vh; object-fit: contain;">
+
+                <!-- Next Button -->
+                <button type="button" class="btn btn-dark bg-opacity-50 text-white rounded-circle position-absolute end-0 top-50 translate-middle-y me-3 border-0 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; z-index: 10;" onclick="nextPhoto()">
+                    <i class="bi bi-chevron-right fs-4"></i>
+                </button>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="modal-footer border-top border-secondary border-opacity-50 py-3 px-4 bg-dark bg-opacity-75 d-flex justify-content-between align-items-center">
+                <div>
+                    <p id="modalPhotoDescription" class="mb-1 text-white-50 small"></p>
+                    <small class="text-secondary" id="modalPhotoDate"><i class="bi bi-calendar3 me-1"></i>Date</small>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span id="modalPhotoCounter" class="text-white-50 small me-2">1 / 10</span>
+                    <a id="modalDownloadBtn" href="" target="_blank" class="btn btn-sm btn-outline-light rounded-pill px-3" download>
+                        <i class="bi bi-download me-1"></i> Full Resolution
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Client-side instant category filtering & Lightbox browsing
+    let allPhotoCards = [];
+    let visiblePhotoIndices = [];
+    let currentModalIndex = 0;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const cards = document.querySelectorAll('.gallery-item-col');
+        allPhotoCards = Array.from(cards).map(card => ({
+            id: card.getAttribute('data-id'),
+            views: parseInt(card.getAttribute('data-views') || '0', 10),
+            category: card.getAttribute('data-category'),
+            title: card.getAttribute('data-title'),
+            desc: card.getAttribute('data-desc'),
+            img: card.getAttribute('data-img'),
+            date: card.getAttribute('data-date'),
+            element: card
+        }));
+
+        visiblePhotoIndices = allPhotoCards.map((_, i) => i);
+    });
+
+    function filterGallery(category, buttonEl) {
+        // Update active class on filter buttons
+        document.querySelectorAll('#galleryFilterGroup .pub-filter-btn').forEach(btn => btn.classList.remove('active'));
+        if (buttonEl) buttonEl.classList.add('active');
+
+        visiblePhotoIndices = [];
+        let visibleCount = 0;
+
+        allPhotoCards.forEach((photo, idx) => {
+            if (category === 'All' || photo.category === category) {
+                photo.element.style.display = 'block';
+                visiblePhotoIndices.push(idx);
+                visibleCount++;
+            } else {
+                photo.element.style.display = 'none';
+            }
+        });
+
+        // Update count badge
+        const countBadge = document.getElementById('visiblePhotoCount');
+        if (countBadge) countBadge.textContent = visibleCount;
+
+        // Toggle empty message
+        const emptyMsg = document.getElementById('filterEmptyMessage');
+        if (emptyMsg) {
+            emptyMsg.style.display = visibleCount === 0 ? 'block' : 'none';
+        }
+    }
+
+    function resetGalleryFilter() {
+        const allBtn = document.querySelector('#galleryFilterGroup .pub-filter-btn');
+        filterGallery('All', allBtn);
+    }
+
+    function recordPhotoView(photo) {
+        if (!photo || !photo.id) return;
+        fetch('/gallery/view/' + photo.id, { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.views_count !== undefined) {
+                    photo.views = data.views_count;
+                    document.getElementById('modalPhotoViews').textContent = data.views_count;
+                    document.querySelectorAll('.photo-views-' + photo.id).forEach(el => {
+                        el.textContent = data.views_count;
+                    });
+                }
+            })
+            .catch(() => {});
+    }
+
+    function openPublicLightbox(photoIdx) {
+        currentModalIndex = visiblePhotoIndices.indexOf(photoIdx);
+        if (currentModalIndex === -1) currentModalIndex = 0;
+        updateModalContent();
+        const modal = new bootstrap.Modal(document.getElementById('publicLightboxModal'));
+        modal.show();
+
+        const actualIdx = visiblePhotoIndices[currentModalIndex];
+        recordPhotoView(allPhotoCards[actualIdx]);
+    }
+
+    function updateModalContent() {
+        if (visiblePhotoIndices.length === 0) return;
+        const actualIdx = visiblePhotoIndices[currentModalIndex];
+        const photo = allPhotoCards[actualIdx];
+
+        document.getElementById('modalPhotoImage').src = photo.img;
+        document.getElementById('modalPhotoTitle').textContent = photo.title;
+        document.getElementById('modalCategoryBadge').textContent = photo.category;
+        document.getElementById('modalPhotoViews').textContent = photo.views || 0;
+        document.getElementById('modalPhotoDescription').textContent = photo.desc || 'Campus photograph captured at ' + (photo.category || 'college events');
+        document.getElementById('modalPhotoDate').innerHTML = '<i class="bi bi-calendar3 me-1"></i> ' + (photo.date || 'Campus Collection');
+        document.getElementById('modalPhotoCounter').textContent = (currentModalIndex + 1) + ' / ' + visiblePhotoIndices.length;
+        document.getElementById('modalDownloadBtn').href = photo.img;
+    }
+
+    function prevPhoto() {
+        if (visiblePhotoIndices.length <= 1) return;
+        currentModalIndex = (currentModalIndex - 1 + visiblePhotoIndices.length) % visiblePhotoIndices.length;
+        updateModalContent();
+        const actualIdx = visiblePhotoIndices[currentModalIndex];
+        recordPhotoView(allPhotoCards[actualIdx]);
+    }
+
+    function nextPhoto() {
+        if (visiblePhotoIndices.length <= 1) return;
+        currentModalIndex = (currentModalIndex + 1) % visiblePhotoIndices.length;
+        updateModalContent();
+        const actualIdx = visiblePhotoIndices[currentModalIndex];
+        recordPhotoView(allPhotoCards[actualIdx]);
+    }
+
+    // Keyboard arrow keys navigation for Lightbox
+    document.addEventListener('keydown', (e) => {
+        const modalEl = document.getElementById('publicLightboxModal');
+        if (modalEl && modalEl.classList.contains('show')) {
+            if (e.key === 'ArrowLeft') prevPhoto();
+            if (e.key === 'ArrowRight') nextPhoto();
+        }
+    });
+</script>
+{% endblock %}

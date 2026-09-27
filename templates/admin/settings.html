@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Settings – CampusSync</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/common.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/admin.css') }}" rel="stylesheet">
+</head>
+
+<body class="admin-theme">
+    <div class="wrapper">
+        {% include 'components/sidebar.html' %}
+        <div id="content">
+            {% include 'components/topbar.html' %}
+
+            <div class="content-body">
+                <!-- Page Header -->
+                <div class="page-header d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h2>Admin Account Settings</h2>
+                        <p class="text-muted">Manage your admin profile, contact details, and account security</p>
+                    </div>
+                </div>
+
+                <!-- Flash Messages -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                <div class="mb-4">
+                    {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show d-flex align-items-center gap-2" role="alert">
+                        <i class="bi bi-info-circle-fill fs-5"></i>
+                        <div>{{ message }}</div>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% endwith %}
+
+                <div class="row g-4">
+                    <!-- Left Column: Profile Card & Account Info -->
+                    <div class="col-lg-4">
+                        
+                        <!-- Admin Profile Card -->
+                        <!-- Admin Profile -->
+                        <div class="card mb-4 shadow-sm border-0">
+                            <div class="card-body text-center p-4">
+                                <div class="position-relative d-inline-block mb-3">
+                                    {% if admin and admin.profile_photo and admin.profile_photo != 'default-avatar.png' %}
+                                        <img id="profileImagePreview" src="{{ url_for('admin.serve_uploads', filename='admin/' + admin.profile_photo) }}" alt="Profile Photo" class="rounded-circle img-thumbnail" style="width: 120px; height: 120px; object-fit: cover;">
+                                    {% else %}
+                                        <div id="profileAvatarPlaceholder" class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center mx-auto fs-1 font-weight-bold" style="width: 120px; height: 120px;">
+                                            {{ (admin.full_name[0] if admin and admin.full_name else 'A') | upper }}
+                                        </div>
+                                        <img id="profileImagePreview" src="" alt="Profile Photo" class="rounded-circle img-thumbnail d-none" style="width: 120px; height: 120px; object-fit: cover;">
+                                    {% endif %}
+                                </div>
+                                <h4 class="fw-bold mb-1">{{ admin.full_name if admin else 'Administrator' }}</h4>
+                                <p class="text-muted small mb-2">@{{ admin.username if admin else 'admin' }}</p>
+                                <span class="badge bg-success px-3 py-2 fs-7">Active Admin</span>
+                                
+                                <hr class="my-3">
+
+                                <div class="text-start fs-8">
+                                    <div class="d-flex align-items-center gap-2 mb-2 text-secondary">
+                                        <i class="bi bi-envelope-fill text-primary"></i>
+                                        <span>{{ admin.email if admin and admin.email else 'Not specified' }}</span>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2 text-secondary">
+                                        <i class="bi bi-telephone-fill text-primary"></i>
+                                        <span>{{ admin.mobile if admin and admin.mobile else 'Not specified' }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Account Information Card -->
+                        <!-- Account Information -->
+                        <div class="card mb-4 shadow-sm border-0">
+                            <div class="card-header bg-white py-3">
+                                <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-shield-check me-2 text-primary"></i>Account Information</h6>
+                            </div>
+                            <div class="card-body">
+                                <ul class="list-group list-group-flush">
+                                    <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-2 border-0">
+                                        <span class="text-muted small">Account Status</span>
+                                        <span class="badge bg-light-success text-success border border-success">{{ admin.status if admin else 'Active' }}</span>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-2 border-0">
+                                        <span class="text-muted small">Created Date</span>
+                                        <span class="fw-semibold small text-dark">{{ admin.created_at.strftime('%b %d, %Y') if admin and admin.created_at else 'N/A' }}</span>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-2 border-0">
+                                        <span class="text-muted small">Last Login</span>
+                                        <span class="fw-semibold small text-dark">{{ admin.last_login.strftime('%b %d, %Y %I:%M %p') if admin and admin.last_login else 'First login' }}</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Account Actions Card -->
+                        <!-- Account Actions -->
+                        <div class="card shadow-sm border-0">
+                            <div class="card-body">
+                                <h6 class="fw-bold mb-3 text-danger"><i class="bi bi-exclamation-triangle-fill me-2"></i>Account Actions</h6>
+                                <p class="text-muted small">Click below to terminate your current admin session safely.</p>
+                                <a href="{{ url_for('admin_logout') }}" class="btn btn-outline-danger w-100 d-flex align-items-center justify-content-center gap-2">
+                                    <i class="bi bi-box-arrow-right"></i> Log Out of Admin Session
+                                </a>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Right Column: Edit Profile & Change Password -->
+                    <div class="col-lg-8">
+                        
+                        <!-- Academic Settings Card -->
+                        <!-- Academic Settings -->
+                        <div class="card shadow-sm border-0 mb-4" id="academic-settings">
+                            <div class="card-header bg-white py-3 d-flex align-items-center justify-content-between">
+                                <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-calendar3 me-2 text-primary"></i>Academic Settings</h6>
+                                <span class="badge bg-primary px-3 py-2 fs-8">Central Configuration</span>
+                            </div>
+                            <div class="card-body p-4">
+
+                                 <!-- Academic Settings Summary Display -->
+                                <div class="bg-light rounded p-3 mb-4 border">
+                                    <h6 class="fw-bold mb-3 text-secondary fs-7 text-uppercase"><i class="bi bi-info-circle me-1"></i> Current Academic Summary</h6>
+                                    <div class="row g-3">
+                                        <div class="col-md-3">
+                                            <small class="text-muted d-block">Current Academic Year</small>
+                                            <span class="fw-bold text-dark fs-6">{{ academic.academic_year if academic else '2026-27' }}</span>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <small class="text-muted d-block">Current Cycle</small>
+                                            <span class="badge bg-info text-dark px-2 py-1 fs-7">
+                                                {{ academic.semester_cycle if academic else 'Odd' }} Semester
+                                            </span>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <small class="text-muted d-block">Class Capacity / Division Limit</small>
+                                            <span class="fw-bold text-success fs-6">{{ academic.students_per_division if academic and academic.students_per_division else 70 }} Students/Div</span>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <small class="text-muted d-block">Active Semesters</small>
+                                            <span class="fw-semibold text-primary fs-7">
+                                                {% if active_semesters %}
+                                                    {% for sem in active_semesters %}Semester {{ sem }}{% if not loop.last %}, {% endif %}{% endfor %}
+                                                {% else %}
+                                                    Semester 1, Semester 3, Semester 5
+                                                {% endif %}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {% if academic and academic.semester_cycle == 'Odd' and odd_students_summary and odd_students_summary.total > 0 %}
+                                <div class="alert alert-primary border-0 bg-primary-subtle text-primary-emphasis d-flex align-items-center gap-2 p-3 mb-3 rounded-3">
+                                    <i class="bi bi-arrow-left-right fs-4 text-primary"></i>
+                                    <div>
+                                        <strong>Odd Semester Students Active:</strong> There are currently <strong>{{ odd_students_summary.total }}</strong> active student(s) in Semesters 1, 3, and 5 (Sem 1: {{ odd_students_summary.sem1 }}, Sem 3: {{ odd_students_summary.sem3 }}, Sem 5: {{ odd_students_summary.sem5 }}). When switching the cycle to <strong>Even Semester</strong>, a confirmation modal will allow you to automatically promote these students to their next even semester.
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                {% if academic and academic.semester_cycle == 'Even' and even_students_summary and even_students_summary.total > 0 %}
+                                <div class="alert alert-success border-0 bg-success-subtle text-success-emphasis d-flex align-items-center gap-2 p-3 mb-3 rounded-3">
+                                    <i class="bi bi-arrow-left-right fs-4 text-success"></i>
+                                    <div>
+                                        <strong>Even Semester Students Active:</strong> There are currently <strong>{{ even_students_summary.total }}</strong> active student(s) in Semesters 2, 4, and 6 (Sem 2: {{ even_students_summary.sem2 }}, Sem 4: {{ even_students_summary.sem4 }}, Sem 6: {{ even_students_summary.sem6 }}). When switching the cycle to <strong>Odd Semester</strong>, a confirmation modal will allow you to automatically transition these students to their corresponding odd semester without any data loss.
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                {% if academic and academic.semester_cycle == 'Odd' and even_students_summary and even_students_summary.total > 0 and (not odd_students_summary or odd_students_summary.total == 0) %}
+                                <div class="alert alert-warning border-0 bg-warning-subtle text-dark d-flex align-items-center justify-content-between flex-wrap gap-2 p-3 mb-3 rounded-3 shadow-sm">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <i class="bi bi-exclamation-triangle-fill fs-4 text-warning"></i>
+                                        <div>
+                                            <strong>Mismatched Semester Cycle Detected:</strong> College cycle is currently <strong>Odd Semester</strong>, but all <strong>{{ even_students_summary.total }}</strong> active student(s) are in Even semesters (Sem 2: {{ even_students_summary.sem2 }}, Sem 4: {{ even_students_summary.sem4 }}, Sem 6: {{ even_students_summary.sem6 }}).
+                                        </div>
+                                    </div>
+                                    <form action="{{ url_for('admin.sync_cycle_students') }}" method="POST" class="m-0">
+                                        <input type="hidden" name="target_cycle" value="Odd">
+                                        <button type="submit" class="btn btn-warning btn-sm fw-bold shadow-sm">
+                                            <i class="bi bi-arrow-repeat me-1"></i> Align to Odd Semesters Now
+                                        </button>
+                                    </form>
+                                </div>
+                                {% endif %}
+
+                                {% if academic and academic.semester_cycle == 'Even' and odd_students_summary and odd_students_summary.total > 0 and (not even_students_summary or even_students_summary.total == 0) %}
+                                <div class="alert alert-warning border-0 bg-warning-subtle text-dark d-flex align-items-center justify-content-between flex-wrap gap-2 p-3 mb-3 rounded-3 shadow-sm">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <i class="bi bi-exclamation-triangle-fill fs-4 text-warning"></i>
+                                        <div>
+                                            <strong>Mismatched Semester Cycle Detected:</strong> College cycle is currently <strong>Even Semester</strong>, but all <strong>{{ odd_students_summary.total }}</strong> active student(s) are in Odd semesters (Sem 1: {{ odd_students_summary.sem1 }}, Sem 3: {{ odd_students_summary.sem3 }}, Sem 5: {{ odd_students_summary.sem5 }}).
+                                        </div>
+                                    </div>
+                                    <form action="{{ url_for('admin.sync_cycle_students') }}" method="POST" class="m-0">
+                                        <input type="hidden" name="target_cycle" value="Even">
+                                        <button type="submit" class="btn btn-primary btn-sm fw-bold shadow-sm">
+                                            <i class="bi bi-arrow-repeat me-1"></i> Align to Even Semesters Now
+                                        </button>
+                                    </form>
+                                </div>
+                                {% endif %}
+
+                                {% if sem6_count and sem6_count > 0 %}
+                                <div class="alert alert-warning border-0 bg-warning-subtle text-dark d-flex align-items-center gap-2 p-3 mb-3 rounded-3">
+                                    <i class="bi bi-mortarboard-fill fs-4 text-warning"></i>
+                                    <div>
+                                        <strong>Semester 6 Graduating Students Detected:</strong> There are <strong>{{ sem6_count }}</strong> student(s) currently enrolled in Semester 6 for academic year <code>{{ academic.academic_year if academic else '2026-27' }}</code>.
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                <!-- Academic Settings Edit Form -->
+                                <form id="academicSettingsForm" action="{{ url_for('admin.update_academic_settings') }}" method="POST">
+                                    <input type="hidden" name="archive_sem6" id="archive_sem6" value="no">
+                                    <input type="hidden" name="move_odd_students" id="move_odd_students" value="no">
+                                    <input type="hidden" name="move_even_students" id="move_even_students" value="no">
+                                    <input type="hidden" name="transition_academic_year" id="transition_academic_year" value="no">
+                                    <div class="row g-3">
+                                        <div class="col-md-4">
+                                            <label for="academic_year" class="form-label fw-semibold small">Academic Year <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control bg-light" id="academic_year" name="academic_year" value="{{ academic.academic_year if academic else '2026-27' }}" required readonly style="cursor: not-allowed;" placeholder="e.g. 2026-27">
+                                            <div class="form-text fs-8 text-primary"><i class="bi bi-info-circle me-1"></i>Auto-calculated from Start Date & End Date.</div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="semester_cycle" class="form-label fw-semibold small">Current Semester Cycle <span class="text-danger">*</span></label>
+                                            <select class="form-select" id="semester_cycle" name="semester_cycle" required>
+                                                <option value="Odd" {% if academic and academic.semester_cycle == 'Odd' %}selected{% endif %}>Odd Semester</option>
+                                                <option value="Even" {% if academic and academic.semester_cycle == 'Even' %}selected{% endif %}>Even Semester</option>
+                                            </select>
+                                            <div class="form-text fs-8">6-month operational cycle</div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="students_per_division" class="form-label fw-semibold small">Students Per Division (Class Limit) <span class="text-danger">*</span></label>
+                                            <input type="number" class="form-control" id="students_per_division" name="students_per_division" value="{{ academic.students_per_division if academic and academic.students_per_division else 70 }}" min="1" max="500" required placeholder="Default: 70">
+                                            <div class="form-text fs-8">Auto-generates Div A (1-70), Div B (71-140), etc.</div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="cycle_start_date" class="form-label fw-semibold small">Current Cycle Start Date <span class="text-danger">*</span></label>
+                                            <input type="date" class="form-control" id="cycle_start_date" name="cycle_start_date" value="{{ academic.cycle_start_date.strftime('%Y-%m-%d') if academic and academic.cycle_start_date else '' }}" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="cycle_end_date" class="form-label fw-semibold small">Current Cycle End Date <span class="text-danger">*</span></label>
+                                            <input type="date" class="form-control" id="cycle_end_date" name="cycle_end_date" value="{{ academic.cycle_end_date.strftime('%Y-%m-%d') if academic and academic.cycle_end_date else '' }}" required>
+                                        </div>
+                                    </div>
+                                    <div class="mt-4 text-end">
+                                        <button type="submit" id="btnSaveAcademic" class="btn btn-primary px-4" onclick="handleAcademicSubmit(event)">
+                                            <i class="bi bi-check-circle me-1"></i> Save Academic Settings
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Edit Profile Form Card -->
+                        <!-- Edit Profile -->
+                        <div class="card shadow-sm border-0 mb-4">
+                            <div class="card-header bg-white py-3 d-flex align-items-center justify-content-between">
+                                <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-person-lines-fill me-2 text-primary"></i>Edit Profile Details</h6>
+                            </div>
+                            <div class="card-body p-4">
+                                <form action="{{ url_for('admin.update_admin_profile') }}" method="POST" enctype="multipart/form-data">
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label for="full_name" class="form-label fw-semibold small">Full Name <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" id="full_name" name="full_name" value="{{ admin.full_name if admin else '' }}" required placeholder="Enter full name">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="username" class="form-label fw-semibold small">Username</label>
+                                            <input type="text" class="form-control bg-light" id="username" value="{{ admin.username if admin else '' }}" readonly disabled>
+                                            <div class="form-text fs-8">Username cannot be changed.</div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="email" class="form-label fw-semibold small">Email Address <span class="text-danger">*</span></label>
+                                            <input type="email" class="form-control" id="email" name="email" value="{{ admin.email if admin and admin.email else '' }}" required placeholder="admin@college.edu">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="mobile" class="form-label fw-semibold small">Mobile Number</label>
+                                            <input type="text" class="form-control" id="mobile" name="mobile" value="{{ admin.mobile if admin and admin.mobile else '' }}" placeholder="10-digit mobile number" maxlength="15">
+                                        </div>
+                                        <div class="col-12">
+                                            <label for="profile_photo" class="form-label fw-semibold small">Update Profile Photo</label>
+                                            <input type="file" class="form-control" id="profile_photo" name="profile_photo" accept="image/*">
+                                            <div class="form-text fs-8">Allowed formats: JPG, PNG, GIF, WEBP. Max size: 2MB.</div>
+                                        </div>
+                                    </div>
+                                    <div class="mt-4 text-end">
+                                        <button type="submit" class="btn btn-primary px-4">
+                                            <i class="bi bi-check-circle me-1"></i> Save Changes
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Change Password Card -->
+                        <!-- Change Password -->
+                        <div class="card shadow-sm border-0">
+                            <div class="card-header bg-white py-3">
+                                <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-key-fill me-2 text-primary"></i>Change Password</h6>
+                            </div>
+                            <div class="card-body p-4">
+                                <form action="{{ url_for('admin.change_admin_password') }}" method="POST">
+                                    <div class="row g-3">
+                                        <div class="col-12">
+                                            <label for="current_password" class="form-label fw-semibold small">Current Password <span class="text-danger">*</span></label>
+                                            <div class="input-group">
+                                                <input type="password" class="form-control" id="current_password" name="current_password" required placeholder="Enter current password">
+                                                <button class="btn btn-outline-secondary toggle-password-btn" type="button" data-target="current_password">
+                                                    <i class="bi bi-eye"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="new_password" class="form-label fw-semibold small">New Password <span class="text-danger">*</span></label>
+                                            <div class="input-group">
+                                                <input type="password" class="form-control" id="new_password" name="new_password" required minlength="6" placeholder="Enter new password">
+                                                <button class="btn btn-outline-secondary toggle-password-btn" type="button" data-target="new_password">
+                                                    <i class="bi bi-eye"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="confirm_password" class="form-label fw-semibold small">Confirm New Password <span class="text-danger">*</span></label>
+                                            <div class="input-group">
+                                                <input type="password" class="form-control" id="confirm_password" name="confirm_password" required minlength="6" placeholder="Re-enter new password">
+                                                <button class="btn btn-outline-secondary toggle-password-btn" type="button" data-target="confirm_password">
+                                                    <i class="bi bi-eye"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="mt-4 text-end">
+                                        <button type="submit" class="btn btn-primary px-4">
+                                            <i class="bi bi-shield-lock me-1"></i> Change Password
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Odd to Even Cycle Student Promotion Confirmation Modal -->
+    <div class="modal fade" id="cycleConfirmModal" tabindex="-1" aria-labelledby="cycleConfirmModalLabel" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-primary text-white py-3">
+                    <h5 class="modal-title fw-bold" id="cycleConfirmModalLabel">
+                        <i class="bi bi-arrow-repeat me-2"></i> Semester Cycle Change & Student Promotion
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <span class="badge bg-warning text-dark px-3 py-2 fs-7">Odd Semester (1, 3, 5)</span>
+                        <i class="bi bi-arrow-right fs-5 text-muted"></i>
+                        <span class="badge bg-success text-white px-3 py-2 fs-7">Even Semester (2, 4, 6)</span>
+                    </div>
+                    <p class="fs-6 mb-3">
+                        You are changing the semester cycle from <strong>Odd</strong> to <strong>Even</strong>. Would you like to promote all active students in Odd semesters to the corresponding Even semesters?
+                    </p>
+
+                    <!-- Student Count Breakdown Card -->
+                    <div class="bg-light border rounded-3 p-3 mb-3">
+                        <h6 class="fw-bold text-dark small mb-2 text-uppercase">
+                            <i class="bi bi-people-fill text-primary me-1"></i> Student Promotion Breakdown:
+                        </h6>
+                        <div class="d-flex flex-column gap-2">
+                            <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
+                                <span class="small text-secondary">Semester 1 &rarr; <strong class="text-dark">Semester 2</strong></span>
+                                <span class="badge bg-primary-subtle text-primary fw-bold">{{ odd_students_summary.sem1 if odd_students_summary else 0 }} Students</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
+                                <span class="small text-secondary">Semester 3 &rarr; <strong class="text-dark">Semester 4</strong></span>
+                                <span class="badge bg-primary-subtle text-primary fw-bold">{{ odd_students_summary.sem3 if odd_students_summary else 0 }} Students</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
+                                <span class="small text-secondary">Semester 5 &rarr; <strong class="text-dark">Semester 6</strong></span>
+                                <span class="badge bg-primary-subtle text-primary fw-bold">{{ odd_students_summary.sem5 if odd_students_summary else 0 }} Students</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center pt-1 fw-bold">
+                                <span class="small text-dark">Total Students to Move:</span>
+                                <span class="badge bg-success fs-7">{{ odd_students_summary.total if odd_students_summary else 0 }} Students</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info py-2 px-3 small mb-0">
+                        <i class="bi bi-shield-check me-1 text-primary"></i>
+                        <strong>Data Safety Assurance:</strong> Students will have their semester updated. All previous internal marks and attendance history remain 100% intact and secured.
+                    </div>
+                </div>
+                <div class="modal-footer bg-light p-3 d-flex justify-content-between">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="confirmCycleSubmit('no')">
+                            Change Cycle Only
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm fw-bold shadow-sm" onclick="confirmCycleSubmit('yes')">
+                            <i class="bi bi-check2-circle me-1"></i> Yes, Change Cycle & Move Students
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Even to Odd Cycle Student Transition Confirmation Modal -->
+    <div class="modal fade" id="evenToOddCycleModal" tabindex="-1" aria-labelledby="evenToOddCycleModalLabel" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-primary text-white py-3">
+                    <h5 class="modal-title fw-bold" id="evenToOddCycleModalLabel">
+                        <i class="bi bi-arrow-repeat me-2"></i> Semester Cycle Change & Student Transition
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <span class="badge bg-success text-white px-3 py-2 fs-7">Even Semester (2, 4, 6)</span>
+                        <i class="bi bi-arrow-right fs-5 text-muted"></i>
+                        <span class="badge bg-warning text-dark px-3 py-2 fs-7">Odd Semester (1, 3, 5)</span>
+                    </div>
+                    <p class="fs-6 mb-3">
+                        You are changing the semester cycle from <strong>Even</strong> to <strong>Odd</strong>. Would you like to transition all active students in Even semesters to their corresponding Odd semesters so that Odd semester data loads?
+                    </p>
+
+                    <!-- Student Count Breakdown Card -->
+                    <div class="bg-light border rounded-3 p-3 mb-3">
+                        <h6 class="fw-bold text-dark small mb-2 text-uppercase">
+                            <i class="bi bi-people-fill text-primary me-1"></i> Student Transition Breakdown:
+                        </h6>
+                        <div class="d-flex flex-column gap-2">
+                            <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
+                                <span class="small text-secondary">Semester 2 &rarr; <strong class="text-dark">Semester 1</strong></span>
+                                <span class="badge bg-primary-subtle text-primary fw-bold">{{ even_students_summary.sem2 if even_students_summary else 0 }} Students</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
+                                <span class="small text-secondary">Semester 4 &rarr; <strong class="text-dark">Semester 3</strong></span>
+                                <span class="badge bg-primary-subtle text-primary fw-bold">{{ even_students_summary.sem4 if even_students_summary else 0 }} Students</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
+                                <span class="small text-secondary">Semester 6 &rarr; <strong class="text-dark">Semester 5</strong></span>
+                                <span class="badge bg-primary-subtle text-primary fw-bold">{{ even_students_summary.sem6 if even_students_summary else 0 }} Students</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center pt-1 fw-bold">
+                                <span class="small text-dark">Total Students to Move:</span>
+                                <span class="badge bg-success fs-7">{{ even_students_summary.total if even_students_summary else 0 }} Students</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info py-2 px-3 small mb-0">
+                        <i class="bi bi-shield-check me-1 text-primary"></i>
+                        <strong>Zero Data Loss Assurance:</strong> Students will have their active semester updated to Odd. All previous Even semester internal marks, grades, and attendance records remain 100% intact and secured in the database.
+                    </div>
+                </div>
+                <div class="modal-footer bg-light p-3 d-flex justify-content-between">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="confirmEvenToOddSubmit('no')">
+                            Change Cycle Only
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm fw-bold shadow-sm" onclick="confirmEvenToOddSubmit('yes')">
+                            <i class="bi bi-check2-circle me-1"></i> Yes, Change Cycle & Move Students
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sem 6 Archiving Confirmation Modal -->
+    <div class="modal fade" id="archiveConfirmModal" tabindex="-1" aria-labelledby="archiveConfirmModalLabel" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-warning text-dark py-3">
+                    <h5 class="modal-title fw-bold" id="archiveConfirmModalLabel">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i> Academic Change & Student Archiving
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="fs-6 mb-3">
+                        There are <strong><span id="modalSem6Count">{{ sem6_count|default(0) }}</span></strong> student(s) currently enrolled in Semester 6 for academic year <strong>{{ academic.academic_year if academic else '2026-27' }}</strong>.
+                    </p>
+                    <div class="alert alert-info py-2 px-3 small mb-3">
+                        <i class="bi bi-info-circle me-1"></i>
+                        <strong>Are you sure you want to change this?</strong><br>
+                        Would you like to move graduating Semester 6 students and all their marks to the historical Archive tables?
+                    </div>
+                    <ul class="small text-muted mb-0">
+                        <li><strong>Archive & Save:</strong> Semester 6 students and their marks will be moved to <code>archived_students</code> and <code>archived_internal_marks</code>.</li>
+                        <li><strong>Save Without Archiving:</strong> Only the settings will be updated; no student records or marks will be moved.</li>
+                        <li><strong>Current Data:</strong> All active students in Semesters 1 to 5 and their marks remain completely untouched and safe.</li>
+                    </ul>
+                </div>
+                <div class="modal-footer bg-light p-3 d-flex justify-content-between">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="confirmAcademicSubmit('no')">
+                            Save Without Archiving
+                        </button>
+                        <button type="button" class="btn btn-warning btn-sm fw-bold shadow-sm" onclick="confirmAcademicSubmit('yes')">
+                            <i class="bi bi-archive-fill me-1"></i> Yes, Archive & Save
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Academic Year Transition Confirmation Modal -->
+    <div class="modal fade" id="academicYearChangeModal" tabindex="-1" aria-labelledby="academicYearChangeModalLabel" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header text-white py-3" style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);">
+                    <h5 class="modal-title fw-bold" id="academicYearChangeModalLabel">
+                        <i class="bi bi-calendar-range-fill me-2"></i> Academic Year Transition Detected
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="d-flex align-items-center justify-content-between p-3 rounded-3 mb-3" style="background: #f1f5f9; border: 1px solid #cbd5e1;">
+                        <div class="text-center flex-fill">
+                            <span class="small text-muted d-block text-uppercase fw-semibold">Current Academic Year</span>
+                            <span class="fs-5 fw-bold text-secondary">{{ academic.academic_year if academic else '2026-27' }}</span>
+                        </div>
+                        <div class="px-3 text-primary fs-3">
+                            <i class="bi bi-arrow-right-circle-fill"></i>
+                        </div>
+                        <div class="text-center flex-fill">
+                            <span class="small text-primary d-block text-uppercase fw-semibold">New Academic Year</span>
+                            <span class="fs-5 fw-bold text-primary" id="modalNewAcademicYear">-</span>
+                        </div>
+                    </div>
+
+                    <p class="fs-6 mb-3">
+                        The selected cycle dates initiate a transition into a <strong>new Academic Year</strong>. Please review the automated student lifecycle updates below:
+                    </p>
+
+                    <!-- Transition Breakdown Cards -->
+                    <div class="row g-3 mb-3">
+                        <!-- Sem 6 Graduating Archive & Inactive -->
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded-3 bg-light h-100">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <div class="rounded-circle p-2 bg-warning-subtle text-warning">
+                                        <i class="bi bi-mortarboard-fill fs-5"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0 fw-bold text-dark">Semester 6 Graduating Batch</h6>
+                                        <span class="badge bg-warning text-dark">{{ even_students_summary.sem6 if even_students_summary else 0 }} Students</span>
+                                    </div>
+                                </div>
+                                <p class="small text-muted mb-0">
+                                    Records & internal marks are saved to <code>archived_students</code> and <code>archived_internal_marks</code>. Student status will be set to <strong>Inactive</strong> (disabling portal login access).
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Even-to-Odd Progression -->
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded-3 bg-light h-100">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <div class="rounded-circle p-2 bg-primary-subtle text-primary">
+                                        <i class="bi bi-arrow-up-right-circle-fill fs-5"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0 fw-bold text-dark">Batch Promotion (Even &rarr; Odd)</h6>
+                                        <span class="badge bg-primary text-white">Promote Active Batches</span>
+                                    </div>
+                                </div>
+                                <ul class="small text-muted mb-0 ps-3">
+                                    <li><strong>Semester 4 &rarr; Semester 5</strong> ({{ even_students_summary.sem4 if even_students_summary else 0 }} students)</li>
+                                    <li><strong>Semester 2 &rarr; Semester 3</strong> ({{ even_students_summary.sem2 if even_students_summary else 0 }} students)</li>
+                                    <li><strong>Semester 1</strong>: Cleared for incoming fresh enrollments!</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Automatic Lifecycle Reset -->
+                    <div class="alert alert-primary d-flex align-items-center gap-2 py-2 px-3 mb-0">
+                        <i class="bi bi-arrow-repeat fs-5"></i>
+                        <span class="small">
+                            <strong>Automatic Cycle Reset:</strong> The new academic year will automatically activate in <strong>Odd Semester Cycle</strong> (Semesters 1, 3, 5).
+                        </span>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light p-3 d-flex justify-content-between">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="confirmAcademicYearSubmit('no')">
+                            Save Year Only (No Student Move)
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm fw-bold shadow-sm" onclick="confirmAcademicYearSubmit('yes')">
+                            <i class="bi bi-check2-circle me-1"></i> Yes, Start New Academic Year & Move Students
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/common.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+    <script>
+    const currentAcademicYear = "{{ academic.academic_year if academic else '2026-27' }}";
+    const currentSemesterCycle = "{{ academic.semester_cycle if academic else 'Odd' }}";
+    const sem6StudentCount = {{ sem6_count|default(0) }};
+    const oddStudentsTotal = {{ odd_students_summary.total if odd_students_summary else 0 }};
+
+    function updateCalculatedAcademicYear() {
+        const startInput = document.getElementById('cycle_start_date');
+        const endInput = document.getElementById('cycle_end_date');
+        const acadInput = document.getElementById('academic_year');
+        if (!startInput || !endInput || !acadInput) return;
+
+        const startVal = startInput.value;
+        const endVal = endInput.value;
+        if (!startVal) return;
+
+        const startYear = parseInt(startVal.split('-')[0], 10);
+        if (isNaN(startYear)) return;
+
+        let endYear = endVal ? parseInt(endVal.split('-')[0], 10) : (startYear + 1);
+        if (isNaN(endYear) || endYear <= startYear) {
+            endYear = startYear + 1;
+        }
+
+        const calculated = `${startYear}-${String(endYear).slice(-2)}`;
+        acadInput.value = calculated;
+    }
+
+    const startEl = document.getElementById('cycle_start_date');
+    const endEl = document.getElementById('cycle_end_date');
+    if (startEl) {
+        startEl.addEventListener('change', updateCalculatedAcademicYear);
+        startEl.addEventListener('input', updateCalculatedAcademicYear);
+    }
+    if (endEl) {
+        endEl.addEventListener('change', updateCalculatedAcademicYear);
+        endEl.addEventListener('input', updateCalculatedAcademicYear);
+    }
+
+    function handleAcademicSubmit(e) {
+        const form = document.getElementById('academicSettingsForm');
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+
+        updateCalculatedAcademicYear();
+        const selectedYear = document.getElementById('academic_year').value.trim();
+        const selectedCycle = document.getElementById('semester_cycle').value;
+
+        // 1. If Academic Year is changing, trigger New Academic Year Transition modal
+        if (selectedYear && selectedYear !== currentAcademicYear) {
+            e.preventDefault();
+            const modalNewYearSpan = document.getElementById('modalNewAcademicYear');
+            if (modalNewYearSpan) modalNewYearSpan.textContent = selectedYear;
+
+            const modalEl = document.getElementById('academicYearChangeModal');
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+            return;
+        }
+
+        // 2. If switching from Odd to Even cycle within same year, prompt to move students
+        if (currentSemesterCycle === 'Odd' && selectedCycle === 'Even') {
+            e.preventDefault();
+            const modalEl = document.getElementById('cycleConfirmModal');
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+            return;
+        }
+
+        // 3. If switching from Even to Odd cycle within same year, prompt to transition students
+        if (currentSemesterCycle === 'Even' && selectedCycle === 'Odd') {
+            e.preventDefault();
+            const modalEl = document.getElementById('evenToOddCycleModal');
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+            return;
+        }
+
+        // 4. If saving while Sem 6 students exist and cycle is Odd (and year not changed), prompt for optional archiving
+        if (selectedCycle === 'Odd' && sem6StudentCount > 0 && currentSemesterCycle === 'Odd') {
+            e.preventDefault();
+            const modalEl = document.getElementById('archiveConfirmModal');
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+            return;
+        }
+    }
+
+    function confirmAcademicYearSubmit(transitionOption) {
+        document.getElementById('transition_academic_year').value = transitionOption;
+        const modalEl = document.getElementById('academicYearChangeModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) {
+            modal.hide();
+        }
+        document.getElementById('academicSettingsForm').submit();
+    }
+
+    function confirmCycleSubmit(moveOption) {
+        document.getElementById('move_odd_students').value = moveOption;
+        const modalEl = document.getElementById('cycleConfirmModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) {
+            modal.hide();
+        }
+        document.getElementById('academicSettingsForm').submit();
+    }
+
+    function confirmEvenToOddSubmit(moveOption) {
+        document.getElementById('move_even_students').value = moveOption;
+        const modalEl = document.getElementById('evenToOddCycleModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) {
+            modal.hide();
+        }
+        document.getElementById('academicSettingsForm').submit();
+    }
+
+    function confirmAcademicSubmit(archiveOption) {
+        document.getElementById('archive_sem6').value = archiveOption;
+        const modalEl = document.getElementById('archiveConfirmModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) {
+            modal.hide();
+        }
+        document.getElementById('academicSettingsForm').submit();
+    }
+    </script>
+</body>
+
+</html>

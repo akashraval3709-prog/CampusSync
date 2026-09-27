@@ -1,0 +1,249 @@
+{% extends 'public/base_public.html' %}
+
+{% block title %}Campus Facilities & Infrastructure – {{ college.college_name if college else 'CampusSync College' }}{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="pub-hero">
+    <div class="container position-relative" style="z-index: 1;">
+        <div class="pub-hero-pill">
+            <i class="bi bi-building"></i> World-Class 15-Acre Smart Campus
+        </div>
+        <h1 class="pub-hero-title">Infrastructure Engineered for Innovation</h1>
+        <p class="pub-hero-subtitle">
+            From high-performance computing clusters to multi-sport arenas, our campus is curated to foster academic breakthroughs and an vibrant student lifestyle.
+        </p>
+        <div class="pub-breadcrumb">
+            <a href="{{ url_for('home') }}"><i class="bi bi-house-door-fill me-1"></i> Home</a>
+            <span>/</span>
+            <span class="text-white fw-semibold">Facilities</span>
+        </div>
+    </div>
+</section>
+
+<!-- Campus Numbers Strip -->
+<section class="py-5 bg-white border-bottom">
+    <div class="container">
+        <div class="row g-4 text-center">
+            <div class="col-6 col-md-3">
+                <div class="pub-stat-card">
+                    <div class="pub-stat-icon bg-primary-subtle text-primary mx-auto">
+                        <i class="bi bi-cpu-fill"></i>
+                    </div>
+                    <div class="pub-stat-val">45+</div>
+                    <div class="pub-stat-label">Specialized R&D Labs</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="pub-stat-card">
+                    <div class="pub-stat-icon bg-success-subtle text-success mx-auto">
+                        <i class="bi bi-book-half"></i>
+                    </div>
+                    <div class="pub-stat-val">50k+</div>
+                    <div class="pub-stat-label">Volumes & E-Journals</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="pub-stat-card">
+                    <div class="pub-stat-icon bg-info-subtle text-info mx-auto">
+                        <i class="bi bi-wifi"></i>
+                    </div>
+                    <div class="pub-stat-val">1 Gbps</div>
+                    <div class="pub-stat-label">Fiber Wi-Fi Campus</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="pub-stat-card">
+                    <div class="pub-stat-icon bg-warning-subtle text-warning mx-auto">
+                        <i class="bi bi-trophy-fill"></i>
+                    </div>
+                    <div class="pub-stat-val">8+</div>
+                    <div class="pub-stat-label">Sports Arenas</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Facilities Showcase -->
+<section class="py-5" style="background: #f8fafc;">
+    <div class="container">
+        <div class="text-center mb-5">
+            <span class="badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-size:.78rem;padding:.4em 1.1em;">Next-Gen Amenities</span>
+            <h2 class="mt-2 fw-bold text-dark" style="font-size: 1.85rem;">Designed for Exploration & Discovery</h2>
+            <p class="text-muted mx-auto" style="max-width: 620px; font-size: 0.95rem;">
+                Experience state-of-the-art facilities crafted to meet international engineering and research standards.
+            </p>
+        </div>
+
+        <div class="row g-4">
+            
+            <!-- Facility 1: Computing Labs -->
+            <div class="col-lg-4 col-md-6">
+                <div class="pub-facility-card">
+                    <div class="p-4" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: #fff;">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="badge bg-primary">Computing Infrastructure</span>
+                            <i class="bi bi-pc-display-horizontal text-primary fs-3"></i>
+                        </div>
+                        <h4 class="fw-bold mb-1" style="font-size: 1.2rem;">AI & Supercomputing Labs</h4>
+                        <small class="text-slate-400" style="color: #94a3b8;">High Performance GPU Clusters</small>
+                    </div>
+                    <div class="p-4 bg-white flex-grow-1">
+                        <p class="text-muted small mb-3" style="line-height: 1.65;">
+                            Equipped with NVIDIA RTX workstations, Dell PowerEdge rack servers, Linux development terminals, and high-speed fiber internet for machine learning and big data computations.
+                        </p>
+                        <ul class="list-unstyled text-muted small mb-0">
+                            <li class="mb-1"><i class="bi bi-check2 text-primary me-2 fw-bold"></i> 600+ Terminal Workstations</li>
+                            <li class="mb-1"><i class="bi bi-check2 text-primary me-2 fw-bold"></i> Gigabit Ethernet Architecture</li>
+                            <li><i class="bi bi-check2 text-primary me-2 fw-bold"></i> Cloud Sandbox Access</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Facility 2: Central Library -->
+            <div class="col-lg-4 col-md-6">
+                <div class="pub-facility-card">
+                    <div class="p-4" style="background: linear-gradient(135deg, #064e3b 0%, #022c22 100%); color: #fff;">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="badge bg-success">Knowledge Center</span>
+                            <i class="bi bi-journal-bookmark-fill text-success fs-3"></i>
+                        </div>
+                        <h4 class="fw-bold mb-1" style="font-size: 1.2rem;">Central Digital Library</h4>
+                        <small style="color: #6ee7b7;">Knowledge Resource Center</small>
+                    </div>
+                    <div class="p-4 bg-white flex-grow-1">
+                        <p class="text-muted small mb-3" style="line-height: 1.65;">
+                            Three-tier library housing rare manuscripts, textbook reserves, Springer/IEEE e-subscriptions, RFID automated lending kiosks, and quiet study carrels.
+                        </p>
+                        <ul class="list-unstyled text-muted small mb-0">
+                            <li class="mb-1"><i class="bi bi-check2 text-success me-2 fw-bold"></i> 50,000+ Printed Catalogues</li>
+                            <li class="mb-1"><i class="bi bi-check2 text-success me-2 fw-bold"></i> IEEE Xplore Digital Access</li>
+                            <li><i class="bi bi-check2 text-success me-2 fw-bold"></i> 24x7 Digital Reading Kiosks</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Facility 3: Auditoriums -->
+            <div class="col-lg-4 col-md-6">
+                <div class="pub-facility-card">
+                    <div class="p-4" style="background: linear-gradient(135deg, #4c1d95 0%, #2e1065 100%); color: #fff;">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="badge" style="background: #a855f7;">Events & Symposia</span>
+                            <i class="bi bi-camera-video-fill text-warning fs-3"></i>
+                        </div>
+                        <h4 class="fw-bold mb-1" style="font-size: 1.2rem;">Smart Amphitheatres</h4>
+                        <small style="color: #d8b4fe;">Audio-Visual Convention Halls</small>
+                    </div>
+                    <div class="p-4 bg-white flex-grow-1">
+                        <p class="text-muted small mb-3" style="line-height: 1.65;">
+                            Acoustically engineered air-conditioned auditoriums with 4K laser projectors, Dolby surround arrays, and broadcast studio setups for national hackathons and guest lectures.
+                        </p>
+                        <ul class="list-unstyled text-muted small mb-0">
+                            <li class="mb-1"><i class="bi bi-check2 text-purple me-2 fw-bold" style="color:#7e22ce"></i> 1,200 Seater Grand Auditorium</li>
+                            <li class="mb-1"><i class="bi bi-check2 text-purple me-2 fw-bold" style="color:#7e22ce"></i> Interactive Smart Lecterns</li>
+                            <li><i class="bi bi-check2 text-purple me-2 fw-bold" style="color:#7e22ce"></i> Live Multi-Cam Webcasting</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Facility 4: Incubation Cell -->
+            <div class="col-lg-4 col-md-6">
+                <div class="pub-facility-card">
+                    <div class="p-4" style="background: linear-gradient(135deg, #78350f 0%, #451a03 100%); color: #fff;">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="badge bg-warning text-dark">Startup Ecosystem</span>
+                            <i class="bi bi-robot text-warning fs-3"></i>
+                        </div>
+                        <h4 class="fw-bold mb-1" style="font-size: 1.2rem;">Robotics & Maker Space</h4>
+                        <small style="color: #fde68a;">Hardware Prototyping Hub</small>
+                    </div>
+                    <div class="p-4 bg-white flex-grow-1">
+                        <p class="text-muted small mb-3" style="line-height: 1.65;">
+                            Dedicated maker space for student inventors with precision 3D printers, laser cutters, oscilloscope benches, PCB fabrication stations, and seed funding mentorship.
+                        </p>
+                        <ul class="list-unstyled text-muted small mb-0">
+                            <li class="mb-1"><i class="bi bi-check2 text-warning me-2 fw-bold"></i> Industrial 3D Printing Station</li>
+                            <li class="mb-1"><i class="bi bi-check2 text-warning me-2 fw-bold"></i> IoT Sensor Telemetry Bank</li>
+                            <li><i class="bi bi-check2 text-warning me-2 fw-bold"></i> Pre-Seed Venture Mentorship</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Facility 5: Sports Complex -->
+            <div class="col-lg-4 col-md-6">
+                <div class="pub-facility-card">
+                    <div class="p-4" style="background: linear-gradient(135deg, #1e3a8a 0%, #172554 100%); color: #fff;">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="badge bg-info text-dark">Physical Wellness</span>
+                            <i class="bi bi-dribbble text-info fs-3"></i>
+                        </div>
+                        <h4 class="fw-bold mb-1" style="font-size: 1.2rem;">Sports Complex & Arena</h4>
+                        <small style="color: #93c5fd;">Indoor & Outdoor Arenas</small>
+                    </div>
+                    <div class="p-4 bg-white flex-grow-1">
+                        <p class="text-muted small mb-3" style="line-height: 1.65;">
+                            Expansive athletic complex featuring standard cricket pitch, floodlit basketball & volleyball courts, indoor badminton stadium, and modern strength fitness gymnasium.
+                        </p>
+                        <ul class="list-unstyled text-muted small mb-0">
+                            <li class="mb-1"><i class="bi bi-check2 text-info me-2 fw-bold"></i> Floodlit Tournament Courts</li>
+                            <li class="mb-1"><i class="bi bi-check2 text-info me-2 fw-bold"></i> Cardio & Weight Training Gym</li>
+                            <li><i class="bi bi-check2 text-info me-2 fw-bold"></i> Certified Fitness Instructors</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Facility 6: Hostels & Dining -->
+            <div class="col-lg-4 col-md-6">
+                <div class="pub-facility-card">
+                    <div class="p-4" style="background: linear-gradient(135deg, #134e4a 0%, #042f2e 100%); color: #fff;">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="badge bg-teal" style="background: #14b8a6; color: #fff;">Residential Life</span>
+                            <i class="bi bi-houses-fill text-teal fs-3" style="color:#2dd4bf"></i>
+                        </div>
+                        <h4 class="fw-bold mb-1" style="font-size: 1.2rem;">Hostels & Student Dining</h4>
+                        <small style="color: #99f6e4;">Secure & Comfortable Living</small>
+                    </div>
+                    <div class="p-4 bg-white flex-grow-1">
+                        <p class="text-muted small mb-3" style="line-height: 1.65;">
+                            Secure on-campus resident halls with biometric access, high-speed Wi-Fi, laundry facilities, study lounges, and FSSAI-certified nutritious multi-cuisine dining messes.
+                        </p>
+                        <ul class="list-unstyled text-muted small mb-0">
+                            <li class="mb-1"><i class="bi bi-check2 text-success me-2 fw-bold"></i> 24x7 CCTV & Warden Security</li>
+                            <li class="mb-1"><i class="bi bi-check2 text-success me-2 fw-bold"></i> Hygienic Multi-Cuisine Mess</li>
+                            <li><i class="bi bi-check2 text-success me-2 fw-bold"></i> Resident Medical Clinic on Call</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+<!-- Virtual Visit CTA -->
+<section class="py-5 bg-white border-top">
+    <div class="container text-center">
+        <div class="p-5 rounded-4" style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 1px solid #bfdbfe;">
+            <i class="bi bi-geo-alt-fill text-primary display-4 mb-3 d-inline-block"></i>
+            <h2 class="fw-bold text-dark mb-2">Want to Experience Our Campus in Person?</h2>
+            <p class="text-muted mx-auto mb-4" style="max-width: 600px;">
+                We invite prospective students, parents, and academic delegates for a guided campus tour. Discover classrooms, laboratories, and meet our faculty members.
+            </p>
+            <div class="d-flex justify-content-center gap-3 flex-wrap">
+                <a href="{{ url_for('contact') }}" class="btn btn-primary px-4 py-2 fw-semibold">
+                    Schedule a Guided Campus Tour <i class="bi bi-calendar-event ms-1"></i>
+                </a>
+                <a href="{{ url_for('courses') }}" class="btn btn-outline-primary px-4 py-2 fw-semibold">
+                    View Degree Curriculums
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,29 @@
+# Python Virtual Environments
+venv/
+env/
+ENV/
+.venv/
+
+# Byte-compiled / optimized files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment files (Never commit actual passwords/keys to public git)
+.env
+.env.local
+
+# OS generated files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IDE configs
+.vscode/
+.idea/
+
+# Logs and scratch files
+*.log
+scratch/
+*.backup*
+*_temp.py

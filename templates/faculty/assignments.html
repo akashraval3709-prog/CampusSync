@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assignment Submissions &amp; Verification – Faculty Portal</title>
+    <!-- CSS Dependencies -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/common.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/faculty.css') }}" rel="stylesheet">
+    <style>
+        .assignment-kpi-card {
+            border-radius: 14px;
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+            padding: 1.25rem;
+            transition: all 0.2s ease;
+        }
+        .assignment-kpi-card:hover {
+            box-shadow: 0 8px 16px -4px rgba(0,0,0,0.06);
+            transform: translateY(-2px);
+        }
+        .student-row-submitted {
+            background-color: rgba(34, 197, 94, 0.05) !important;
+        }
+        .mark-input-cell {
+            width: 90px;
+        }
+        .check-huge {
+            width: 1.35rem;
+            height: 1.35rem;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body class="faculty-theme">
+<div class="wrapper">
+    <!-- Reusable Faculty Sidebar -->
+    {% include 'components/sidebar.html' %}
+
+    <div id="content">
+        <!-- Reusable Faculty Topbar -->
+        {% include 'components/topbar.html' %}
+
+        <div class="content-body p-4">
+            
+            <!-- Page Header -->
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+                <div>
+                    <h2 class="fw-bold mb-1 text-dark">
+                        <i class="bi bi-ui-checks text-success me-2"></i>Assignment Submissions &amp; Verification
+                    </h2>
+                    <p class="text-muted small mb-0">
+                        Select an assignment, tick students who submitted, and auto-credit full internal marks with one click.
+                    </p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('faculty_notices') }}" class="btn btn-outline-success btn-sm">
+                        <i class="bi bi-plus-circle me-1"></i> Post New Assignment Notice
+                    </a>
+                    <a href="{{ url_for('faculty_marks') }}" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-pencil-square me-1"></i> View Internal Marks Register
+                    </a>
+                </div>
+            </div>
+
+            <!-- Flash Alert Messages & Error HTML Modal Pop-up -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="mb-4">
+                {% for category, message in messages %}
+                    {% if category in ['danger', 'error'] %}
+                        <!-- Custom HTML Error Modal Pop-up -->
+                        <div class="modal fade" id="flashErrorModal" tabindex="-1" aria-labelledby="flashErrorModalLabel" aria-hidden="true" data-bs-backdrop="static">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                                    <div class="modal-header bg-danger text-white py-3 px-4">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="bi bi-exclamation-octagon-fill fs-4"></i>
+                                            <h5 class="modal-title fw-bold m-0" id="flashErrorModalLabel">Action Denied / Error</h5>
+                                        </div>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body p-4 text-center">
+                                        <div class="d-inline-flex align-items-center justify-content-center bg-danger-subtle text-danger rounded-circle mb-3 shadow-sm" style="width: 72px; height: 72px;">
+                                            <i class="bi bi-shield-lock-fill fs-1"></i>
+                                        </div>
+                                        <h5 class="fw-bold text-dark mb-2">Assignment Already Final Saved &amp; Locked</h5>
+                                        <p class="text-secondary small mb-3">
+                                            {{ message }}
+                                        </p>
+                                        <div class="alert alert-warning py-2 px-3 small text-start d-flex align-items-start gap-2 mb-0">
+                                            <i class="bi bi-info-circle-fill text-warning fs-6 mt-1"></i>
+                                            <div>
+                                                Once an assignment is Final Saved, submissions are locked to prevent accidental overwrite. To modify or decrease individual student marks, please use the <strong>Internal Marks Register</strong>.
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer bg-light py-3 px-4 d-flex justify-content-between">
+                                        <button type="button" class="btn btn-outline-secondary px-4 fw-semibold" data-bs-dismiss="modal">
+                                            <i class="bi bi-x-circle me-1"></i> Cancel
+                                        </button>
+                                        <div class="d-flex gap-2">
+                                            <a href="{{ url_for('faculty_marks') }}" class="btn btn-outline-primary fw-semibold px-3">
+                                                <i class="bi bi-pencil-square me-1"></i> Open Marks
+                                            </a>
+                                            <button type="button" class="btn btn-danger px-4 fw-semibold shadow-sm" data-bs-dismiss="modal">
+                                                <i class="bi bi-check-lg me-1"></i> OK
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show d-flex align-items-center gap-2" role="alert">
+                            <i class="bi bi-info-circle-fill fs-5"></i>
+                            <div>{{ message }}</div>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            <!-- Assignment Selector Bar -->
+            <div class="card shadow-sm border-0 rounded-4 mb-4">
+                <div class="card-body p-3">
+                    <form method="GET" action="{{ url_for('faculty_assignments') }}" class="row g-3 align-items-center">
+                        <div class="col-md-8 col-lg-9">
+                            <label class="form-label small fw-semibold text-secondary mb-1">Select Published Assignment Notice:</label>
+                            <select name="assignment_id" class="form-select fw-semibold" onchange="this.form.submit()">
+                                <option value="">-- Choose Assignment Task --</option>
+                                {% for item in assignment_notices %}
+                                    {% set an = item.notice %}
+                                    <option value="{{ an.id }}" {% if selected_assignment_id == an.id %}selected{% endif %}>
+                                        {{ an.title }} &bull; Sem {{ an.target_semester if an.target_semester else 'All' }} (Div {{ an.target_division }}) &bull; {{ an.subject.subject_name if an.subject else 'General' }} {% if item.is_final_saved %}[🔒 Final Saved &amp; Locked]{% elif item.is_expired %}[Deadline Passed]{% endif %}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4 col-lg-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-success w-100 fw-semibold">
+                                <i class="bi bi-arrow-repeat me-1"></i> Load Submission Sheet
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            {% if sheet_data %}
+                {% set n = sheet_data.notice %}
+                {% set max_m = sheet_data.max_assignment_marks %}
+                
+                <!-- Assignment Overview & Timeline Banner -->
+                <div class="card shadow-sm border-0 rounded-4 mb-4 overflow-hidden border-start border-4 {% if sheet_data.is_final_saved %}border-primary{% elif sheet_data.is_expired %}border-danger{% else %}border-success{% endif %}">
+                    <div class="card-body p-4 bg-white">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                            <div>
+                                <div class="d-flex align-items-center gap-2 mb-1">
+                                    <h4 class="fw-bold text-dark m-0">{{ n.title }}</h4>
+                                    {% if sheet_data.is_final_saved %}
+                                        <span class="badge bg-primary px-3 py-2 shadow-sm" style="font-size: 0.8rem;">
+                                            <i class="bi bi-lock-fill me-1"></i> Final Saved &amp; Locked
+                                        </span>
+                                    {% elif sheet_data.is_expired %}
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                                            <i class="bi bi-clock-history me-1"></i> Deadline Passed
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                            <i class="bi bi-hourglass-split me-1"></i> Active Submission Window
+                                        </span>
+                                    {% endif %}
+                                </div>
+                                <div class="text-secondary small">
+                                    <strong>Subject:</strong> {{ sheet_data.subject.subject_code }} - {{ sheet_data.subject.subject_name if sheet_data.subject else 'N/A' }}
+                                    &bull; <strong>Target:</strong> Sem {{ n.target_semester if n.target_semester else 'All' }} (Div {{ n.target_division }})
+                                    &bull; <strong>Deadline:</strong> <span class="fw-bold text-danger">{{ n.end_date.strftime('%d %b %Y, %I:%M %p') if n.end_date else 'No deadline set' }}</span>
+                                    {% if sheet_data.is_final_saved and sheet_data.final_saved_at %}
+                                        &bull; <strong class="text-success"><i class="bi bi-calendar-check me-1"></i>Final Saved:</strong> {{ sheet_data.final_saved_at.strftime('%d %b %Y, %I:%M %p') }}
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <div class="badge bg-light text-dark border p-2 text-start">
+                                    <div class="text-muted small">Auto-Credit Component:</div>
+                                    <div class="fw-bold text-success fs-6"><i class="bi bi-check2-all me-1"></i>{{ max_m }} Marks (Home Assignment)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- KPI Metric Cards -->
+                <div class="row g-3 mb-4">
+                    <div class="col-sm-6 col-lg-3">
+                        <div class="assignment-kpi-card text-center">
+                            <span class="text-secondary small fw-semibold d-block mb-1">Total Target Students</span>
+                            <h3 class="fw-bold text-dark mb-0">{{ sheet_data.total_students }}</h3>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <div class="assignment-kpi-card text-center border-success-subtle bg-success-subtle">
+                            <span class="text-success small fw-semibold d-block mb-1">Submitted (Checked [✓])</span>
+                            <h3 class="fw-bold text-success mb-0" id="liveSubmittedCounter">{{ sheet_data.submitted_count }}</h3>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <div class="assignment-kpi-card text-center border-warning-subtle bg-warning-subtle">
+                            <span class="text-warning-emphasis small fw-semibold d-block mb-1">Pending (Not Submitted)</span>
+                            <h3 class="fw-bold text-warning-emphasis mb-0" id="livePendingCounter">{{ sheet_data.pending_count }}</h3>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <div class="assignment-kpi-card text-center">
+                            <span class="text-secondary small fw-semibold d-block mb-1">Max Assignment Marks</span>
+                            <h3 class="fw-bold text-primary mb-0">{{ max_m }} / {{ max_m }}</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Student Submission Checklist Form -->
+                <form method="POST" action="{{ url_for('faculty_save_assignment_submissions') }}" id="assignmentForm">
+                    <input type="hidden" name="notification_id" value="{{ n.id }}">
+                    <input type="hidden" name="sync_internal" value="1">
+
+                    <div class="card shadow-sm border-0 rounded-4 overflow-hidden mb-4">
+                        <div class="card-header bg-white py-3 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <div class="d-flex align-items-center gap-3">
+                                <h5 class="card-title fw-bold m-0 text-dark fs-6">
+                                    <i class="bi bi-people-fill text-primary me-2"></i>Student Submission Checklist
+                                </h5>
+                                {% if not sheet_data.is_final_saved %}
+                                    <div class="btn-group btn-group-sm">
+                                        <button type="button" class="btn btn-outline-success btn-sm" onclick="toggleAllSubmissions(true)">
+                                            <i class="bi bi-check-all"></i> Select All Submitted
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="toggleAllSubmissions(false)">
+                                            <i class="bi bi-x"></i> Deselect All
+                                        </button>
+                                    </div>
+                                {% else %}
+                                    <span class="badge bg-secondary-subtle text-secondary border px-3 py-1">
+                                        <i class="bi bi-lock-fill me-1 text-primary"></i> Submissions Permanently Locked
+                                    </span>
+                                {% endif %}
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <input type="text" id="studentSearchInput" class="form-control form-control-sm" placeholder="🔍 Search Roll No or Name..." style="width: 220px;" onkeyup="filterStudentRows()">
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0" id="submissionTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="ps-4" style="width: 70px;">
+                                            <input type="checkbox" id="headerMasterCheck" class="form-check-input check-huge" title="Toggle All" onchange="toggleAllSubmissions(this.checked)" {% if sheet_data.is_final_saved %}disabled{% endif %}>
+                                        </th>
+                                        <th style="width: 100px;">Roll No</th>
+                                        <th style="width: 170px;">Enrollment No</th>
+                                        <th>Student Full Name</th>
+                                        <th style="width: 100px;">Division</th>
+                                        <th style="width: 130px;">Status</th>
+                                        <th style="width: 140px;" class="mark-input-cell">Marks (Max {{ max_m }})</th>
+                                        <th class="text-end pe-4" style="width: 160px;">Submitted On</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% if sheet_data.students %}
+                                        {% for st in sheet_data.students %}
+                                        <tr class="student-item-row {% if st.is_submitted %}student-row-submitted{% endif %}" id="row_{{ st.student_id }}">
+                                            <td class="ps-4">
+                                                <input type="checkbox" 
+                                                       name="submitted_students" 
+                                                       value="{{ st.student_id }}" 
+                                                       class="form-check-input check-huge student-check"
+                                                       {% if st.is_submitted %}checked{% endif %}
+                                                       {% if sheet_data.is_final_saved %}disabled{% endif %}
+                                                       onchange="onStudentCheckChanged(this, {{ st.student_id }}, {{ max_m }})">
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-light text-dark border font-monospace">{{ st.roll_number }}</span>
+                                            </td>
+                                            <td class="font-monospace text-secondary small">
+                                                {{ st.enrollment_no }}
+                                            </td>
+                                            <td>
+                                                <div class="fw-bold text-dark student-name">{{ st.full_name }}</div>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-secondary-subtle text-secondary border">Div {{ st.division }}</span>
+                                            </td>
+                                            <td>
+                                                {% if st.is_submitted %}
+                                                    <span class="badge bg-success-subtle text-success border border-success-subtle status-badge" id="badge_{{ st.student_id }}">
+                                                        <i class="bi bi-check-circle-fill me-1"></i> Submitted
+                                                    </span>
+                                                {% else %}
+                                                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle status-badge" id="badge_{{ st.student_id }}">
+                                                        <i class="bi bi-hourglass me-1"></i> Pending
+                                                    </span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="mark-input-cell">
+                                                <input type="number" 
+                                                       step="0.5" 
+                                                       min="0" 
+                                                       max="{{ max_m }}" 
+                                                       name="marks_{{ st.student_id }}" 
+                                                       id="marks_{{ st.student_id }}" 
+                                                       class="form-control form-control-sm text-center fw-bold" 
+                                                       value="{{ st.marks_awarded if st.marks_awarded is not none else (max_m if st.is_submitted else 0) }}"
+                                                       {% if sheet_data.is_final_saved %}disabled readonly{% endif %}
+                                                       title="Faculty can reduce marks if needed">
+                                            </td>
+                                            <td class="text-end pe-4 text-muted small">
+                                                <span id="date_{{ st.student_id }}">{{ st.submitted_at.strftime('%d %b, %I:%M %p') if st.submitted_at else '—' }}</span>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="8" class="text-center py-4 text-muted">
+                                                No active students found in Semester {{ n.target_semester }} (Division {{ n.target_division }}).
+                                            </td>
+                                        </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Submit Action Toolbar -->
+                        <div class="card-footer bg-white p-3 border-top d-flex flex-wrap justify-content-between align-items-center gap-3">
+                            {% if sheet_data.is_final_saved %}
+                                <div class="text-success small fw-semibold d-flex align-items-center gap-2">
+                                    <i class="bi bi-shield-lock-fill fs-5 text-success"></i>
+                                    <div>
+                                        This assignment has been <strong>Final Saved and Locked</strong> on {{ sheet_data.final_saved_at.strftime('%d %b %Y, %I:%M %p') if sheet_data.final_saved_at else '' }}. Internal marks are permanently recorded.
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-2 align-items-center">
+                                    <a href="{{ url_for('faculty_marks') }}" class="btn btn-outline-primary px-3 py-2 fw-semibold">
+                                        <i class="bi bi-pencil-square me-1"></i> Edit in Internal Marks Register
+                                    </a>
+                                    <button type="button" class="btn btn-secondary px-4 py-2 fw-semibold" disabled title="Final Save already completed for this assignment">
+                                        <i class="bi bi-lock-fill me-1"></i> Final Saved &amp; Locked
+                                    </button>
+                                </div>
+                            {% else %}
+                                <div class="small text-secondary">
+                                    <i class="bi bi-shield-check text-success me-1"></i>
+                                    Clicking <strong>Final Save</strong> automatically credits full marks (or customized marks) directly into student internal marks!
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-success px-4 py-2 fw-semibold shadow-sm" onclick="openFinalSaveModal();">
+                                        <i class="bi bi-check2-circle me-1"></i> Final Save &amp; Auto-Credit Internal Marks
+                                    </button>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Custom HTML Bootstrap Confirmation Modal -->
+                <div class="modal fade" id="finalSaveConfirmModal" tabindex="-1" aria-labelledby="finalSaveConfirmModalLabel" aria-hidden="true" data-bs-backdrop="static">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                            <div class="modal-header bg-success text-white py-3 px-4">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-patch-check-fill fs-4"></i>
+                                    <h5 class="modal-title fw-bold m-0" id="finalSaveConfirmModalLabel">Confirm Final Save</h5>
+                                </div>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body p-4 text-center">
+                                <div class="d-inline-flex align-items-center justify-content-center bg-success-subtle text-success rounded-circle mb-3 shadow-sm" style="width: 70px; height: 70px;">
+                                    <i class="bi bi-check2-all fs-1"></i>
+                                </div>
+                                <h5 class="fw-bold text-dark mb-2">Are you sure you want to Final Save?</h5>
+                                <p class="text-secondary small mb-3">
+                                    This action will mark students as submitted and transfer their marks directly into Internal Assessment.
+                                </p>
+
+                                <div class="p-3 bg-light rounded-3 border mb-3 text-start">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="text-secondary small fw-semibold">Submitted Students Checked:</span>
+                                        <span class="badge bg-success fs-6 px-3 py-1" id="modalSubmittedStudentCount">0 Students</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="text-secondary small fw-semibold">Assignment Component Marks:</span>
+                                        <span class="fw-bold text-success">{{ max_m }} / {{ max_m }} Marks</span>
+                                    </div>
+                                </div>
+
+                                <div class="alert alert-info py-2 px-3 small text-start d-flex align-items-start gap-2 mb-0">
+                                    <i class="bi bi-info-circle-fill text-primary fs-6 mt-1"></i>
+                                    <div>
+                                        All ticked students will receive their full marks in <strong>Internal Marks</strong> (Home Assignment). Unchecked students will remain marked as Pending.
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer bg-light py-3 px-4 d-flex justify-content-between">
+                                <button type="button" class="btn btn-outline-secondary px-4 fw-semibold" data-bs-dismiss="modal">
+                                    <i class="bi bi-x-circle me-1"></i> Cancel
+                                </button>
+                                <button type="button" class="btn btn-success px-4 fw-semibold shadow-sm" onclick="executeFinalSave()">
+                                    <i class="bi bi-check2-circle me-1"></i> OK, Final Save
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dynamic Error HTML Modal (If locked action is attempted) -->
+                <div class="modal fade" id="dynamicErrorModal" tabindex="-1" aria-labelledby="dynamicErrorModalLabel" aria-hidden="true" data-bs-backdrop="static">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                            <div class="modal-header bg-danger text-white py-3 px-4">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-exclamation-octagon-fill fs-4"></i>
+                                    <h5 class="modal-title fw-bold m-0" id="dynamicErrorModalLabel">Action Denied / Error</h5>
+                                </div>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body p-4 text-center">
+                                <div class="d-inline-flex align-items-center justify-content-center bg-danger-subtle text-danger rounded-circle mb-3 shadow-sm" style="width: 72px; height: 72px;">
+                                    <i class="bi bi-shield-lock-fill fs-1"></i>
+                                </div>
+                                <h5 class="fw-bold text-dark mb-2">Assignment Already Final Saved &amp; Locked</h5>
+                                <p class="text-secondary small mb-3">
+                                    This assignment has already been Final Saved and permanently locked. You cannot perform Final Save again.
+                                </p>
+                                <div class="alert alert-warning py-2 px-3 small text-start d-flex align-items-start gap-2 mb-0">
+                                    <i class="bi bi-info-circle-fill text-warning fs-6 mt-1"></i>
+                                    <div>
+                                        All internal marks are permanently saved. If you need to decrease or adjust any student's marks, please open the <strong>Internal Marks Register</strong>.
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer bg-light py-3 px-4 d-flex justify-content-between">
+                                <button type="button" class="btn btn-outline-secondary px-4 fw-semibold" data-bs-dismiss="modal">
+                                    <i class="bi bi-x-circle me-1"></i> Cancel
+                                </button>
+                                <div class="d-flex gap-2">
+                                    <a href="{{ url_for('faculty_marks') }}" class="btn btn-outline-primary fw-semibold px-3">
+                                        <i class="bi bi-pencil-square me-1"></i> Open Marks Register
+                                    </a>
+                                    <button type="button" class="btn btn-danger px-4 fw-semibold shadow-sm" data-bs-dismiss="modal">
+                                        <i class="bi bi-check-lg me-1"></i> OK
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            {% else %}
+                <!-- Empty State when no assignment is chosen -->
+                <div class="card shadow-sm border-0 rounded-4 text-center py-5">
+                    <div class="card-body">
+                        <i class="bi bi-folder-check text-muted" style="font-size: 3.5rem;"></i>
+                        <h4 class="fw-bold text-dark mt-3 mb-2">No Assignment Selected</h4>
+                        <p class="text-muted small mx-auto" style="max-width: 480px;">
+                            Please choose an assignment from the dropdown above to view student submission checklists, verify received work, and sync internal marks.
+                        </p>
+                        {% if not assignment_notices %}
+                            <a href="{{ url_for('faculty_notices') }}" class="btn btn-success btn-sm mt-2">
+                                <i class="bi bi-plus-circle me-1"></i> Create First Assignment Notice
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// Checkbox toggle handler
+function onStudentCheckChanged(checkbox, studentId, maxMarks) {
+    const row = document.getElementById('row_' + studentId);
+    const badge = document.getElementById('badge_' + studentId);
+    const marksInput = document.getElementById('marks_' + studentId);
+    const dateCell = document.getElementById('date_' + studentId);
+
+    if (checkbox.checked) {
+        row.classList.add('student-row-submitted');
+        badge.className = 'badge bg-success-subtle text-success border border-success-subtle status-badge';
+        badge.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Submitted';
+        if (parseFloat(marksInput.value) === 0 || !marksInput.value) {
+            marksInput.value = maxMarks;
+        }
+        if (dateCell.textContent.trim() === '—') {
+            const now = new Date();
+            dateCell.textContent = 'Today, ' + now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        }
+    } else {
+        row.classList.remove('student-row-submitted');
+        badge.className = 'badge bg-warning-subtle text-warning border border-warning-subtle status-badge';
+        badge.innerHTML = '<i class="bi bi-hourglass me-1"></i> Pending';
+        marksInput.value = 0;
+        dateCell.textContent = '—';
+    }
+    updateLiveCounters();
+}
+
+// Select All / Deselect All
+function toggleAllSubmissions(checkState) {
+    const checkboxes = document.querySelectorAll('.student-check');
+    checkboxes.forEach(cb => {
+        if (cb.checked !== checkState) {
+            cb.checked = checkState;
+            const sid = cb.value;
+            const maxMarks = {{ sheet_data.max_assignment_marks if sheet_data else 5.0 }};
+            onStudentCheckChanged(cb, sid, maxMarks);
+        }
+    });
+    const headerMaster = document.getElementById('headerMasterCheck');
+    if (headerMaster) headerMaster.checked = checkState;
+    updateLiveCounters();
+}
+
+// Live Counter Update
+function updateLiveCounters() {
+    const checks = document.querySelectorAll('.student-check');
+    let sub = 0;
+    checks.forEach(c => { if (c.checked) sub++; });
+    const total = checks.length;
+    const pen = total - sub;
+
+    const subEl = document.getElementById('liveSubmittedCounter');
+    const penEl = document.getElementById('livePendingCounter');
+    if (subEl) subEl.textContent = sub;
+    if (penEl) penEl.textContent = pen;
+}
+
+// Live student search filter
+function filterStudentRows() {
+    const query = document.getElementById('studentSearchInput').value.toLowerCase().trim();
+    const rows = document.querySelectorAll('.student-item-row');
+    rows.forEach(r => {
+        const text = r.textContent.toLowerCase();
+        r.style.display = text.includes(query) ? '' : 'none';
+    });
+}
+
+// Automatically trigger Flash Error Modal Pop-up on page load if present
+document.addEventListener("DOMContentLoaded", function() {
+    const flashErrModalEl = document.getElementById('flashErrorModal');
+    if (flashErrModalEl) {
+        const errModal = new bootstrap.Modal(flashErrModalEl);
+        errModal.show();
+    }
+});
+
+// HTML Bootstrap Modal Dialog for Confirmation
+let finalSaveModalInstance = null;
+
+function openFinalSaveModal() {
+    {% if sheet_data and sheet_data.is_final_saved %}
+    const dynModalEl = document.getElementById('dynamicErrorModal');
+    if (dynModalEl) {
+        new bootstrap.Modal(dynModalEl).show();
+    }
+    return;
+    {% endif %}
+
+    let subCount = 0;
+    document.querySelectorAll('.student-check').forEach(c => { if (c.checked) subCount++; });
+    const countBadge = document.getElementById('modalSubmittedStudentCount');
+    if (countBadge) {
+        countBadge.textContent = `${subCount} Student${subCount === 1 ? '' : 's'}`;
+    }
+
+    const modalEl = document.getElementById('finalSaveConfirmModal');
+    if (modalEl) {
+        if (!finalSaveModalInstance) {
+            finalSaveModalInstance = new bootstrap.Modal(modalEl);
+        }
+        finalSaveModalInstance.show();
+    }
+}
+
+function executeFinalSave() {
+    if (finalSaveModalInstance) {
+        finalSaveModalInstance.hide();
+    }
+    const form = document.getElementById('assignmentForm');
+    if (form) {
+        form.submit();
+    }
+}
+</script>
+<script src="{{ url_for('static', filename='js/common.js') }}"></script>
+</body>
+</html>

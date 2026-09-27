@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>College Settings – CampusSync</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/common.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/admin.css') }}" rel="stylesheet">
+</head>
+
+<body class="admin-theme">
+    <div class="wrapper">
+        <!-- Sidebar Navigation -->
+        {% include 'components/sidebar.html' %}
+        
+        <div id="content">
+            <!-- Topbar Header -->
+            {% include 'components/topbar.html' %}
+
+            <div class="content-body">
+                <!-- Page Header -->
+                <div class="page-header d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h2><i class="bi bi-building me-2"></i>College Settings</h2>
+                        <p class="text-muted">Manage college information, logo, contact details, and institutional profile</p>
+                    </div>
+                </div>
+
+                <!-- Flash Messages -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                <div class="mb-4">
+                    {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show d-flex align-items-center gap-2" role="alert">
+                        <i class="bi bi-info-circle-fill fs-5"></i>
+                        <div>{{ message }}</div>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% endwith %}
+
+                <div class="row g-4">
+                    <!-- Left Column: College Logo & Quick Preview -->
+                    <div class="col-lg-4">
+                        <div class="card shadow-sm border-0 mb-4">
+                            <div class="card-body text-center p-4">
+                                <h5 class="fw-bold mb-3">College Logo</h5>
+                                
+                                <div class="position-relative d-inline-block mb-3">
+                                    {% if college and college.logo and college.logo != 'default-logo.png' %}
+                                        <img id="logoPreview" src="{{ url_for('admin.serve_uploads', filename='college/' + college.logo) }}" alt="College Logo" class="img-thumbnail rounded" style="max-width: 160px; max-height: 160px; object-fit: contain; padding: 8px;">
+                                    {% else %}
+                                        <div id="logoPlaceholder" class="rounded bg-light border d-flex align-items-center justify-content-center mx-auto" style="width: 140px; height: 140px;">
+                                            <i class="bi bi-building fs-1 text-secondary"></i>
+                                        </div>
+                                        <img id="logoPreview" src="" alt="College Logo" class="img-thumbnail rounded d-none" style="max-width: 160px; max-height: 160px; object-fit: contain; padding: 8px;">
+                                    {% endif %}
+                                </div>
+
+                                <h5 class="fw-bold text-dark mb-1">{{ college.college_name if college else 'CampusSync College' }}</h5>
+                                <p class="text-muted small mb-2">{{ college.college_short_name if college and college.college_short_name else 'CampusSync' }}</p>
+                                <span class="badge bg-primary px-3 py-2 fs-7">Active Institution</span>
+                            </div>
+                        </div>
+
+                        <!-- Summary Card -->
+                        <div class="card shadow-sm border-0">
+                            <div class="card-body p-4">
+                                <h6 class="fw-bold mb-3 text-secondary">Institutional Details</h6>
+                                <div class="mb-2 fs-8">
+                                    <strong class="text-dark"><i class="bi bi-mortarboard me-1"></i> College Type:</strong>
+                                    <span class="text-secondary ms-1">{{ college.college_type if college and college.college_type else 'Not specified' }}</span>
+                                </div>
+                                <div class="mb-2 fs-8">
+                                    <strong class="text-dark"><i class="bi bi-person-badge me-1"></i> Principal:</strong>
+                                    <span class="text-secondary ms-1">{{ college.principal_name if college and college.principal_name else 'Not specified' }}</span>
+                                </div>
+                                <div class="mb-2 fs-8">
+                                    <strong class="text-dark"><i class="bi bi-calendar-event me-1"></i> Established:</strong>
+                                    <span class="text-secondary ms-1">{{ college.established_year if college and college.established_year else 'Not specified' }}</span>
+                                </div>
+                                <div class="mb-2 fs-8">
+                                    <strong class="text-dark"><i class="bi bi-envelope me-1"></i> Email:</strong>
+                                    <span class="text-secondary ms-1">{{ college.email if college and college.email else 'Not specified' }}</span>
+                                </div>
+                                <div class="fs-8">
+                                    <strong class="text-dark"><i class="bi bi-globe me-1"></i> Website:</strong>
+                                    <span class="text-secondary ms-1">{{ college.website if college and college.website else 'Not specified' }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Settings Form -->
+                    <div class="col-lg-8">
+                        <form action="{{ url_for('update_college_settings') }}" method="POST" enctype="multipart/form-data">
+                            
+                            <!-- Section 1: College Basic Information -->
+                            <div class="card shadow-sm border-0 mb-4">
+                                <div class="card-header bg-white py-3">
+                                    <h5 class="card-title fw-bold m-0 text-primary">
+                                        <i class="bi bi-info-circle me-2"></i>1. College Basic Information
+                                    </h5>
+                                </div>
+                                <div class="card-body p-4">
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label for="college_name" class="form-label fw-semibold small">College Name <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" id="college_name" name="college_name" value="{{ college.college_name if college else '' }}" required placeholder="e.g. BKM BCA College">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label for="college_short_name" class="form-label fw-semibold small">Short Name / Code</label>
+                                            <input type="text" class="form-control" id="college_short_name" name="college_short_name" value="{{ college.college_short_name if college else '' }}" placeholder="e.g. BKM BCA">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label for="college_type" class="form-label fw-semibold small">College Type / Main Course</label>
+                                            <select class="form-select" id="college_type" name="college_type">
+                                                <option value="">Select Course</option>
+                                                <option value="BCA" {% if college and college.college_type == 'BCA' %}selected{% endif %}>BCA</option>
+                                                <option value="BBA" {% if college and college.college_type == 'BBA' %}selected{% endif %}>BBA</option>
+                                                <option value="BA" {% if college and college.college_type == 'BA' %}selected{% endif %}>BA</option>
+                                                <option value="B.Com" {% if college and college.college_type == 'B.Com' %}selected{% endif %}>B.Com</option>
+                                                <option value="B.Sc" {% if college and college.college_type == 'B.Sc' %}selected{% endif %}>B.Sc</option>
+                                                <option value="MCA" {% if college and college.college_type == 'MCA' %}selected{% endif %}>MCA</option>
+                                                <option value="MA" {% if college and college.college_type == 'MA' %}selected{% endif %}>MA</option>
+                                                <option value="M.Com" {% if college and college.college_type == 'M.Com' %}selected{% endif %}>M.Com</option>
+                                                <option value="Other" {% if college and college.college_type == 'Other' %}selected{% endif %}>Other</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-12">
+                                            <label for="logo" class="form-label fw-semibold small">Change College Logo</label>
+                                            <input type="file" class="form-control" id="logo" name="logo" accept="image/*" onchange="previewCollegeLogo(this)">
+                                            <div class="form-text small text-muted">Allowed image formats: JPG, PNG, GIF, WEBP. Maximum recommended size: 2MB.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Section 2: Contact Information -->
+                            <div class="card shadow-sm border-0 mb-4">
+                                <div class="card-header bg-white py-3">
+                                    <h5 class="card-title fw-bold m-0 text-primary">
+                                        <i class="bi bi-telephone me-2"></i>2. Contact Information
+                                    </h5>
+                                </div>
+                                <div class="card-body p-4">
+                                    <div class="row g-3">
+                                        <div class="col-md-12">
+                                            <label for="address" class="form-label fw-semibold small">Campus Address</label>
+                                            <input type="text" class="form-control" id="address" name="address" value="{{ college.address if college else '' }}" placeholder="e.g. College Campus Road, Near Bus Station">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="city" class="form-label fw-semibold small">City</label>
+                                            <input type="text" class="form-control" id="city" name="city" value="{{ college.city if college else '' }}" placeholder="e.g. Palanpur">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="state" class="form-label fw-semibold small">State</label>
+                                            <input type="text" class="form-control" id="state" name="state" value="{{ college.state if college else '' }}" placeholder="e.g. Gujarat">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="pincode" class="form-label fw-semibold small">Pincode</label>
+                                            <input type="text" class="form-control" id="pincode" name="pincode" value="{{ college.pincode if college else '' }}" placeholder="e.g. 385001">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="phone" class="form-label fw-semibold small">Phone Number</label>
+                                            <input type="text" class="form-control" id="phone" name="phone" value="{{ college.phone if college else '' }}" placeholder="e.g. +91 98765 43210">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="email" class="form-label fw-semibold small">Official Email</label>
+                                            <input type="email" class="form-control" id="email" name="email" value="{{ college.email if college else '' }}" placeholder="e.g. info@college.edu">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="website" class="form-label fw-semibold small">Website URL</label>
+                                            <input type="url" class="form-control" id="website" name="website" value="{{ college.website if college else '' }}" placeholder="e.g. https://campussync.edu">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Section 3: Academic / Institution Information -->
+                            <div class="card shadow-sm border-0 mb-4">
+                                <div class="card-header bg-white py-3">
+                                    <h5 class="card-title fw-bold m-0 text-primary">
+                                        <i class="bi bi-mortarboard me-2"></i>3. Academic / Institution Information
+                                    </h5>
+                                </div>
+                                <div class="card-body p-4">
+                                    <div class="row g-3">
+                                        <div class="col-md-8">
+                                            <label for="principal_name" class="form-label fw-semibold small">Principal Name</label>
+                                            <input type="text" class="form-control" id="principal_name" name="principal_name" value="{{ college.principal_name if college else '' }}" placeholder="e.g. Dr. A. K. Patel">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="established_year" class="form-label fw-semibold small">Established Year</label>
+                                            <input type="text" class="form-control" id="established_year" name="established_year" value="{{ college.established_year if college else '' }}" placeholder="e.g. 2005">
+                                        </div>
+                                        <div class="col-md-12">
+                                            <label for="description" class="form-label fw-semibold small">College Description / Overview</label>
+                                            <textarea class="form-control" id="description" name="description" rows="3" placeholder="Brief description of the institution...">{{ college.description if college else '' }}</textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Section 4: Official Marksheet Verification (Seal & Signature) -->
+                            <div class="card shadow-sm border-0 mb-4">
+                                <div class="card-header bg-white py-3 d-flex align-items-center justify-content-between">
+                                    <h5 class="card-title fw-bold m-0 text-primary">
+                                        <i class="bi bi-patch-check-fill me-2"></i>4. Official Marksheet Verification (Seal & Signature)
+                                    </h5>
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle fs-8">Used in PDF Marksheets</span>
+                                </div>
+                                <div class="card-body p-4">
+                                    <p class="text-muted small mb-4">
+                                        Upload the official college seal/stamp and principal's signature. These will be automatically rendered at the bottom of all generated student internal marksheets and transcripts.
+                                    </p>
+                                    <div class="row g-4">
+                                        <!-- College Stamp / Seal -->
+                                        <div class="col-md-6">
+                                            <div class="p-3 border rounded-3 bg-light text-center h-100 d-flex flex-column justify-content-between">
+                                                <div>
+                                                    <label class="form-label fw-bold text-dark d-block mb-2">
+                                                        <i class="bi bi-award me-1 text-primary"></i> College Official Stamp / Seal
+                                                    </label>
+                                                    <div class="d-flex justify-content-center align-items-center my-3" style="min-height: 120px;">
+                                                        {% if college and college.college_stamp %}
+                                                            <img id="stampPreview" src="{{ url_for('admin.serve_uploads', filename='college/' + college.college_stamp) }}" alt="College Stamp" class="img-thumbnail rounded-circle bg-white shadow-xs" style="width: 110px; height: 110px; object-fit: contain; padding: 6px;">
+                                                        {% else %}
+                                                            <div id="stampPlaceholder" class="rounded-circle bg-white border border-2 border-dashed d-flex align-items-center justify-content-center text-muted" style="width: 110px; height: 110px;">
+                                                                <i class="bi bi-award fs-1 text-secondary"></i>
+                                                            </div>
+                                                            <img id="stampPreview" src="" alt="College Stamp" class="img-thumbnail rounded-circle bg-white shadow-xs d-none" style="width: 110px; height: 110px; object-fit: contain; padding: 6px;">
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <input type="file" class="form-control form-control-sm" id="college_stamp" name="college_stamp" accept="image/*" onchange="previewCollegeStamp(this)">
+                                                    <div class="form-text small text-muted text-start mt-1">Recommended: Circular PNG/JPG with transparent background.</div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Principal Signature -->
+                                        <div class="col-md-6">
+                                            <div class="p-3 border rounded-3 bg-light text-center h-100 d-flex flex-column justify-content-between">
+                                                <div>
+                                                    <label class="form-label fw-bold text-dark d-block mb-2">
+                                                        <i class="bi bi-pen-fill me-1 text-primary"></i> Principal Digital Signature
+                                                    </label>
+                                                    <div class="d-flex justify-content-center align-items-center my-3" style="min-height: 120px;">
+                                                        {% if college and college.principal_signature %}
+                                                            <img id="sigPreview" src="{{ url_for('admin.serve_uploads', filename='college/' + college.principal_signature) }}" alt="Principal Signature" class="img-thumbnail rounded bg-white shadow-xs" style="max-width: 180px; max-height: 80px; object-fit: contain; padding: 6px;">
+                                                        {% else %}
+                                                            <div id="sigPlaceholder" class="rounded bg-white border border-2 border-dashed d-flex align-items-center justify-content-center text-muted" style="width: 180px; height: 80px;">
+                                                                <i class="bi bi-pen fs-2 text-secondary"></i>
+                                                            </div>
+                                                            <img id="sigPreview" src="" alt="Principal Signature" class="img-thumbnail rounded bg-white shadow-xs d-none" style="max-width: 180px; max-height: 80px; object-fit: contain; padding: 6px;">
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <input type="file" class="form-control form-control-sm" id="principal_signature" name="principal_signature" accept="image/*" onchange="previewPrincipalSignature(this)">
+                                                    <div class="form-text small text-muted text-start mt-1">Recommended: Dark ink signature on transparent/white background.</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Section 5: Attendance Criteria & Eligibility Rules -->
+                            <div class="card shadow-sm border-0 mb-4">
+                                <div class="card-header bg-white py-3 d-flex align-items-center justify-content-between">
+                                    <h5 class="card-title fw-bold m-0 text-primary">
+                                        <i class="bi bi-calendar-check-fill me-2"></i>5. Attendance Criteria & Eligibility Rules
+                                    </h5>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle fs-8">Dynamic Student & Blacklist Engine</span>
+                                </div>
+                                <div class="card-body p-4">
+                                    <p class="text-muted small mb-4">
+                                        Configure official attendance percentage thresholds. These values dynamically calculate required lectures on student dashboards and flag students in the <strong>Attendance Defaulters / Blacklist</strong> module.
+                                    </p>
+                                    <div class="row g-4">
+                                        <div class="col-md-4">
+                                            <label for="min_overall_attendance" class="form-label fw-semibold small">
+                                                <i class="bi bi-pie-chart-fill text-primary me-1"></i>Minimum Overall Attendance (%)
+                                            </label>
+                                            <div class="input-group">
+                                                <input type="number" step="0.1" min="1" max="100" class="form-control" id="min_overall_attendance" name="min_overall_attendance" value="{{ college.min_overall_attendance if college and college.min_overall_attendance is defined else 75.0 }}" required>
+                                                <span class="input-group-text bg-light fw-bold">%</span>
+                                            </div>
+                                            <div class="form-text small text-muted">Required overall for exam eligibility (Default: 75%).</div>
+                                        </div>
+
+                                        <div class="col-md-4">
+                                            <label for="min_subject_attendance" class="form-label fw-semibold small">
+                                                <i class="bi bi-journal-check text-success me-1"></i>Minimum Subject-Wise Attendance (%)
+                                            </label>
+                                            <div class="input-group">
+                                                <input type="number" step="0.1" min="1" max="100" class="form-control" id="min_subject_attendance" name="min_subject_attendance" value="{{ college.min_subject_attendance if college and college.min_subject_attendance is defined else 75.0 }}" required>
+                                                <span class="input-group-text bg-light fw-bold">%</span>
+                                            </div>
+                                            <div class="form-text small text-muted">Required in each subject to be marked Safe (Default: 75%).</div>
+                                        </div>
+
+                                        <div class="col-md-4">
+                                            <label for="attendance_warning_threshold" class="form-label fw-semibold small">
+                                                <i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>Shortage / Warning Alert Below (%)
+                                            </label>
+                                            <div class="input-group">
+                                                <input type="number" step="0.1" min="1" max="100" class="form-control" id="attendance_warning_threshold" name="attendance_warning_threshold" value="{{ college.attendance_warning_threshold if college and college.attendance_warning_threshold is defined else 60.0 }}" required>
+                                                <span class="input-group-text bg-light fw-bold">%</span>
+                                            </div>
+                                            <div class="form-text small text-muted">Triggers red shortage alert on student gauge (Default: 60%).</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Section 6: Campus GPS Geofence & QR Attendance Settings -->
+                            <div class="card shadow-sm border-0 mb-4">
+                                <div class="card-header bg-white py-3 d-flex align-items-center justify-content-between">
+                                    <h5 class="card-title fw-bold m-0 text-primary">
+                                        <i class="bi bi-geo-alt-fill me-2 text-danger"></i>6. Campus GPS Geofence & QR Attendance Settings
+                                    </h5>
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle fs-8">QR Security Boundary</span>
+                                </div>
+                                <div class="card-body p-4">
+                                    <p class="text-muted small mb-4">
+                                        Configure the official Google Maps location of the college campus. When students scan the attendance QR code, their phone's GPS is strictly validated against these coordinates within the allowed perimeter.
+                                    </p>
+                                    <div class="row g-4">
+                                        <div class="col-md-6">
+                                            <label for="campus_plus_code" class="form-label fw-semibold small">
+                                                <i class="bi bi-pin-map-fill text-danger me-1"></i>Google Maps Plus Code / Key
+                                            </label>
+                                            <div class="input-group">
+                                                <input type="text" class="form-control font-monospace" id="campus_plus_code" name="campus_plus_code" value="{{ college.campus_plus_code if college and college.campus_plus_code else '5C53+R58 Palanpur, Gujarat' }}" placeholder="e.g. 5C53+R58 Palanpur, Gujarat">
+                                                <a href="https://www.google.com/maps/search/?api=1&query={{ college.campus_latitude if college and college.campus_latitude else '24.15953750' }},{{ college.campus_longitude if college and college.campus_longitude else '72.40295313' }}" target="_blank" class="btn btn-outline-secondary" title="View on Google Maps">
+                                                    <i class="bi bi-box-arrow-up-right"></i> Maps
+                                                </a>
+                                            </div>
+                                            <div class="form-text small text-muted">Current Campus Key: <strong>5C53+R58 Palanpur, Gujarat</strong></div>
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label for="college_start_time" class="form-label fw-semibold small">
+                                                <i class="bi bi-clock-history text-primary me-1"></i>College Opening Time (Start Time)
+                                            </label>
+                                            <input type="time" class="form-control fw-bold text-dark" id="college_start_time" name="college_start_time" value="{{ college.college_start_time if college and college.college_start_time else '10:00' }}" required>
+                                            <div class="form-text small text-muted">Daily earliest allowed lecture/lab start time (e.g. 10:00 AM).</div>
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label for="college_end_time" class="form-label fw-semibold small">
+                                                <i class="bi bi-clock-fill text-danger me-1"></i>College Closing Time (End Time)
+                                            </label>
+                                            <input type="time" class="form-control fw-bold text-dark" id="college_end_time" name="college_end_time" value="{{ college.college_end_time if college and college.college_end_time else '17:00' }}" required>
+                                            <div class="form-text small text-muted">Daily latest allowed lecture/lab end time (e.g. 05:00 PM).</div>
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label for="campus_radius_meters" class="form-label fw-semibold small">
+                                                <i class="bi bi-radar text-success me-1"></i>Geofence Radius (Allowed Scan Perimeter)
+                                            </label>
+                                            <div class="input-group">
+                                                <input type="number" min="50" max="5000" step="10" class="form-control fw-bold text-primary" id="campus_radius_meters" name="campus_radius_meters" value="{{ college.campus_radius_meters if college and college.campus_radius_meters else 800 }}" required>
+                                                <span class="input-group-text bg-light fw-bold">Meters</span>
+                                            </div>
+                                            <div class="form-text small text-muted">Current Test Distance: <strong>800 meters</strong> around campus center.</div>
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label for="campus_latitude" class="form-label fw-semibold small">
+                                                <i class="bi bi-compass text-secondary me-1"></i>Campus Central Latitude
+                                            </label>
+                                            <input type="number" step="0.00000001" class="form-control font-monospace" id="campus_latitude" name="campus_latitude" value="{{ college.campus_latitude if college and college.campus_latitude else 24.15953750 }}" required>
+                                            <div class="form-text small text-muted">Auto-computed from Google Maps (Palanpur).</div>
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label for="campus_longitude" class="form-label fw-semibold small">
+                                                <i class="bi bi-compass text-secondary me-1"></i>Campus Central Longitude
+                                            </label>
+                                            <input type="number" step="0.00000001" class="form-control font-monospace" id="campus_longitude" name="campus_longitude" value="{{ college.campus_longitude if college and college.campus_longitude else 72.40295313 }}" required>
+                                            <div class="form-text small text-muted">Auto-computed from Google Maps (Palanpur).</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Save Changes Button -->
+                            <div class="d-flex justify-content-end mb-5">
+                                <button type="submit" class="btn btn-primary px-4 py-2 fw-semibold">
+                                    <i class="bi bi-check-circle me-1"></i> Save Changes
+                                </button>
+                            </div>
+
+                        </form>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Live image preview function for logo upload
+        function previewCollegeLogo(input) {
+            if (input.files && input.files[0]) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    var preview = document.getElementById('logoPreview');
+                    var placeholder = document.getElementById('logoPlaceholder');
+                    if (preview) {
+                        preview.src = e.target.result;
+                        preview.classList.remove('d-none');
+                    }
+                    if (placeholder) {
+                        placeholder.classList.add('d-none');
+                    }
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        // Live image preview function for stamp upload
+        function previewCollegeStamp(input) {
+            if (input.files && input.files[0]) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    var preview = document.getElementById('stampPreview');
+                    var placeholder = document.getElementById('stampPlaceholder');
+                    if (preview) {
+                        preview.src = e.target.result;
+                        preview.classList.remove('d-none');
+                    }
+                    if (placeholder) {
+                        placeholder.classList.add('d-none');
+                    }
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        // Live image preview function for signature upload
+        function previewPrincipalSignature(input) {
+            if (input.files && input.files[0]) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    var preview = document.getElementById('sigPreview');
+                    var placeholder = document.getElementById('sigPlaceholder');
+                    if (preview) {
+                        preview.src = e.target.result;
+                        preview.classList.remove('d-none');
+                    }
+                    if (placeholder) {
+                        placeholder.classList.add('d-none');
+                    }
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+    </script>
+    <script src="{{ url_for('static', filename='js/common.js') }}"></script>
+</body>
+</html>

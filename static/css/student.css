@@ -1,0 +1,4 @@
+/* Student theme overrides */
+.student-theme #sidebar { background: #0F172A; }
+.student-theme .sidebar-header h3 { color: #f1f5f9; }
+.student-theme #sidebar ul.components li.active > a { background: #2563eb; }

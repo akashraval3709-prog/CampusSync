@@ -1,0 +1,332 @@
+{% extends 'public/base_public.html' %}
+
+{% block title %}Contact Us & Campus Inquiry – {{ college.college_name if college else 'CampusSync College' }}{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="pub-hero">
+    <div class="container position-relative" style="z-index: 1;">
+        <div class="pub-hero-pill">
+            <i class="bi bi-telephone-inbound-fill"></i> Get in Touch With Us
+        </div>
+        <h1 class="pub-hero-title">We are Here to Guide Your Academic Journey</h1>
+        <p class="pub-hero-subtitle">
+            Whether you have questions about admissions, academic programs, campus tours, or technical ERP support, our helpdesk team is ready to assist.
+        </p>
+        <div class="pub-breadcrumb">
+            <a href="{{ url_for('home') }}"><i class="bi bi-house-door-fill me-1"></i> Home</a>
+            <span>/</span>
+            <span class="text-white fw-semibold">Contact</span>
+        </div>
+    </div>
+</section>
+
+<!-- Direct Office Cards -->
+<section class="py-5 bg-white border-bottom">
+    <div class="container">
+        <div class="row g-4">
+            
+            <!-- Card 1: Admissions -->
+            <div class="col-md-3 col-sm-6">
+                <div class="pub-contact-card text-center">
+                    <div class="pub-stat-icon bg-primary-subtle text-primary mx-auto mb-3">
+                        <i class="bi bi-mortarboard-fill"></i>
+                    </div>
+                    <h5 class="fw-bold text-dark mb-1">Admissions Cell</h5>
+                    <p class="text-muted small mb-2">Inquiries, eligibility & seat status</p>
+                    <a href="tel:{{ college.phone if college and college.phone else '+919876543210' }}" class="fw-bold text-primary text-decoration-none d-block small">
+                        {{ college.phone if college and college.phone else '+91 98765 43210' }}
+                    </a>
+                    <small class="text-muted">Mon–Sat: 9:00 AM – 5:00 PM</small>
+                </div>
+            </div>
+
+            <!-- Card 2: Registrar -->
+            <div class="col-md-3 col-sm-6">
+                <div class="pub-contact-card text-center">
+                    <div class="pub-stat-icon bg-success-subtle text-success mx-auto mb-3">
+                        <i class="bi bi-file-earmark-text-fill"></i>
+                    </div>
+                    <h5 class="fw-bold text-dark mb-1">Registrar Office</h5>
+                    <p class="text-muted small mb-2">Transcripts, Bonafide & Verifications</p>
+                    <a href="mailto:registrar@campussync.edu" class="fw-bold text-success text-decoration-none d-block small">
+                        registrar@campussync.edu
+                    </a>
+                    <small class="text-muted">Academic Verification Desk</small>
+                </div>
+            </div>
+
+            <!-- Card 3: Placements -->
+            <div class="col-md-3 col-sm-6">
+                <div class="pub-contact-card text-center">
+                    <div class="pub-stat-icon bg-warning-subtle text-warning mx-auto mb-3">
+                        <i class="bi bi-briefcase-fill"></i>
+                    </div>
+                    <h5 class="fw-bold text-dark mb-1">Placement Cell</h5>
+                    <p class="text-muted small mb-2">Campus recruitment & internships</p>
+                    <a href="mailto:placements@campussync.edu" class="fw-bold text-warning text-decoration-none d-block small">
+                        placements@campussync.edu
+                    </a>
+                    <small class="text-muted">Corporate Relations Division</small>
+                </div>
+            </div>
+
+            <!-- Card 4: ERP Helpdesk -->
+            <div class="col-md-3 col-sm-6">
+                <div class="pub-contact-card text-center">
+                    <div class="pub-stat-icon bg-info-subtle text-info mx-auto mb-3">
+                        <i class="bi bi-shield-lock-fill"></i>
+                    </div>
+                    <h5 class="fw-bold text-dark mb-1">ERP Tech Desk</h5>
+                    <p class="text-muted small mb-2">Student & Faculty portal access</p>
+                    <a href="mailto:support@campussync.edu" class="fw-bold text-info text-decoration-none d-block small">
+                        support@campussync.edu
+                    </a>
+                    <small class="text-muted">CampusSync Technical Support</small>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+<!-- Form & Location Section -->
+<section class="py-5" style="background: #f8fafc;">
+    <div class="container">
+        <div class="row g-5">
+            
+            <!-- Left: Frontend Interactive Inquiry Form -->
+            <div class="col-lg-7">
+                <div class="bg-white p-4 p-md-5 rounded-4 shadow-sm border">
+                    <div class="mb-4">
+                        <span class="badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-size:.78rem;padding:.4em 1.1em;">Admissions Inquiry</span>
+                        <h2 class="mt-2 fw-bold text-dark" style="font-size: 1.75rem;">Send Us an Inquiry</h2>
+                        <p class="text-muted small mb-0">Fill out this quick form and our admissions advisor will contact you within 24 hours.</p>
+                    </div>
+
+                    <!-- Client-side Simulated Submission Alert (Hidden by default) -->
+                    <div id="inquirySuccessAlert" class="alert alert-success d-none align-items-center gap-3 p-3 rounded-3 mb-4" role="alert">
+                        <i class="bi bi-check-circle-fill fs-3 text-success"></i>
+                        <div>
+                            <strong class="d-block">Inquiry Successfully Received!</strong>
+                            <small>Thank you for reaching out. Ticket <span class="badge bg-success-subtle text-success">#CS-2026-ENQ</span> has been recorded. Our counselor will call you shortly.</small>
+                        </div>
+                    </div>
+
+                    <form id="contactInquiryForm" onsubmit="handleInquirySubmit(event)">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold text-dark">Full Name <span class="text-danger">*</span></label>
+                                <input type="text" id="inq_name" class="form-control pub-form-control" placeholder="e.g. Rahul Sharma" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold text-dark">Email Address <span class="text-danger">*</span></label>
+                                <input type="email" id="inq_email" class="form-control pub-form-control" placeholder="name@example.com" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold text-dark">Mobile / WhatsApp Number <span class="text-danger">*</span></label>
+                                <input type="tel" id="inq_phone" class="form-control pub-form-control" placeholder="+91 98765 43210" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold text-dark">Program of Interest <span class="text-danger">*</span></label>
+                                <select id="inq_program" class="form-select pub-form-control" required>
+                                    <option value="" disabled selected>Select Academic Program...</option>
+                                    <option value="btech_cse">B.Tech Computer Science (AI & ML)</option>
+                                    <option value="btech_it">B.Tech Information Technology</option>
+                                    <option value="bca">Bachelor of Computer Applications (BCA)</option>
+                                    <option value="mca">Master of Computer Applications (MCA)</option>
+                                    <option value="btech_ece">B.Tech Electronics & IoT</option>
+                                    <option value="diploma">Diploma in Engineering</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small fw-semibold text-dark">Your Question or Inquiry</label>
+                                <textarea id="inq_message" class="form-control pub-form-control" rows="4" placeholder="Ask about fees, hostel facilities, scholarships, or admission process..." required></textarea>
+                            </div>
+                            <div class="col-12 mt-4">
+                                <button type="submit" id="btnSubmitInquiry" class="btn btn-primary px-4 py-2 fw-semibold d-inline-flex align-items-center gap-2">
+                                    <span>Submit Inquiry</span>
+                                    <i class="bi bi-send-fill"></i>
+                                </button>
+                                <small class="text-muted ms-3">No spam policy • Your data is securely held</small>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Right: Campus Address & Transit Guide -->
+            <div class="col-lg-5">
+                <div class="bg-white p-4 p-md-5 rounded-4 shadow-sm border mb-4">
+                    <h4 class="fw-bold text-dark mb-3">Campus Headquarters</h4>
+                    
+                    <div class="d-flex gap-3 mb-3">
+                        <i class="bi bi-geo-alt-fill text-danger fs-4"></i>
+                        <div>
+                            <strong class="d-block text-dark">{{ college.college_name if college else 'CampusSync College of Engineering & Technology' }}</strong>
+                            <p class="text-muted small mb-0">
+                                {{ college.address if college and college.address else 'Main University Knowledge Corridor, Tech Park Road' }}<br>
+                                {% if college and college.city %}{{ college.city }}, {% endif %}{% if college and college.state %}{{ college.state }} {% endif %}{% if college and college.pincode %} - {{ college.pincode }}{% endif %}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-3 mb-3">
+                        <i class="bi bi-clock-fill text-primary fs-4"></i>
+                        <div>
+                            <strong class="d-block text-dark">Campus Visiting Hours</strong>
+                            <p class="text-muted small mb-0">
+                                Administrative Offices: 9:00 AM – 5:00 PM (Mon–Sat)<br>
+                                Campus Gate Access: 6:00 AM – 9:00 PM
+                            </p>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <h5 class="fw-bold text-dark mb-3" style="font-size: 1.05rem;">How to Reach Our Campus</h5>
+                    
+                    <div class="d-flex align-items-start gap-3 mb-2">
+                        <span class="badge bg-primary-subtle text-primary p-2 rounded-3"><i class="bi bi-train-front-fill"></i></span>
+                        <div>
+                            <span class="fw-semibold small d-block text-dark">Metro Station</span>
+                            <small class="text-muted">Central University Metro Station (Line 2) — 800m walking distance.</small>
+                        </div>
+                    </div>
+
+                    <div class="d-flex align-items-start gap-3 mb-2">
+                        <span class="badge bg-success-subtle text-success p-2 rounded-3"><i class="bi bi-bus-front-fill"></i></span>
+                        <div>
+                            <span class="fw-semibold small d-block text-dark">City Transit Buses</span>
+                            <small class="text-muted">Routes 42, 88, 104 direct to College South Gate Stop.</small>
+                        </div>
+                    </div>
+
+                    <div class="d-flex align-items-start gap-3">
+                        <span class="badge bg-warning-subtle text-warning p-2 rounded-3"><i class="bi bi-airplane-fill"></i></span>
+                        <div>
+                            <span class="fw-semibold small d-block text-dark">International Airport</span>
+                            <small class="text-muted">Approx 18 km via Outer Ring Road (approx. 25 mins drive).</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Campus Map Card -->
+                <div class="card border-0 rounded-4 overflow-hidden shadow-sm" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #fff;">
+                    <div class="p-4 text-center">
+                        <i class="bi bi-map-fill text-primary display-5 mb-2 d-inline-block"></i>
+                        <h5 class="fw-bold mb-1">Interactive Campus Navigation</h5>
+                        <p class="text-slate-300 small mb-3" style="color: #cbd5e1;">View campus zones, building blocks, parking lots & smart entrances.</p>
+                        <a href="https://maps.google.com" target="_blank" rel="noopener noreferrer" class="btn btn-outline-light btn-sm px-3 rounded-pill">
+                            Open in Google Maps <i class="bi bi-box-arrow-up-right ms-1"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+<!-- Frequently Asked Questions (FAQ) Section -->
+<section class="py-5 bg-white border-top">
+    <div class="container" style="max-width: 860px;">
+        <div class="text-center mb-5">
+            <span class="badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-size:.78rem;padding:.4em 1.1em;">Clear Answers</span>
+            <h2 class="mt-2 fw-bold text-dark" style="font-size: 1.85rem;">Frequently Asked Questions</h2>
+        </div>
+
+        <div class="accordion pub-accordion" id="faqAccordion">
+            
+            <!-- FAQ 1 -->
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingOne">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                        What is the admission deadline for the 2026–2027 academic session?
+                    </button>
+                </h2>
+                <div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="headingOne" data-bs-parent="#faqAccordion">
+                    <div class="accordion-body">
+                        Admissions for Undergraduate (B.Tech, BCA) and Postgraduate (MCA) programs commence in April and conclude by late July. Merit lists and counseling rounds are announced on the official portal notices.
+                    </div>
+                </div>
+            </div>
+
+            <!-- FAQ 2 -->
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingTwo">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                        Are merit scholarships and tuition fee waivers available?
+                    </button>
+                </h2>
+                <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#faqAccordion">
+                    <div class="accordion-body">
+                        Yes! We offer up to 100% tuition scholarships for students scoring 90%+ in 10+2 examinations, as well as institutional grants for outstanding achievers in national sports and hackathons.
+                    </div>
+                </div>
+            </div>
+
+            <!-- FAQ 3 -->
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingThree">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                        How does the CampusSync Smart Attendance system work for students?
+                    </button>
+                </h2>
+                <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#faqAccordion">
+                    <div class="accordion-body">
+                        During class, professors project a dynamic, time-sensitive encrypted QR code on the smart board. Students simply scan it using their CampusSync mobile portal to register instantaneous verified attendance without proxy risks.
+                    </div>
+                </div>
+            </div>
+
+            <!-- FAQ 4 -->
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingFour">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
+                        How can alumni verify their past marks and download marksheets?
+                    </button>
+                </h2>
+                <div id="collapseFour" class="accordion-collapse collapse" aria-labelledby="headingFour" data-bs-parent="#faqAccordion">
+                    <div class="accordion-body">
+                        Alumni can use the top navigation button <strong>View Result</strong>. By entering their Enrollment Number, selecting their Year/Semester, and verifying via secure email OTP, they can view their certified marks and download official PDF marksheets.
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Frontend-only Simulated Form Submission with Rich Feedback
+    function handleInquirySubmit(event) {
+        event.preventDefault();
+        
+        const btn = document.getElementById('btnSubmitInquiry');
+        const alertBox = document.getElementById('inquirySuccessAlert');
+        const form = document.getElementById('contactInquiryForm');
+
+        // Loading state
+        btn.disabled = true;
+        btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Recording Inquiry...`;
+
+        setTimeout(() => {
+            btn.disabled = false;
+            btn.innerHTML = `<span>Submit Another Inquiry</span> <i class="bi bi-send-fill"></i>`;
+            
+            // Show success alert
+            alertBox.classList.remove('d-none');
+            alertBox.classList.add('d-flex');
+            
+            // Scroll to alert
+            alertBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+            // Reset input values
+            form.reset();
+        }, 800);
+    }
+</script>
+{% endblock %}

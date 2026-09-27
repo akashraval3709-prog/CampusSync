@@ -1,0 +1,1943 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Students – Admin – CampusSync</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/common.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/admin.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/notification_modal.css') }}" rel="stylesheet">
+    <style>
+        @keyframes spinIcon { 100% { transform: rotate(360deg); } }
+        .spin { animation: spinIcon 1.5s linear infinite; display: inline-block; }
+    </style>
+</head>
+
+<body class="admin-theme">
+    <div class="wrapper">
+        {% include 'components/sidebar.html' %}
+        <div id="content">
+            {% include 'components/topbar.html' %}
+            <div class="content-body">
+            <!-- Reusable Flash Container -->
+            <div id="flashContainer" class="flash-container"></div>
+
+            <div class="page-header d-flex justify-content-between align-items-start">
+                <div>
+                    <h2>Student Management</h2>
+                    <p class="mb-1">View, add, and manage student records</p>
+                    {% if academic %}
+                    <div class="d-inline-flex align-items-center gap-2 mt-1 px-2 py-1 bg-light border rounded fs-8 text-secondary">
+                        <i class="bi bi-calendar3 text-primary"></i>
+                        <span>Academic Year: <strong>{{ academic.academic_year }}</strong> ({{ academic.semester_cycle }} Cycle)</span>
+                        <span class="text-muted">|</span>
+                        <span>Active Semesters: <strong class="text-primary">{% for s in active_semesters %}Sem {{ s }}{% if not loop.last %}, {% endif %}{% endfor %}</strong></span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="d-flex gap-2">
+
+                    <button id="addStudentBtn" class="btn btn-primary btn-sm">
+                        <i class="bi bi-plus-lg"></i>
+                        Add Student
+                    </button>
+
+                    <button id="importBtn" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-file-earmark-excel"></i>
+                        Import
+                    </button>
+
+                </div>
+            </div>
+
+            <!-- Hidden File Input -->
+            <input type="file" id="excelFile" accept=".xlsx" hidden>
+
+            <!-- Add Student Modal -->
+            <div id="addStudentOverlay" class="modal-overlay hidden">
+                <div class="modal-box">
+                    <div class="modal-header">
+                        <h3>Add New Student</h3>
+                        <button type="button" id="closeModalBtn" class="modal-close-btn">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                    <form id="addStudentForm" class="modal-form" novalidate>
+                        <p style="font-size:.8rem;color:#64748b;margin:-4px 0 12px">
+                            Roll Number and Enrollment Number are generated automatically.
+                        </p>
+                        <div class="form-grid">
+
+                            <div class="form-group">
+                                <label for="full_name">Full Name <span class="required">*</span></label>
+                                <input type="text" id="full_name" name="full_name" maxlength="100"
+                                    placeholder="e.g. Ravi Patel">
+                                <span class="error-msg" id="err_full_name"></span>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="email">Email <span class="required">*</span></label>
+                                <input type="email" id="email" name="email" maxlength="100"
+                                    placeholder="student@college.edu">
+                                <span class="error-msg" id="err_email"></span>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="mobile">Mobile Number <span class="required">*</span></label>
+                                <input type="text" id="mobile" name="mobile" maxlength="10"
+                                    placeholder="10-digit number">
+                                <span class="error-msg" id="err_mobile"></span>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="dob">Date of Birth</label>
+                                <input type="date" id="dob" name="dob">
+                                <span class="error-msg" id="err_dob"></span>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="course">Course <span class="required">*</span></label>
+                                <select id="course" name="course">
+                                    <option value="">Select Course</option>
+                                    <option value="BCA">BCA</option>
+                                    <option value="BBA">BBA</option>
+                                    <option value="B.Sc">B.Sc</option>
+                                    <option value="B.Com">B.Com</option>
+                                </select>
+                                <span class="error-msg" id="err_course"></span>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="semester">Semester <span class="required">*</span></label>
+                                <select id="semester" name="semester">
+                                    <option value="">Select Semester</option>
+                                    <option value="1">Semester 1</option>
+                                    <option value="2">Semester 2</option>
+                                    <option value="3">Semester 3</option>
+                                    <option value="4">Semester 4</option>
+                                    <option value="5">Semester 5</option>
+                                    <option value="6">Semester 6</option>
+                                </select>
+                                <span class="error-msg" id="err_semester"></span>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="division">Division <span class="required">*</span></label>
+                                <select id="division" name="division">
+                                    <option value="">Select Division</option>
+                                    <option value="A">A</option>
+                                    <option value="B">B</option>
+                                    <option value="C">C</option>
+                                </select>
+                                <span class="error-msg" id="err_division"></span>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="academic_year">Academic Year <span class="required">*</span></label>
+                                <input type="text" id="academic_year" name="academic_year" maxlength="20"
+                                    value="{{ academic.academic_year if academic and academic.academic_year else '2026-27' }}"
+                                    data-central-year="{{ academic.academic_year if academic and academic.academic_year else '2026-27' }}"
+                                    placeholder="e.g. 2026-27">
+                                <small style="font-size:0.75rem; color:#64748b; margin-top:2px; display:block;">Auto-fills based on selected Semester</small>
+                                <span class="error-msg" id="err_academic_year"></span>
+                            </div>
+
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" id="cancelBtn" class="btn-cancel">Cancel</button>
+                            <button type="submit" id="submitStudentBtn" class="btn-submit" disabled>Add
+                                Student</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Edit Student Modal Overlay -->
+            <div id="editStudentOverlay" class="modal-overlay hidden" style="display: none;">
+                <div class="modal-box">
+                    <div class="modal-header">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 38px; height: 38px; background: #eff6ff; color: #2563eb; font-size: 1.2rem;">
+                                <i class="bi bi-pencil-square"></i>
+                            </div>
+                            <div>
+                                <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700; color: #0f172a;">Edit Student Record</h3>
+                                <span style="font-size: 0.78rem; color: #64748b;">Update student information & academic details</span>
+                            </div>
+                        </div>
+                        <button type="button" id="closeEditModalBtn" class="modal-close-btn">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                    <form id="editStudentForm" class="modal-form" novalidate>
+                        <input type="hidden" id="edit_student_id" name="student_id">
+
+                        <!-- Readonly Identity Card -->
+                        <div class="p-3 mb-3 rounded-3" style="background: #f8fafc; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <span style="font-size: 0.75rem; color: #64748b; display: block;">Enrollment Number</span>
+                                <strong id="edit_display_enrollment" style="color: #2563eb; font-size: 0.95rem;">-</strong>
+                            </div>
+                            <div class="text-end">
+                                <span style="font-size: 0.75rem; color: #64748b; display: block;">Current Roll Number</span>
+                                <strong id="edit_display_roll" style="color: #0f172a; font-size: 0.95rem;">-</strong>
+                            </div>
+                        </div>
+
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="edit_full_name">Full Name <span class="required">*</span></label>
+                                <input type="text" id="edit_full_name" name="full_name" maxlength="100" placeholder="e.g. Ravi Patel" required>
+                                <span class="error-msg" id="err_edit_full_name"></span>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="edit_email">Email <span class="required">*</span></label>
+                                <input type="email" id="edit_email" name="email" maxlength="100" placeholder="student@college.edu" required>
+                                <span class="error-msg" id="err_edit_email"></span>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="edit_mobile">Mobile Number <span class="required">*</span></label>
+                                <input type="text" id="edit_mobile" name="mobile" maxlength="10" placeholder="10-digit number" required>
+                                <span class="error-msg" id="err_edit_mobile"></span>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="edit_dob">Date of Birth</label>
+                                <input type="date" id="edit_dob" name="dob">
+                                <span class="error-msg" id="err_edit_dob"></span>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="edit_course">Course <span class="required">*</span></label>
+                                <select id="edit_course" name="course" required>
+                                    <option value="BCA">BCA</option>
+                                    <option value="BBA">BBA</option>
+                                    <option value="B.Sc">B.Sc</option>
+                                    <option value="B.Com">B.Com</option>
+                                </select>
+                                <span class="error-msg" id="err_edit_course"></span>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="edit_semester">Semester <span class="required">*</span></label>
+                                <select id="edit_semester" name="semester" required>
+                                    <option value="1">Semester 1</option>
+                                    <option value="2">Semester 2</option>
+                                    <option value="3">Semester 3</option>
+                                    <option value="4">Semester 4</option>
+                                    <option value="5">Semester 5</option>
+                                    <option value="6">Semester 6</option>
+                                </select>
+                                <span class="error-msg" id="err_edit_semester"></span>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="edit_division">Division <span class="required">*</span></label>
+                                <select id="edit_division" name="division" required>
+                                    <option value="A">A</option>
+                                    <option value="B">B</option>
+                                    <option value="C">C</option>
+                                </select>
+                                <span class="error-msg" id="err_edit_division"></span>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="edit_academic_year">Academic Year <span class="required">*</span></label>
+                                <input type="text" id="edit_academic_year" name="academic_year" maxlength="20"
+                                    data-central-year="{{ academic.academic_year if academic and academic.academic_year else '2026-27' }}"
+                                    placeholder="e.g. 2026-27" required>
+                                <small style="font-size:0.75rem; color:#64748b; margin-top:2px; display:block;">Auto-fills based on selected Semester</small>
+                                <span class="error-msg" id="err_edit_academic_year"></span>
+                            </div>
+
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label for="edit_status">Account Status <span class="required">*</span></label>
+                                <select id="edit_status" name="status" class="form-select form-select-sm" style="border-radius: 8px;" required>
+                                    <option value="Active">Active (Permitted to Log In)</option>
+                                    <option value="Inactive">Inactive (Login Access Revoked)</option>
+                                </select>
+                                <span class="error-msg" id="err_edit_status"></span>
+                            </div>
+                        </div>
+
+                        <div class="modal-footer" style="padding-top: 16px;">
+                            <button type="button" id="cancelEditBtn" class="btn-cancel">Cancel</button>
+                            <button type="submit" id="saveEditStudentBtn" class="btn-submit">
+                                <i class="bi bi-check-circle me-1"></i> Update Student
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Delete Student Confirmation Modal Overlay -->
+            <div id="deleteStudentOverlay" class="modal-overlay hidden" style="display: none;">
+                <div class="modal-box" style="max-width: 440px;">
+                    <div class="modal-header" style="border-bottom: 1px solid #fee2e2;">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 38px; height: 38px; background: #fef2f2; color: #ef4444; font-size: 1.2rem;">
+                                <i class="bi bi-trash-fill"></i>
+                            </div>
+                            <div>
+                                <h3 style="margin: 0; font-size: 1.1rem; color: #991b1b;">Delete Student Record</h3>
+                                <span style="font-size: 0.75rem; color: #64748b;">Confirm Database Deletion</span>
+                            </div>
+                        </div>
+                        <button type="button" id="closeDeleteModalBtn" class="modal-close-btn">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+
+                    <div class="modal-body p-4">
+                        <p style="font-size: 0.95rem; color: #334155; margin-bottom: 0.75rem;">
+                            Are you sure you want to delete <strong id="deleteStudentName" style="color: #0f172a;">this student</strong>?
+                        </p>
+                        <div class="p-3 rounded-3" style="background: #f8fafc; border: 1px solid #e2e8f0; font-size: 0.85rem; display: flex; flex-direction: column; gap: 0.25rem;">
+                            <div><span style="color:#64748b;">Roll Number:</span> <strong id="deleteStudentRoll" style="color:#0f172a;">-</strong></div>
+                            <div><span style="color:#64748b;">Enrollment No:</span> <strong id="deleteStudentEnroll" style="color:#2563eb;">-</strong></div>
+                        </div>
+                        <p class="text-danger mt-3 mb-0" style="font-size: 0.8rem; font-weight: 500;">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i> Warning: This action cannot be undone. The record will be permanently deleted from the database.
+                        </p>
+                    </div>
+
+                    <div class="modal-footer" style="padding: 14px 24px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 0.5rem;">
+                        <button type="button" id="cancelDeleteBtn" class="btn btn-outline-secondary btn-sm" style="min-width: 90px; border-radius: 8px;">Cancel</button>
+                        <button type="button" id="confirmDeleteBtn" class="btn btn-danger btn-sm" style="min-width: 110px; border-radius: 8px; background: #ef4444; border-color: #ef4444;">
+                            <i class="bi bi-trash me-1"></i> Yes, Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bulk Change Semester Confirmation Modal Overlay -->
+            <div id="bulkSemOverlay" class="modal-overlay hidden" style="display: none;">
+                <div class="modal-box" style="max-width: 440px;">
+                    <div class="modal-header" style="border-bottom: 1px solid #bfdbfe;">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 38px; height: 38px; background: #eff6ff; color: #2563eb; font-size: 1.2rem;">
+                                <i class="bi bi-mortarboard-fill"></i>
+                            </div>
+                            <div>
+                                <h3 style="margin: 0; font-size: 1.1rem; color: #1e40af;">Bulk Semester Change</h3>
+                                <span style="font-size: 0.75rem; color: #64748b;">Update Selected Student Semesters</span>
+                            </div>
+                        </div>
+                        <button type="button" id="closeBulkSemModalBtn" class="modal-close-btn">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+
+                    <div class="modal-body p-4">
+                        <p style="font-size: 0.95rem; color: #334155; margin-bottom: 0.75rem;">
+                            Are you sure you want to move <strong id="bulkSemStudentCount" style="color: #2563eb;">0 students</strong> to <strong id="bulkSemTargetText" style="color: #0f172a;">Semester -</strong>?
+                        </p>
+                        <p class="text-muted mb-0" style="font-size: 0.8rem;">
+                            <i class="bi bi-info-circle-fill me-1 text-primary"></i> Roll numbers will be regenerated automatically for the target semester.
+                        </p>
+                    </div>
+
+                    <div class="modal-footer" style="padding: 14px 24px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 0.5rem;">
+                        <button type="button" id="cancelBulkSemBtn" class="btn btn-outline-secondary btn-sm" style="min-width: 90px; border-radius: 8px;">Cancel</button>
+                        <button type="button" id="confirmBulkSemBtn" class="btn btn-primary btn-sm" style="min-width: 110px; border-radius: 8px;">
+                            <i class="bi bi-check-lg me-1"></i> Confirm & Move
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bulk Delete Confirmation Modal Overlay -->
+            <div id="bulkDeleteOverlay" class="modal-overlay hidden" style="display: none;">
+                <div class="modal-box" style="max-width: 440px;">
+                    <div class="modal-header" style="border-bottom: 1px solid #fee2e2;">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 38px; height: 38px; background: #fef2f2; color: #ef4444; font-size: 1.2rem;">
+                                <i class="bi bi-trash-fill"></i>
+                            </div>
+                            <div>
+                                <h3 style="margin: 0; font-size: 1.1rem; color: #991b1b;">Bulk Delete Students</h3>
+                                <span style="font-size: 0.75rem; color: #64748b;">Confirm Database Deletion</span>
+                            </div>
+                        </div>
+                        <button type="button" id="closeBulkDeleteModalBtn" class="modal-close-btn">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+
+                    <div class="modal-body p-4">
+                        <p style="font-size: 0.95rem; color: #334155; margin-bottom: 0.75rem;">
+                            Are you sure you want to delete <strong id="bulkDeleteStudentCount" style="color: #ef4444;">0 selected students</strong>?
+                        </p>
+                        <p class="text-danger mt-2 mb-0" style="font-size: 0.8rem; font-weight: 500;">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i> Warning: This action cannot be undone. All selected records will be permanently deleted.
+                        </p>
+                    </div>
+
+                    <div class="modal-footer" style="padding: 14px 24px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 0.5rem;">
+                        <button type="button" id="cancelBulkDeleteBtn" class="btn btn-outline-secondary btn-sm" style="min-width: 90px; border-radius: 8px;">Cancel</button>
+                        <button type="button" id="confirmBulkDeleteBtn" class="btn btn-danger btn-sm" style="min-width: 110px; border-radius: 8px; background: #ef4444; border-color: #ef4444;">
+                            <i class="bi bi-trash me-1"></i> Yes, Delete All
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick View Student Result Modal Overlay -->
+            <div id="studentResultQuickViewOverlay" class="modal-overlay hidden" style="display: none;">
+                <div class="modal-box" style="width: 95%; max-width: 960px; border-radius: 18px; max-height: 92vh; overflow-y: auto; box-shadow: 0 25px 60px rgba(15, 23, 42, 0.25);">
+                    <div class="modal-header" style="border-bottom: 1px solid #e2e8f0; padding: 18px 24px; position: sticky; top: 0; background: #ffffff; z-index: 10;">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 42px; height: 42px; background: #eff6ff; color: #2563eb; font-size: 1.25rem;">
+                                <i class="bi bi-award-fill"></i>
+                            </div>
+                            <div>
+                                <h3 id="quickViewStudentTitle" style="margin: 0; font-size: 1.15rem; font-weight: 700; color: #0f172a;">Official Internal Result Card</h3>
+                                <span style="font-size: 0.8rem; color: #64748b; font-weight: 500;">CampusSync Internal Assessment Breakdown</span>
+                            </div>
+                        </div>
+                        <button type="button" onclick="closeStudentResultQuickViewModal()" class="modal-close-btn" style="font-size: 1.2rem; cursor: pointer;">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+
+                    <div class="modal-body p-4 pt-3" id="quickViewResultContent">
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-primary"></div>
+                            <p class="mt-2 text-muted small">Loading internal marks result...</p>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer" style="padding: 12px 24px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; position: sticky; bottom: 0; z-index: 10;">
+                        <button type="button" onclick="closeStudentResultQuickViewModal()" class="btn btn-secondary btn-sm px-3" style="border-radius: 8px;">Close</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Excel Import Progress & Status Pop-up Modal Overlay -->
+            <div id="excelImportOverlay" class="modal-overlay hidden" style="display: none;">
+                <div class="modal-box" style="max-width: 520px; border-radius: 16px;">
+                    <div class="modal-header" style="border-bottom: 1px solid #e2e8f0; padding: 18px 24px;">
+                        <div class="d-flex align-items-center gap-2">
+                            <div id="excelModalIcon" class="rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 42px; height: 42px; background: #eff6ff; color: #2563eb; font-size: 1.3rem;">
+                                <i class="bi bi-file-earmark-excel-fill"></i>
+                            </div>
+                            <div>
+                                <h3 id="excelModalTitle" style="margin: 0; font-size: 1.15rem; font-weight: 700; color: #0f172a;">Excel Import Portal</h3>
+                                <span id="excelModalSubtitle" style="font-size: 0.78rem; color: #64748b; font-weight: 500;">CampusSync Automated Batch Processing</span>
+                            </div>
+                        </div>
+                        <button type="button" id="closeExcelImportModalBtn" class="modal-close-btn" style="display: none;">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+
+                    <div class="modal-body p-4">
+                        <!-- Semester Selection View -->
+                        <div id="excelSelectState" style="display: none;">
+                            <div class="p-3 rounded-3 mb-3" style="background: #f8fafc; border: 1px solid #e2e8f0;">
+                                <div class="d-flex align-items-center gap-2 mb-1">
+                                    <i class="bi bi-file-earmark-spreadsheet-fill text-primary" style="font-size: 1.2rem;"></i>
+                                    <strong id="excelSelectFileNameText" style="font-size: 0.88rem; color: #1e293b;">File Selected</strong>
+                                </div>
+                                <span id="excelSelectFileSizeText" class="text-muted small" style="font-size: 0.78rem;">Size: -- KB</span>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="excelSemesterSelect" class="form-label fw-bold text-dark mb-1" style="font-size: 0.85rem;">Select Target Semester <span class="text-danger">*</span></label>
+                                <select id="excelSemesterSelect" class="form-select form-select-sm" style="border-radius: 8px; font-weight: 600; padding: 8px 12px; font-size: 0.88rem;">
+                                    {% for sem in active_semesters %}
+                                    <option value="{{ sem }}" {% if loop.first %}selected{% endif %}>Semester {{ sem }}</option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text mt-2" style="font-size: 0.78rem; color: #64748b;">
+                                    <i class="bi bi-info-circle me-1"></i> All students imported from this Excel file will be enrolled into the selected semester.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Loading State View -->
+                        <div id="excelLoadingState" class="py-2" style="display: none;">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="spinner-border spinner-border-sm text-primary" role="status"></span>
+                                    <strong style="font-size: 0.95rem; color: #1e293b;" id="excelStepTitleText">Reading Excel Data...</strong>
+                                </div>
+                                <span id="excelProgressPercentText" style="font-size: 0.85rem; font-weight: 700; color: #2563eb;">20%</span>
+                            </div>
+
+                            <p id="excelFileNameText" class="text-muted small mb-3" style="font-size: 0.82rem;">File: student_data.xlsx</p>
+
+                            <!-- Animated Progress Bar -->
+                            <div class="progress mb-3" style="height: 10px; border-radius: 6px; overflow: hidden; background: #e2e8f0;">
+                                <div id="excelProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-primary" role="progressbar" style="width: 20%; transition: width 0.4s ease;"></div>
+                            </div>
+
+                            <!-- Processing Checklist Steps -->
+                            <div class="p-3 rounded-3" style="background: #f8fafc; border: 1px solid #e2e8f0; font-size: 0.82rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                                <div id="stepItem1" class="d-flex align-items-center gap-2 text-primary fw-semibold">
+                                    <i class="bi bi-check-circle-fill"></i> <span>Reading & Validating Excel Rows</span>
+                                </div>
+                                <div id="stepItem2" class="d-flex align-items-center gap-2 text-muted">
+                                    <i class="bi bi-circle"></i> <span>Generating Semester-Wise Roll & Enrollment Numbers</span>
+                                </div>
+                                <div id="stepItem3" class="d-flex align-items-center gap-2 text-muted">
+                                    <i class="bi bi-circle"></i> <span>Hashing Passwords & Creating Accounts</span>
+                                </div>
+                                <div id="stepItem4" class="d-flex align-items-center gap-2 text-muted">
+                                    <i class="bi bi-circle"></i> <span>Saving Students to Database</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Result State View -->
+                        <div id="excelResultState" style="display: none;">
+                            <!-- Stats Cards Grid -->
+                            <div class="row g-2 mb-3">
+                                <div class="col-4">
+                                    <div class="p-2 rounded-3 text-center" style="background: #f0fdf4; border: 1px solid #bbf7d0;">
+                                        <span style="font-size: 0.72rem; color: #166534; font-weight: 600; text-transform: uppercase;">Added</span>
+                                        <strong id="excelAddedCount" style="font-size: 1.5rem; color: #15803d; display: block; line-height: 1.1;">0</strong>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="p-2 rounded-3 text-center" style="background: #fffbeb; border: 1px solid #fde68a;">
+                                        <span style="font-size: 0.72rem; color: #92400e; font-weight: 600; text-transform: uppercase;">Skipped</span>
+                                        <strong id="excelSkippedCount" style="font-size: 1.5rem; color: #b45309; display: block; line-height: 1.1;">0</strong>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="p-2 rounded-3 text-center" style="background: #fef2f2; border: 1px solid #fecaca;">
+                                        <span style="font-size: 0.72rem; color: #991b1b; font-weight: 600; text-transform: uppercase;">Errors</span>
+                                        <strong id="excelErrorCount" style="font-size: 1.5rem; color: #dc2626; display: block; line-height: 1.1;">0</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="p-3 rounded-3 mb-3" style="background: #f8fafc; border: 1px solid #e2e8f0;">
+                                <p id="excelResultMessage" style="font-size: 0.88rem; color: #334155; margin: 0; font-weight: 500;"></p>
+                            </div>
+
+                            <!-- Highlights Badges -->
+                            <div class="d-flex flex-wrap gap-2 mb-3">
+                                <span class="badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-size:.74rem">
+                                    <i class="bi bi-shield-check me-1"></i> Batch Roll Numbers Assigned
+                                </span>
+                                <span class="badge" style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;font-size:.74rem">
+                                    <i class="bi bi-key-fill me-1"></i> Default Password = Mobile No
+                                </span>
+                            </div>
+
+                            <!-- Row Errors Detail Box -->
+                            <div id="excelErrorDetailsBox" style="display: none; max-height: 130px; overflow-y: auto; background: #fff5f5; border: 1px solid #fed7d7; border-radius: 8px; padding: 10px 14px; font-size: 0.78rem; color: #991b1b;">
+                                <strong style="display: block; margin-bottom: 4px;"><i class="bi bi-exclamation-triangle-fill me-1"></i> Issue Details:</strong>
+                                <ul id="excelErrorList" class="mb-0 ps-3"></ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="excelModalFooter" class="modal-footer" style="padding: 14px 24px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 0.5rem;">
+                        <button type="button" id="cancelExcelImportBtn" class="btn btn-outline-secondary btn-sm" style="min-width: 90px; border-radius: 8px;">
+                            <i class="bi bi-x-circle me-1"></i> Cancel
+                        </button>
+                        <button type="button" id="startExcelImportBtn" class="btn btn-primary btn-sm" style="min-width: 120px; border-radius: 8px; display: none;">
+                            <i class="bi bi-cloud-upload-fill me-1"></i> Start Import
+                        </button>
+                        <button type="button" id="doneExcelImportBtn" class="btn btn-primary btn-sm" style="min-width: 100px; border-radius: 8px; display: none;">
+                            <i class="bi bi-check-circle-fill me-1"></i> OK
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <span style="font-weight:700;color:#0f172a;font-size:1.05rem;">Student Directory</span>
+                        <span id="studentCountBadge" class="badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-size:.78rem">0 Students</span>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <!-- Semester Filter Buttons -->
+                        <div class="d-flex align-items-center gap-1 flex-wrap">
+                            <a href="{{ url_for('admin.admin_students') }}" 
+                               class="btn btn-sm {% if not selected_semester %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                All Sem
+                            </a>
+                            {% for sem in active_semesters %}
+                            <a href="{{ url_for('admin.admin_students', semester=sem) }}" 
+                               class="btn btn-sm {% if selected_semester == sem %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                Sem {{ sem }}
+                            </a>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Search Input Group -->
+                        <div class="input-group input-group-sm" style="width:260px">
+                            <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Search by name, roll or enrollment no…">
+                            <button id="searchBtn" class="btn btn-outline-secondary btn-sm" type="button"><i class="bi bi-search"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body p-0">
+                    <!-- Bulk Actions Toolbar (Visible when students are selected) -->
+                    <div id="bulkActionsBar" class="p-2 px-4 bg-light border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2 d-none">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-primary fs-6 fw-normal" id="selectedCountBadge">0 Students Selected</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <!-- Change Semester Bulk Action -->
+                            <div class="input-group input-group-sm" style="width: auto;">
+                                <label class="input-group-text bg-white text-muted" for="bulkSemesterSelect"><i class="bi bi-mortarboard me-1"></i>Move to</label>
+                                <select id="bulkSemesterSelect" class="form-select form-select-sm" style="min-width: 130px;">
+                                    <option value="">Select Semester</option>
+                                    {% for sem in active_semesters %}
+                                    <option value="{{ sem }}">Semester {{ sem }}</option>
+                                    {% endfor %}
+                                </select>
+                                <button id="bulkChangeSemBtn" class="btn btn-outline-primary btn-sm" type="button">Apply</button>
+                            </div>
+
+                            <!-- Delete Selected Bulk Action -->
+                            <button id="bulkDeleteBtn" class="btn btn-danger btn-sm">
+                                <i class="bi bi-trash me-1"></i> Delete Selected
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead>
+                                <tr>
+                                    <th class="ps-4" style="width: 40px;">
+                                        <input type="checkbox" id="selectAllCheckbox" class="form-check-input" title="Select All Students">
+                                    </th>
+                                    <th>Roll No</th>
+                                    <th>Enrollment No</th>
+                                    <th>Name & Email</th>
+                                    <th>Semester</th>
+                                    <th>Division</th>
+                                    <th>Status</th>
+                                    <th class="text-end pe-4">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="studentTableBody">
+                                <!-- JS dynamically fills rows here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card-footer d-flex justify-content-end">
+                    <nav>
+                        <ul class="pagination pagination-sm mb-0">
+                            <li class="page-item disabled"><a class="page-link" href="#">&laquo;</a></li>
+                            <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                            <li class="page-item"><a class="page-link" href="#">2</a></li>
+                            <li class="page-item"><a class="page-link" href="#">&raquo;</a></li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/common.js') }}"></script>
+
+    <script>
+        const importBtn = document.getElementById("importBtn");
+        const excelFile = document.getElementById("excelFile");
+        const excelImportOverlay = document.getElementById("excelImportOverlay");
+        const closeExcelImportModalBtn = document.getElementById("closeExcelImportModalBtn");
+        const doneExcelImportBtn = document.getElementById("doneExcelImportBtn");
+        const cancelExcelImportBtn = document.getElementById("cancelExcelImportBtn");
+        const startExcelImportBtn = document.getElementById("startExcelImportBtn");
+
+        let excelStepTimer = null;
+
+        function updateStepUI(stepIndex, title, percent) {
+            const stepTitle = document.getElementById("excelStepTitleText");
+            const percentText = document.getElementById("excelProgressPercentText");
+            const progressBar = document.getElementById("excelProgressBar");
+
+            if (stepTitle) stepTitle.textContent = title;
+            if (percentText) percentText.textContent = `${percent}%`;
+            if (progressBar) progressBar.style.width = `${percent}%`;
+
+            for (let i = 1; i <= 4; i++) {
+                const item = document.getElementById(`stepItem${i}`);
+                if (!item) continue;
+                if (i < stepIndex) {
+                    item.className = "d-flex align-items-center gap-2 text-success fw-semibold";
+                    item.querySelector("i").className = "bi bi-check-circle-fill";
+                } else if (i === stepIndex) {
+                    item.className = "d-flex align-items-center gap-2 text-primary fw-semibold";
+                    item.querySelector("i").className = "bi bi-arrow-right-circle-fill text-primary";
+                } else {
+                    item.className = "d-flex align-items-center gap-2 text-muted";
+                    item.querySelector("i").className = "bi bi-circle";
+                }
+            }
+        }
+
+        function openExcelSemesterSelectModal(fileName, fileSize) {
+            const sizeKb = (fileSize / 1024).toFixed(1);
+            const fileNameEl = document.getElementById("excelSelectFileNameText");
+            const fileSizeEl = document.getElementById("excelSelectFileSizeText");
+            if (fileNameEl) fileNameEl.textContent = fileName;
+            if (fileSizeEl) fileSizeEl.textContent = `Size: ${sizeKb} KB`;
+
+            // Reset Semester dropdown default to Semester 1
+            const semSelect = document.getElementById("excelSemesterSelect");
+            if (semSelect) semSelect.value = "1";
+
+            // Set UI view states
+            document.getElementById("excelSelectState").style.display = "block";
+            document.getElementById("excelLoadingState").style.display = "none";
+            document.getElementById("excelResultState").style.display = "none";
+            document.getElementById("excelModalFooter").style.display = "flex";
+
+            if (startExcelImportBtn) startExcelImportBtn.style.display = "inline-block";
+            if (doneExcelImportBtn) doneExcelImportBtn.style.display = "none";
+            if (cancelExcelImportBtn) cancelExcelImportBtn.style.display = "inline-block";
+            if (closeExcelImportModalBtn) closeExcelImportModalBtn.style.display = "block";
+
+            document.getElementById("excelModalTitle").textContent = "Excel Import - Select Semester";
+            document.getElementById("excelModalSubtitle").textContent = "CampusSync Automated Batch Processing";
+
+            const iconBox = document.getElementById("excelModalIcon");
+            if (iconBox) {
+                iconBox.style.background = "#eff6ff";
+                iconBox.style.color = "#2563eb";
+                iconBox.innerHTML = `<i class="bi bi-file-earmark-excel-fill"></i>`;
+            }
+
+            if (excelImportOverlay) {
+                excelImportOverlay.style.display = "flex";
+                excelImportOverlay.classList.remove("hidden");
+                requestAnimationFrame(() => excelImportOverlay.classList.add("show"));
+            }
+        }
+
+        function openExcelImportLoadingModal(fileName, fileSize) {
+            const sizeKb = (fileSize / 1024).toFixed(1);
+            const nameEl = document.getElementById("excelFileNameText");
+            if (nameEl) nameEl.textContent = `File: ${fileName} (${sizeKb} KB)`;
+
+            // Set loading state UI
+            document.getElementById("excelSelectState").style.display = "none";
+            document.getElementById("excelLoadingState").style.display = "block";
+            document.getElementById("excelResultState").style.display = "none";
+            document.getElementById("excelModalFooter").style.display = "flex";
+            if (startExcelImportBtn) startExcelImportBtn.style.display = "none";
+            if (doneExcelImportBtn) doneExcelImportBtn.style.display = "none";
+            if (cancelExcelImportBtn) cancelExcelImportBtn.style.display = "inline-block";
+            if (closeExcelImportModalBtn) closeExcelImportModalBtn.style.display = "block";
+
+            document.getElementById("excelModalTitle").textContent = "Processing Excel Import";
+            document.getElementById("excelModalSubtitle").textContent = "CampusSync Automated Batch Engine";
+
+            const iconBox = document.getElementById("excelModalIcon");
+            if (iconBox) {
+                iconBox.style.background = "#eff6ff";
+                iconBox.style.color = "#2563eb";
+                iconBox.innerHTML = `<i class="bi bi-gear-wide-connected spin"></i>`;
+            }
+
+            // Step checklist animations
+            updateStepUI(1, "Reading & Validating Excel Data...", 25);
+
+            if (excelStepTimer) clearInterval(excelStepTimer);
+            let currentStep = 1;
+            excelStepTimer = setInterval(() => {
+                currentStep++;
+                if (currentStep === 2) {
+                    updateStepUI(2, "Generating Batch Roll Numbers...", 55);
+                } else if (currentStep === 3) {
+                    updateStepUI(3, "Hashing Passwords & Account Records...", 80);
+                } else if (currentStep === 4) {
+                    updateStepUI(4, "Saving Students to Database...", 95);
+                    clearInterval(excelStepTimer);
+                }
+            }, 400);
+        }
+
+        function showExcelImportResult(data) {
+            if (excelStepTimer) clearInterval(excelStepTimer);
+
+            document.getElementById("excelSelectState").style.display = "none";
+            document.getElementById("excelLoadingState").style.display = "none";
+            document.getElementById("excelResultState").style.display = "block";
+            document.getElementById("excelModalFooter").style.display = "flex";
+            if (startExcelImportBtn) startExcelImportBtn.style.display = "none";
+            if (doneExcelImportBtn) doneExcelImportBtn.style.display = "inline-block";
+            if (cancelExcelImportBtn) cancelExcelImportBtn.style.display = "inline-block";
+            if (closeExcelImportModalBtn) closeExcelImportModalBtn.style.display = "block";
+
+            const added = data.added || 0;
+            const skipped = data.skipped || 0;
+            const errors = data.errors || [];
+            const iconBox = document.getElementById("excelModalIcon");
+            const titleEl = document.getElementById("excelModalTitle");
+
+            document.getElementById("excelAddedCount").textContent = added;
+            document.getElementById("excelSkippedCount").textContent = skipped;
+            const errorCountEl = document.getElementById("excelErrorCount");
+            if (errorCountEl) errorCountEl.textContent = errors.length;
+
+            document.getElementById("excelResultMessage").textContent = data.message || "Import batch finished.";
+
+            if (added > 0) {
+                if (iconBox) {
+                    iconBox.style.background = "#ecfdf5";
+                    iconBox.style.color = "#16a34a";
+                    iconBox.innerHTML = `<i class="bi bi-check-circle-fill"></i>`;
+                }
+                if (titleEl) titleEl.textContent = skipped > 0 ? "Import Completed with Warnings" : "Import Successful";
+            } else {
+                if (iconBox) {
+                    iconBox.style.background = "#fef2f2";
+                    iconBox.style.color = "#dc2626";
+                    iconBox.innerHTML = `<i class="bi bi-exclamation-octagon-fill"></i>`;
+                }
+                if (titleEl) titleEl.textContent = "Import Failed";
+            }
+
+            // Render error/warning details if available
+            const errorBox = document.getElementById("excelErrorDetailsBox");
+            const errorList = document.getElementById("excelErrorList");
+            if (errors.length > 0) {
+                errorList.innerHTML = errors.map(err => `<li>${escapeHtml(err)}</li>`).join("");
+                errorBox.style.display = "block";
+            } else {
+                errorBox.style.display = "none";
+            }
+        }
+
+        function closeExcelImportModal() {
+            if (!excelImportOverlay) return;
+            excelImportOverlay.classList.remove("show");
+            setTimeout(() => {
+                excelImportOverlay.classList.add("hidden");
+                excelImportOverlay.style.display = "none";
+            }, 200);
+            if (excelFile) excelFile.value = "";
+            if (typeof loadStudents === "function") loadStudents();
+        }
+
+        if (closeExcelImportModalBtn) closeExcelImportModalBtn.addEventListener("click", closeExcelImportModal);
+        if (doneExcelImportBtn) doneExcelImportBtn.addEventListener("click", closeExcelImportModal);
+        if (cancelExcelImportBtn) cancelExcelImportBtn.addEventListener("click", closeExcelImportModal);
+
+        if (importBtn) {
+            importBtn.addEventListener("click", function () {
+                excelFile.click();
+            });
+        }
+
+        if (excelFile) {
+            excelFile.addEventListener("change", function () {
+                const file = this.files[0];
+                if (!file) return;
+                if (!file.name.endsWith(".xlsx")) {
+                    showNotification({
+                        type: "warning",
+                        title: "Invalid File Format",
+                        message: "Please Select Excel (.xlsx) File"
+                    });
+                    this.value = "";
+                    return;
+                }
+                if (file.size > 5 * 1024 * 1024) {
+                    showNotification({
+                        type: "warning",
+                        title: "File Size Exceeded",
+                        message: "Maximum File Size is 5 MB"
+                    });
+                    this.value = "";
+                    return;
+                }
+
+                // Open Semester Selection UI Modal
+                openExcelSemesterSelectModal(file.name, file.size);
+            });
+        }
+
+        if (startExcelImportBtn) {
+            startExcelImportBtn.addEventListener("click", function () {
+                const file = excelFile ? excelFile.files[0] : null;
+                if (!file) {
+                    showNotification({
+                        type: "warning",
+                        title: "No File",
+                        message: "Please select an Excel file first."
+                    });
+                    return;
+                }
+
+                const semSelect = document.getElementById("excelSemesterSelect");
+                const selectedSemester = semSelect ? semSelect.value : "1";
+
+                // Open loading progress modal
+                openExcelImportLoadingModal(file.name, file.size);
+
+                const formData = new FormData();
+                formData.append("excel_file", file);
+                formData.append("semester", selectedSemester);
+
+                fetch("/admin/import-students", {
+                    method: "POST",
+                    body: formData
+                })
+                    .then(async (response) => {
+                        let data;
+                        try {
+                            data = await response.json();
+                        } catch (parseErr) {
+                            throw new Error(`Server returned HTTP ${response.status} (non-JSON response)`);
+                        }
+                        if (!response.ok && data.success === undefined) {
+                            data.success = false;
+                        }
+                        return data;
+                    })
+                    .then(data => {
+                        showExcelImportResult(data);
+                    })
+                    .catch(error => {
+                        console.error("[CampusSync Excel Import Error]:", error);
+                        showExcelImportResult({
+                            success: false,
+                            added: 0,
+                            skipped: 0,
+                            errors: [error.message || "Network error"],
+                            message: error.message || "Upload failed due to a network or server error. Please try again."
+                        });
+                    });
+            });
+        }
+    </script>
+
+    <script>
+        const studentTableBody = document.getElementById("studentTableBody");
+        let allStudents = [];
+        let selectedStudentIds = new Set();
+        let currentDisplayedStudents = [];
+
+        // Currently selected semester from Python backend (null if All Sem)
+        const selectedSemester = {% if selected_semester %}{{ selected_semester }}{% else %}null{% endif %};
+
+        // Update Bulk Actions UI visibility and selected count badge
+        function updateBulkActionsUI() {
+            const bulkActionsBar = document.getElementById("bulkActionsBar");
+            const selectedCountBadge = document.getElementById("selectedCountBadge");
+            const selectAllCheckbox = document.getElementById("selectAllCheckbox");
+
+            const count = selectedStudentIds.size;
+            if (selectedCountBadge) {
+                selectedCountBadge.textContent = `${count} Student${count === 1 ? '' : 's'} Selected`;
+            }
+
+            if (bulkActionsBar) {
+                if (count > 0) {
+                    bulkActionsBar.classList.remove("d-none");
+                } else {
+                    bulkActionsBar.classList.add("d-none");
+                }
+            }
+
+            // Sync Select All checkbox state
+            if (selectAllCheckbox && currentDisplayedStudents.length > 0) {
+                const allDisplayedSelected = currentDisplayedStudents.every(s => selectedStudentIds.has(s.id));
+                selectAllCheckbox.checked = allDisplayedSelected;
+            } else if (selectAllCheckbox) {
+                selectAllCheckbox.checked = false;
+            }
+        }
+
+        // Fetch student list from server using API with server-side semester filter
+        function loadStudents() {
+            let apiUrl = "/admin/api/students";
+            if (selectedSemester) {
+                apiUrl += "?semester=" + selectedSemester;
+            }
+
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    allStudents = data.students || [];
+                    applyFilters();
+                })
+                .catch(error => {
+                    console.error("Failed to load students:", error);
+                    studentTableBody.innerHTML = `
+                        <tr><td colspan="8" class="text-center text-danger py-3">
+                            Failed to load student data.
+                        </td></tr>`;
+                });
+        }
+
+        // Apply client-side search filter on loaded students
+        function applyFilters() {
+            const searchInput = document.getElementById("searchInput");
+            const query = (searchInput ? searchInput.value : "").trim().toLowerCase();
+
+            const filtered = allStudents.filter(student => {
+                // Search Query match (Name, Roll No, Enrollment No)
+                if (query) {
+                    const name = (student.full_name || "").toLowerCase();
+                    const roll = String(student.roll_number || "").toLowerCase();
+                    const enroll = (student.enrollment_no || "").toLowerCase();
+
+                    const matchesName = name.includes(query);
+                    const matchesRoll = roll.includes(query);
+                    const matchesEnroll = enroll.includes(query);
+
+                    if (!matchesName && !matchesRoll && !matchesEnroll) {
+                        return false;
+                    }
+                }
+
+                return true;
+            });
+
+            // Update student count badge
+            const countBadge = document.getElementById("studentCountBadge");
+            if (countBadge) {
+                countBadge.textContent = `${filtered.length} Student${filtered.length === 1 ? '' : 's'}`;
+            }
+
+            renderStudents(filtered);
+        }
+
+        function renderStudents(students) {
+            currentDisplayedStudents = students || [];
+            studentTableBody.innerHTML = "";
+
+            if (!students || students.length === 0) {
+                studentTableBody.innerHTML = `
+                    <tr><td colspan="8" class="text-center text-muted py-4">
+                        <i class="bi bi-search fs-4 d-block mb-2 text-secondary"></i>
+                        No students matching the criteria found.
+                    </td></tr>`;
+                updateBulkActionsUI();
+                return;
+            }
+
+            students.forEach(student => {
+                const isChecked = selectedStudentIds.has(student.id) ? "checked" : "";
+                const statusColor = student.status === "Active"
+                    ? "background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0"
+                    : "background:#fffbeb;color:#b45309;border:1px solid #fde68a";
+
+                const resultBtnHtml = student.has_marks 
+                    ? `<button class="btn btn-sm btn-outline-info me-1 view-result-btn" title="View Internal Marks Result" data-id="${student.id}" data-name="${escapeHtml(student.full_name)}">
+                            <i class="bi bi-award"></i>
+                       </button>` 
+                    : '';
+
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td class="ps-4">
+                        <input type="checkbox" class="form-check-input student-checkbox" data-id="${student.id}" ${isChecked}>
+                    </td>
+                    <td>
+                        <span style="font-weight:700;color:#0f172a">${student.roll_number || '-'}</span>
+                    </td>
+                    <td>
+                        <span style="font-weight:600;color:#2563eb">${student.enrollment_no}</span>
+                    </td>
+                    <td>
+                        <div style="font-weight:600">${student.full_name}</div>
+                        <div style="font-size:.78rem;color:#64748b">${student.email}</div>
+                    </td>
+                    <td>Semester ${student.semester ?? "-"}</td>
+                    <td>${student.division ?? "-"}</td>
+                    <td>
+                        <span class="badge" style="${statusColor}">${student.status}</span>
+                    </td>
+                    <td class="text-end pe-4">
+                        ${resultBtnHtml}
+                        <button class="btn btn-sm btn-outline-secondary me-1 edit-btn" data-id="${student.id}">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary delete-btn"
+                            style="color:#ef4444;border-color:#fca5a5"
+                            data-id="${student.id}"
+                            data-name="${escapeHtml(student.full_name)}"
+                            data-roll="${student.roll_number || '-'}"
+                            data-enroll="${student.enrollment_no}">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                `;
+                studentTableBody.appendChild(row);
+            });
+
+            attachActionListeners();
+            updateBulkActionsUI();
+        }
+
+        let pendingDeleteId = null;
+        const deleteOverlay = document.getElementById("deleteStudentOverlay");
+        const closeDeleteModalBtn = document.getElementById("closeDeleteModalBtn");
+        const cancelDeleteBtn = document.getElementById("cancelDeleteBtn");
+        const confirmDeleteBtn = document.getElementById("confirmDeleteBtn");
+
+        function openDeleteModal(id, name, roll, enroll) {
+            pendingDeleteId = id;
+            const nameEl = document.getElementById("deleteStudentName");
+            const rollEl = document.getElementById("deleteStudentRoll");
+            const enrollEl = document.getElementById("deleteStudentEnroll");
+
+            if (nameEl) nameEl.textContent = name;
+            if (rollEl) rollEl.textContent = roll;
+            if (enrollEl) enrollEl.textContent = enroll;
+
+            if (deleteOverlay) {
+                deleteOverlay.style.display = "flex";
+                deleteOverlay.classList.remove("hidden");
+                requestAnimationFrame(() => deleteOverlay.classList.add("show"));
+            }
+        }
+
+        function closeDeleteModal() {
+            if (!deleteOverlay) return;
+            deleteOverlay.classList.remove("show");
+            setTimeout(() => {
+                deleteOverlay.classList.add("hidden");
+                deleteOverlay.style.display = "none";
+            }, 200);
+            pendingDeleteId = null;
+        }
+
+        if (closeDeleteModalBtn) closeDeleteModalBtn.addEventListener("click", closeDeleteModal);
+        if (cancelDeleteBtn) cancelDeleteBtn.addEventListener("click", closeDeleteModal);
+
+        if (confirmDeleteBtn) {
+            confirmDeleteBtn.addEventListener("click", function () {
+                if (!pendingDeleteId) return;
+
+                confirmDeleteBtn.disabled = true;
+                confirmDeleteBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Deleting...`;
+
+                fetch(`/admin/api/students/delete/${pendingDeleteId}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" }
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        closeDeleteModal();
+                        if (data.success) {
+                            showNotification({
+                                type: "success",
+                                title: "Student Deleted",
+                                message: data.message || "Student record deleted successfully from database."
+                            });
+                            loadStudents();
+                        } else {
+                            showNotification({
+                                type: "danger",
+                                title: "Delete Failed",
+                                message: data.message || "Failed to delete student record."
+                            });
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        closeDeleteModal();
+                        showNotification({
+                            type: "danger",
+                            title: "Server Error",
+                            message: "Database connection or network error while deleting student."
+                        });
+                    })
+                    .finally(() => {
+                        confirmDeleteBtn.disabled = false;
+                        confirmDeleteBtn.innerHTML = `<i class="bi bi-trash me-1"></i> Yes, Delete`;
+                    });
+            });
+        }
+
+        function attachActionListeners() {
+            // Handle individual student checkbox toggles
+            document.querySelectorAll(".student-checkbox").forEach(chk => {
+                chk.addEventListener("change", function () {
+                    const id = parseInt(this.getAttribute("data-id"));
+                    if (this.checked) {
+                        selectedStudentIds.add(id);
+                    } else {
+                        selectedStudentIds.delete(id);
+                    }
+                    updateBulkActionsUI();
+                });
+            });
+
+            document.querySelectorAll(".view-result-btn").forEach(btn => {
+                btn.addEventListener("click", function () {
+                    const id = this.getAttribute("data-id");
+                    const name = this.getAttribute("data-name");
+                    openStudentResultQuickViewModal(id, name);
+                });
+            });
+
+            document.querySelectorAll(".edit-btn").forEach(btn => {
+                btn.addEventListener("click", function () {
+                    const studentId = this.getAttribute("data-id");
+                    openEditModal(studentId);
+                });
+            });
+
+            document.querySelectorAll(".delete-btn").forEach(btn => {
+                btn.addEventListener("click", function () {
+                    const id = this.getAttribute("data-id");
+                    const name = this.getAttribute("data-name");
+                    const roll = this.getAttribute("data-roll");
+                    const enroll = this.getAttribute("data-enroll");
+                    openDeleteModal(id, name, roll, enroll);
+                });
+            });
+        }
+
+        const studentResultOverlay = document.getElementById("studentResultQuickViewOverlay");
+
+        function openStudentResultQuickViewModal(studentId, studentName) {
+            const titleEl = document.getElementById("quickViewStudentTitle");
+            const contentEl = document.getElementById("quickViewResultContent");
+
+            if (titleEl) titleEl.textContent = `Official Internal Result Card`;
+            contentEl.innerHTML = `<div class="text-center py-4"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted small">Loading official internal marks...</p></div>`;
+
+            if (studentResultOverlay) {
+                studentResultOverlay.style.display = "flex";
+                studentResultOverlay.classList.remove("hidden");
+                requestAnimationFrame(() => studentResultOverlay.classList.add("show"));
+            }
+
+            fetch(`/admin/api/results/student/${studentId}`)
+                .then(res => res.json())
+                .then(resp => {
+                    if (!resp.success) {
+                        contentEl.innerHTML = `<div class="alert alert-danger mb-0">${resp.message}</div>`;
+                        return;
+                    }
+                    renderQuickViewResultData(resp.data);
+                })
+                .catch(err => {
+                    console.error("Quick view error:", err);
+                    contentEl.innerHTML = `<div class="alert alert-danger mb-0">Failed to load student result card.</div>`;
+                });
+        }
+
+        function closeStudentResultQuickViewModal() {
+            if (!studentResultOverlay) return;
+            studentResultOverlay.classList.remove("show");
+            setTimeout(() => {
+                studentResultOverlay.classList.add("hidden");
+                studentResultOverlay.style.display = "none";
+            }, 200);
+        }
+
+        function renderQuickViewResultData(data) {
+            const st = data.student;
+            const col = data.college || {};
+            const contentEl = document.getElementById("quickViewResultContent");
+
+            let colLogoImg = '';
+            if (col.logo && col.logo !== 'default-logo.png') {
+                colLogoImg = `<img src="/uploads/college/${col.logo}" alt="Logo" class="rounded-circle shadow-sm" style="width: 46px; height: 46px; object-fit: contain; background: #fff; padding: 2px; border: 1px solid #e2e8f0;">`;
+            } else {
+                colLogoImg = `<div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center shadow-sm" style="width: 46px; height: 46px; font-size: 1.3rem;"><i class="bi bi-mortarboard-fill"></i></div>`;
+            }
+
+            const colAddressStr = [col.address, col.city, col.state, col.pincode].filter(Boolean).join(', ');
+
+            let rowsHtml = "";
+            let breakdownCardsHtml = "";
+
+            data.results.forEach((r, idx) => {
+                const passBadge = r.is_pass === true ? '<span class="badge bg-success">PASS</span>' :
+                                 (r.is_pass === false ? '<span class="badge bg-danger">FAIL</span>' : '<span class="badge bg-secondary">Pending</span>');
+
+                const obtainedVal = (r.marks_obtained !== null && r.marks_obtained !== undefined) ? `${r.marks_obtained} / ${r.max_marks}` : `- / ${r.max_marks}`;
+
+                rowsHtml += `
+                    <tr>
+                        <td class="text-center fw-bold text-secondary">${idx + 1}</td>
+                        <td class="text-center fw-bold text-primary font-monospace">${r.subject_code}</td>
+                        <td class="fw-semibold text-dark">${r.subject_name}</td>
+                        <td class="text-center"><span class="badge bg-light text-dark border">${r.subject_type}</span></td>
+                        <td class="text-center fw-semibold">${r.credits}</td>
+                        <td class="text-center fw-extrabold text-primary fs-6">${obtainedVal}</td>
+                        <td class="text-center">${passBadge}</td>
+                    </tr>
+                `;
+
+                const bd = r.breakdown || {};
+                let bdDetailHtml = '';
+                if (r.subject_type === 'Theory') {
+                    const intExamMax = (bd.maxes && bd.maxes.internal_exam) ? bd.maxes.internal_exam : 50;
+                    bdDetailHtml = `
+                        <div class="row g-2 small">
+                            <div class="col-6"><span class="text-muted">Test 1-3 (Best 2):</span> <strong>${bd.test1 !== null && bd.test1 !== undefined ? bd.test1 : '-'} / 20</strong></div>
+                            <div class="col-6"><span class="text-muted">Internal Exam:</span> <strong>${bd.internal_exam !== null && bd.internal_exam !== undefined ? bd.internal_exam : '-'} / ${intExamMax}</strong></div>
+                            <div class="col-6"><span class="text-muted">Act. Learning:</span> <strong>${bd.active_learning !== null && bd.active_learning !== undefined ? bd.active_learning : '-'} / 5</strong></div>
+                            <div class="col-6"><span class="text-muted">Class Assg:</span> <strong>${bd.class_assignment !== null && bd.class_assignment !== undefined ? bd.class_assignment : '-'} / 5</strong></div>
+                            <div class="col-6"><span class="text-muted">Attendance:</span> <strong>${bd.attendance !== null && bd.attendance !== undefined ? bd.attendance : '-'} / 5</strong></div>
+                        </div>
+                    `;
+                } else {
+                    const vivaVal = (bd.internal_exam !== null && bd.internal_exam !== undefined) ? bd.internal_exam : ((bd.viva !== null && bd.viva !== undefined) ? bd.viva : '-');
+                    bdDetailHtml = `
+                        <div class="row g-2 small">
+                            <div class="col-4"><span class="text-muted">Viva / Practical:</span> <strong>${vivaVal} / 10</strong></div>
+                            <div class="col-4"><span class="text-muted">Coding / Lab:</span> <strong>${bd.practical_eval !== null && bd.practical_eval !== undefined ? bd.practical_eval : '-'} / 10</strong></div>
+                            <div class="col-4"><span class="text-muted">Journal:</span> <strong>${bd.journal !== null && bd.journal !== undefined ? bd.journal : '-'} / 5</strong></div>
+                        </div>
+                    `;
+                }
+
+                breakdownCardsHtml += `
+                    <div class="col-md-6">
+                        <div class="border rounded p-2 px-3 bg-white h-100 shadow-xs">
+                            <div class="d-flex justify-content-between align-items-center mb-1 pb-1 border-bottom">
+                                <span class="fw-bold small text-dark">${r.subject_code} - ${r.subject_name}</span>
+                                <span class="badge bg-primary-subtle text-primary fw-bold">${obtainedVal}</span>
+                            </div>
+                            ${bdDetailHtml}
+                        </div>
+                    </div>
+                `;
+            });
+
+            contentEl.innerHTML = `
+                <div class="bg-white position-relative">
+                    <!-- Action Buttons -->
+                    <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom no-print">
+                        <span class="badge bg-primary-subtle text-primary fw-bold px-3 py-1">
+                            <i class="bi bi-shield-check me-1"></i>Official Internal Result
+                        </span>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-secondary" onclick="printStudentResultCard('quickViewResultContent')">
+                                <i class="bi bi-printer-fill me-1"></i>Print
+                            </button>
+                            <a href="/admin/results/student/${st.id}/pdf?semester=${data.semester}&academic_year=${data.academic_year}" class="btn btn-sm btn-primary">
+                                <i class="bi bi-file-earmark-pdf-fill me-1"></i>Download PDF
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Official Header -->
+                    <div class="text-center pb-2 mb-3 border-bottom">
+                        <div class="d-flex align-items-center justify-content-center gap-2 mb-1">
+                            ${colLogoImg}
+                            <div>
+                                <h4 class="fw-extrabold text-primary mb-0 uppercase">
+                                    ${col.college_name ? col.college_name.toUpperCase() : 'CAMPUSSYNC COLLEGE'}
+                                </h4>
+                                <p class="text-muted small mb-0">${colAddressStr}</p>
+                            </div>
+                        </div>
+                        <div class="badge bg-dark text-white px-3 py-1 fs-7 rounded-pill mt-1">
+                            EXAMINATION RESULT — INTERNAL ASSESSMENT
+                        </div>
+                    </div>
+
+                    <!-- Student Info Box -->
+                    <div class="card bg-light border-0 mb-3 p-3 rounded-3 shadow-xs">
+                        <div class="row g-2 small">
+                            <div class="col-6 col-md-3">
+                                <span class="text-muted d-block">Student Name</span>
+                                <strong class="text-dark">${st.full_name}</strong>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <span class="text-muted d-block">Enrollment No</span>
+                                <strong class="text-primary font-monospace">${st.enrollment_no}</strong>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <span class="text-muted d-block">Roll Number</span>
+                                <strong class="text-dark">${st.roll_number || '-'}</strong>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <span class="text-muted d-block">Course & Sem</span>
+                                <strong class="text-dark">${st.course} — Sem ${data.semester}</strong>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <span class="text-muted d-block">Division</span>
+                                <strong class="text-dark">Division ${st.division || 'A'}</strong>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <span class="text-muted d-block">Academic Year</span>
+                                <strong class="text-dark">${data.academic_year}</strong>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <span class="text-muted d-block">Subjects Saved</span>
+                                <span class="badge ${data.evaluated_count === data.total_subjects ? 'bg-success' : 'bg-warning text-dark'}">
+                                    ${data.evaluated_count} / ${data.total_subjects}
+                                </span>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <span class="text-muted d-block">Overall Score</span>
+                                <strong class="text-primary">${data.total_obtained} / ${data.total_max} (${data.overall_percentage}%)</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Saved Subjects Table -->
+                    <h6 class="fw-bold text-dark mb-2 small text-uppercase">
+                        <i class="bi bi-journal-bookmark-fill me-1 text-primary"></i>Saved Subject Internal Marks
+                    </h6>
+                    <div class="table-responsive mb-3 border rounded-3 overflow-hidden shadow-xs">
+                        <table class="table table-bordered table-hover table-sm align-middle mb-0">
+                            <thead class="table-dark small text-uppercase">
+                                <tr>
+                                    <th style="width: 50px;" class="text-center">Sr.</th>
+                                    <th style="width: 115px;" class="text-center">Code</th>
+                                    <th style="min-width: 200px;">Subject Name</th>
+                                    <th style="width: 95px;" class="text-center">Type</th>
+                                    <th style="width: 75px;" class="text-center">Credits</th>
+                                    <th style="width: 140px;" class="text-center">Internal Score</th>
+                                    <th style="width: 100px;" class="text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="small">
+                                ${rowsHtml}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Breakdown Section -->
+                    <h6 class="fw-bold text-dark mb-2 small text-uppercase">
+                        <i class="bi bi-calculator me-1 text-primary"></i>Internal Mark Breakdown
+                    </h6>
+                    <div class="row g-2 mb-3">
+                        ${breakdownCardsHtml}
+                    </div>
+
+                    <!-- Summary Box -->
+                    <div class="card border-primary-subtle bg-primary-subtle p-2 px-3 rounded-3 mb-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong class="text-primary small d-block">INTERNAL ASSESSMENT RESULT SUMMARY</strong>
+                                <span class="small text-secondary">
+                                    Total Scored: <strong class="text-dark">${data.total_obtained} / ${data.total_max}</strong> | 
+                                    Passed: <strong class="text-success">${data.passed_subjects} / ${data.total_subjects}</strong>
+                                </span>
+                            </div>
+                            <div class="text-end">
+                                <span class="fs-5 fw-extrabold text-primary">${data.overall_percentage}%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <p class="text-muted small text-center fst-italic mb-0" style="font-size: 0.75rem;">
+                        * Note: Reflects Faculty Final-Saved Internal Assessment Marks. External / SEE university marks are excluded.
+                    </p>
+                </div>
+            `;
+        }
+
+        // Bulk Change Semester Modal logic
+        const bulkSemOverlay = document.getElementById("bulkSemOverlay");
+        const closeBulkSemModalBtn = document.getElementById("closeBulkSemModalBtn");
+        const cancelBulkSemBtn = document.getElementById("cancelBulkSemBtn");
+        const confirmBulkSemBtn = document.getElementById("confirmBulkSemBtn");
+        const bulkChangeSemBtn = document.getElementById("bulkChangeSemBtn");
+        let pendingTargetSem = null;
+
+        function openBulkSemModal(targetSem) {
+            pendingTargetSem = targetSem;
+            const countEl = document.getElementById("bulkSemStudentCount");
+            const targetTextEl = document.getElementById("bulkSemTargetText");
+
+            if (countEl) countEl.textContent = `${selectedStudentIds.size} student${selectedStudentIds.size === 1 ? '' : 's'}`;
+            if (targetTextEl) targetTextEl.textContent = `Semester ${targetSem}`;
+
+            if (bulkSemOverlay) {
+                bulkSemOverlay.style.display = "flex";
+                bulkSemOverlay.classList.remove("hidden");
+                requestAnimationFrame(() => bulkSemOverlay.classList.add("show"));
+            }
+        }
+
+        function closeBulkSemModal() {
+            if (!bulkSemOverlay) return;
+            bulkSemOverlay.classList.remove("show");
+            setTimeout(() => {
+                bulkSemOverlay.classList.add("hidden");
+                bulkSemOverlay.style.display = "none";
+            }, 200);
+            pendingTargetSem = null;
+        }
+
+        if (closeBulkSemModalBtn) closeBulkSemModalBtn.addEventListener("click", closeBulkSemModal);
+        if (cancelBulkSemBtn) cancelBulkSemBtn.addEventListener("click", closeBulkSemModal);
+
+        if (bulkChangeSemBtn) {
+            bulkChangeSemBtn.addEventListener("click", function () {
+                const targetSem = document.getElementById("bulkSemesterSelect").value;
+                if (!targetSem) {
+                    showNotification({
+                        type: "warning",
+                        title: "Target Semester Required",
+                        message: "Please select a target semester to move students."
+                    });
+                    return;
+                }
+                if (selectedStudentIds.size === 0) {
+                    showNotification({
+                        type: "warning",
+                        title: "No Students Selected",
+                        message: "Please select at least one student."
+                    });
+                    return;
+                }
+                openBulkSemModal(targetSem);
+            });
+        }
+
+        if (confirmBulkSemBtn) {
+            confirmBulkSemBtn.addEventListener("click", function () {
+                if (!pendingTargetSem || selectedStudentIds.size === 0) return;
+
+                confirmBulkSemBtn.disabled = true;
+                confirmBulkSemBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Moving...`;
+
+                fetch("/admin/students/bulk-semester", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        student_ids: Array.from(selectedStudentIds),
+                        target_semester: parseInt(pendingTargetSem)
+                    })
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        closeBulkSemModal();
+                        if (data.success) {
+                            showNotification({
+                                type: "success",
+                                title: "Bulk Semester Updated",
+                                message: data.message || "Students moved successfully with new roll numbers."
+                            });
+                            selectedStudentIds.clear();
+                            loadStudents();
+                        } else {
+                            showNotification({
+                                type: "danger",
+                                title: "Bulk Update Failed",
+                                message: data.message || "Failed to update semester for selected students."
+                            });
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        closeBulkSemModal();
+                        showNotification({
+                            type: "danger",
+                            title: "Server Error",
+                            message: "Database connection or network error during bulk update."
+                        });
+                    })
+                    .finally(() => {
+                        confirmBulkSemBtn.disabled = false;
+                        confirmBulkSemBtn.innerHTML = `<i class="bi bi-check-lg me-1"></i> Confirm & Move`;
+                    });
+            });
+        }
+
+        // Bulk Delete Modal logic
+        const bulkDeleteOverlay = document.getElementById("bulkDeleteOverlay");
+        const closeBulkDeleteModalBtn = document.getElementById("closeBulkDeleteModalBtn");
+        const cancelBulkDeleteBtn = document.getElementById("cancelBulkDeleteBtn");
+        const confirmBulkDeleteBtn = document.getElementById("confirmBulkDeleteBtn");
+        const bulkDeleteBtn = document.getElementById("bulkDeleteBtn");
+
+        function openBulkDeleteModal() {
+            const countEl = document.getElementById("bulkDeleteStudentCount");
+            if (countEl) countEl.textContent = `${selectedStudentIds.size} selected student${selectedStudentIds.size === 1 ? '' : 's'}`;
+
+            if (bulkDeleteOverlay) {
+                bulkDeleteOverlay.style.display = "flex";
+                bulkDeleteOverlay.classList.remove("hidden");
+                requestAnimationFrame(() => bulkDeleteOverlay.classList.add("show"));
+            }
+        }
+
+        function closeBulkDeleteModal() {
+            if (!bulkDeleteOverlay) return;
+            bulkDeleteOverlay.classList.remove("show");
+            setTimeout(() => {
+                bulkDeleteOverlay.classList.add("hidden");
+                bulkDeleteOverlay.style.display = "none";
+            }, 200);
+        }
+
+        if (closeBulkDeleteModalBtn) closeBulkDeleteModalBtn.addEventListener("click", closeBulkDeleteModal);
+        if (cancelBulkDeleteBtn) cancelBulkDeleteBtn.addEventListener("click", closeBulkDeleteModal);
+
+        if (bulkDeleteBtn) {
+            bulkDeleteBtn.addEventListener("click", function () {
+                if (selectedStudentIds.size === 0) {
+                    showNotification({
+                        type: "warning",
+                        title: "No Students Selected",
+                        message: "Please select at least one student to delete."
+                    });
+                    return;
+                }
+                openBulkDeleteModal();
+            });
+        }
+
+        if (confirmBulkDeleteBtn) {
+            confirmBulkDeleteBtn.addEventListener("click", function () {
+                if (selectedStudentIds.size === 0) return;
+
+                confirmBulkDeleteBtn.disabled = true;
+                confirmBulkDeleteBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Deleting...`;
+
+                fetch("/admin/students/bulk-delete", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        student_ids: Array.from(selectedStudentIds)
+                    })
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        closeBulkDeleteModal();
+                        if (data.success) {
+                            showNotification({
+                                type: "success",
+                                title: "Bulk Students Deleted",
+                                message: data.message || "Selected students deleted successfully."
+                            });
+                            selectedStudentIds.clear();
+                            loadStudents();
+                        } else {
+                            showNotification({
+                                type: "danger",
+                                title: "Bulk Delete Failed",
+                                message: data.message || "Failed to delete selected students."
+                            });
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        closeBulkDeleteModal();
+                        showNotification({
+                            type: "danger",
+                            title: "Server Error",
+                            message: "Database connection or network error during bulk delete."
+                        });
+                    })
+                    .finally(() => {
+                        confirmBulkDeleteBtn.disabled = false;
+                        confirmBulkDeleteBtn.innerHTML = `<i class="bi bi-trash me-1"></i> Yes, Delete All`;
+                    });
+            });
+        }
+
+        // =====================================================================
+        // EDIT STUDENT MODAL LOGIC
+        // =====================================================================
+        const editStudentOverlay = document.getElementById("editStudentOverlay");
+        const closeEditModalBtn = document.getElementById("closeEditModalBtn");
+        const cancelEditBtn = document.getElementById("cancelEditBtn");
+        const editStudentForm = document.getElementById("editStudentForm");
+        const saveEditStudentBtn = document.getElementById("saveEditStudentBtn");
+        const editSemesterSelect = document.getElementById("edit_semester");
+        const editAcademicYearInput = document.getElementById("edit_academic_year");
+
+        if (editSemesterSelect && editAcademicYearInput) {
+            editSemesterSelect.addEventListener("change", function () {
+                const baseYear = editAcademicYearInput.getAttribute("data-central-year") || "2026-27";
+                if (this.value) {
+                    editAcademicYearInput.value = calculateAcademicYearForSemester(this.value, baseYear);
+                }
+            });
+        }
+
+        const editMobileInput = document.getElementById("edit_mobile");
+        if (editMobileInput) {
+            editMobileInput.addEventListener("input", function () {
+                this.value = this.value.replace(/\D/g, "").slice(0, 10);
+            });
+        }
+
+        function openEditModal(studentId) {
+            fetch(`/admin/api/students/${studentId}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.success || !data.student) {
+                        showNotification({
+                            type: "danger",
+                            title: "Student Not Found",
+                            message: data.message || "Failed to load student details."
+                        });
+                        return;
+                    }
+                    const s = data.student;
+                    document.getElementById("edit_student_id").value = s.id;
+                    document.getElementById("edit_display_enrollment").textContent = s.enrollment_no;
+                    document.getElementById("edit_display_roll").textContent = s.roll_number || "-";
+                    document.getElementById("edit_full_name").value = s.full_name || "";
+                    document.getElementById("edit_email").value = s.email || "";
+                    document.getElementById("edit_mobile").value = s.mobile || "";
+                    document.getElementById("edit_dob").value = s.dob || "";
+                    document.getElementById("edit_course").value = s.course || "BCA";
+                    document.getElementById("edit_semester").value = s.semester || "1";
+                    document.getElementById("edit_division").value = s.division || "A";
+                    document.getElementById("edit_academic_year").value = s.academic_year || "2026-27";
+                    document.getElementById("edit_status").value = s.status || "Active";
+
+                    ["full_name", "email", "mobile", "dob", "course", "semester", "division", "academic_year", "status"].forEach(f => {
+                        const errEl = document.getElementById("err_edit_" + f);
+                        if (errEl) errEl.textContent = "";
+                    });
+
+                    if (editStudentOverlay) {
+                        editStudentOverlay.style.display = "flex";
+                        editStudentOverlay.classList.remove("hidden");
+                        requestAnimationFrame(() => editStudentOverlay.classList.add("show"));
+                    }
+                })
+                .catch(err => {
+                    console.error("Error fetching student details:", err);
+                    showNotification({
+                        type: "danger",
+                        title: "Error Loading Student",
+                        message: "Failed to fetch student details. Please try again."
+                    });
+                });
+        }
+
+        function closeEditModal() {
+            if (!editStudentOverlay) return;
+            editStudentOverlay.classList.remove("show");
+            setTimeout(() => {
+                editStudentOverlay.classList.add("hidden");
+                editStudentOverlay.style.display = "none";
+            }, 200);
+        }
+
+        if (closeEditModalBtn) closeEditModalBtn.addEventListener("click", closeEditModal);
+        if (cancelEditBtn) cancelEditBtn.addEventListener("click", closeEditModal);
+
+        if (editStudentForm) {
+            editStudentForm.addEventListener("submit", function (e) {
+                e.preventDefault();
+                const studentId = document.getElementById("edit_student_id").value;
+                if (!studentId) return;
+
+                const nameVal = document.getElementById("edit_full_name").value.trim();
+                const emailVal = document.getElementById("edit_email").value.trim();
+                const mobileVal = document.getElementById("edit_mobile").value.trim();
+
+                let hasErr = false;
+                if (!nameVal || nameVal.length < 3) {
+                    document.getElementById("err_edit_full_name").textContent = "Full name must be at least 3 characters.";
+                    hasErr = true;
+                } else {
+                    document.getElementById("err_edit_full_name").textContent = "";
+                }
+
+                if (!emailVal || !emailVal.includes("@") || !emailVal.includes(".")) {
+                    document.getElementById("err_edit_email").textContent = "Enter a valid email address.";
+                    hasErr = true;
+                } else {
+                    document.getElementById("err_edit_email").textContent = "";
+                }
+
+                if (mobileVal && mobileVal.length !== 10) {
+                    document.getElementById("err_edit_mobile").textContent = "Mobile number must be exactly 10 digits.";
+                    hasErr = true;
+                } else {
+                    document.getElementById("err_edit_mobile").textContent = "";
+                }
+
+                if (hasErr) return;
+
+                saveEditStudentBtn.disabled = true;
+                saveEditStudentBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Updating...`;
+
+                const payload = {
+                    full_name: nameVal,
+                    email: emailVal,
+                    mobile: mobileVal,
+                    dob: document.getElementById("edit_dob").value,
+                    course: document.getElementById("edit_course").value,
+                    semester: document.getElementById("edit_semester").value,
+                    division: document.getElementById("edit_division").value,
+                    academic_year: document.getElementById("edit_academic_year").value.trim(),
+                    status: document.getElementById("edit_status").value
+                };
+
+                fetch(`/admin/api/students/${studentId}/update`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            closeEditModal();
+                            showNotification({
+                                type: "success",
+                                title: "Student Updated",
+                                message: data.message || "Student details updated successfully."
+                            });
+                            loadStudents();
+                        } else {
+                            showNotification({
+                                type: "danger",
+                                title: "Update Failed",
+                                message: data.message || "Failed to update student."
+                            });
+                        }
+                    })
+                    .catch(err => {
+                        console.error("Update student error:", err);
+                        showNotification({
+                            type: "danger",
+                            title: "Server Error",
+                            message: "Database connection or network error during update."
+                        });
+                    })
+                    .finally(() => {
+                        saveEditStudentBtn.disabled = false;
+                        saveEditStudentBtn.innerHTML = `<i class="bi bi-check-circle me-1"></i> Update Student`;
+                    });
+            });
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            loadStudents();
+
+            const searchInput = document.getElementById("searchInput");
+            const searchBtn = document.getElementById("searchBtn");
+            const selectAllCheckbox = document.getElementById("selectAllCheckbox");
+
+            if (selectAllCheckbox) {
+                selectAllCheckbox.addEventListener("change", function () {
+                    if (this.checked) {
+                        currentDisplayedStudents.forEach(s => selectedStudentIds.add(s.id));
+                    } else {
+                        currentDisplayedStudents.forEach(s => selectedStudentIds.delete(s.id));
+                    }
+                    document.querySelectorAll(".student-checkbox").forEach(chk => {
+                        chk.checked = this.checked;
+                    });
+                    updateBulkActionsUI();
+                });
+            }
+
+            if (searchInput) {
+                searchInput.addEventListener("input", applyFilters);
+                searchInput.addEventListener("keyup", (e) => {
+                    if (e.key === "Enter") applyFilters();
+                });
+            }
+
+            if (searchBtn) {
+                searchBtn.addEventListener("click", applyFilters);
+            }
+        });
+
+        function printStudentResultCard(containerId) {
+            const el = document.getElementById(containerId);
+            if (!el) { window.print(); return; }
+
+            const printWin = window.open('', '_blank', 'width=850,height=900');
+            if (!printWin) {
+                alert("Please allow pop-ups to print the official result marksheet.");
+                return;
+            }
+
+            const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Internal Assessment Result - Official Marksheet</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        @page {
+            size: portrait;
+            margin: 10mm 12mm;
+        }
+        body {
+            background: #ffffff !important;
+            color: #0f172a !important;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-size: 8.5pt;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            padding: 0;
+            margin: 0;
+        }
+        .no-print { display: none !important; }
+        .table-dark {
+            background-color: #0f172a !important;
+            color: #ffffff !important;
+        }
+        .table-dark th {
+            color: #ffffff !important;
+            background-color: #0f172a !important;
+        }
+        .card {
+            border: 1px solid #cbd5e1 !important;
+            box-shadow: none !important;
+            border-radius: 6px !important;
+        }
+        .badge {
+            border: 1px solid #94a3b8 !important;
+            color: #0f172a !important;
+            background: #f8fafc !important;
+            font-weight: 600;
+        }
+        .text-primary {
+            color: #1e3a8a !important;
+        }
+        .border-primary-subtle {
+            border-color: #93c5fd !important;
+        }
+        .bg-primary-subtle {
+            background-color: #eff6ff !important;
+        }
+    </style>
+</head>
+<body onload="window.focus(); window.print(); setTimeout(() => { window.close(); }, 800);">
+    <div class="container-fluid px-3 py-2">
+        ${el.innerHTML}
+    </div>
+</body>
+</html>
+            `;
+            printWin.document.open();
+            printWin.document.write(html);
+            printWin.document.close();
+        }
+    </script>
+
+    <script src="{{ url_for('static', filename='js/student_form.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/notification_modal.js') }}"></script>
+
+    {% include 'components/notification_modal.html' %}
+        </div>
+    </div>
+</div>
+</body>
+
+</html>

@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+<head>
+  <!-- Basic Meta Tags -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="CampusSync - Alumni & Old Student Results Portal">
+  <title>Old Student Results – {{ college.college_short_name if college and college.college_short_name else 'CampusSync' }} ERP</title>
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Bootstrap 5 CSS CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+  <!-- Custom Login CSS (Same System Design) -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <div class="top-navbar">
+    <button type="button" class="theme-toggle-btn" id="themeToggleBtn" aria-label="Toggle light and dark theme">
+      <i class="bi bi-moon-stars-fill text-primary" id="themeIcon"></i>
+      <span id="themeText">Dark Mode</span>
+    </button>
+  </div>
+
+  <!-- Main Page Wrapper (Split-Screen Layout) -->
+  <div class="container-fluid p-0 login-wrapper">
+    <div class="row g-0 min-vh-100">
+
+      <!-- Left Side: Branding & Illustration -->
+      <div class="col-lg-6 left-panel d-none d-lg-flex">
+        
+        <div class="left-content">
+          
+          <!-- Project Logo & Brand Name -->
+          <div class="brand-logo-container">
+            <div class="brand-icon-box">
+              {% if college and college.logo and college.logo != 'default-logo.png' %}
+                <img src="{{ url_for('admin.serve_uploads', filename='college/' + college.logo) }}" alt="College Logo" style="width: 38px; height: 38px; object-fit: contain; border-radius: 50%;">
+              {% else %}
+                <i class="bi bi-mortarboard-fill"></i>
+              {% endif %}
+            </div>
+            <div>
+              <h2 class="brand-name">
+                {{ college.college_short_name if college and college.college_short_name else 'CampusSync' }}
+                <span class="brand-badge">ALUMNI</span>
+              </h2>
+            </div>
+          </div>
+
+          <!-- Main Headline -->
+          <h1 class="system-title">
+            Alumni & Old Student Results
+          </h1>
+
+          <!-- Short Description -->
+          <p class="system-description">
+            Access your graduated semester internal assessment records, verify continuous evaluation marks, and download official PDF marksheets.
+          </p>
+
+          <!-- Feature Cards Container -->
+          <div class="features-container">
+            
+            <div class="feature-card">
+              <div class="feature-icon-badge">
+                <i class="bi bi-check-lg"></i>
+              </div>
+              <p class="feature-text">Semesters 1 to 6 Continuous Evaluation</p>
+            </div>
+
+            <div class="feature-card">
+              <div class="feature-icon-badge">
+                <i class="bi bi-check-lg"></i>
+              </div>
+              <p class="feature-text">Secure Email OTP Verification</p>
+            </div>
+
+            <div class="feature-card">
+              <div class="feature-icon-badge">
+                <i class="bi bi-check-lg"></i>
+              </div>
+              <p class="feature-text">Official Semester & Consolidated PDFs</p>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- Bottom Section Illustration -->
+        <div class="illustration-wrapper">
+          <img src="{{ url_for('static', filename='images/defaults/admin-login.svg') }}" alt="Alumni Portal Illustration" class="illustration-img">
+        </div>
+
+      </div>
+
+      <!-- Right Side: Search Form Card -->
+      <div class="col-lg-6 right-panel">
+        
+        <div class="login-card-container">
+          
+          <div class="login-card">
+            
+            <!-- Header -->
+            <div class="login-header text-center text-lg-start">
+              <div class="login-title-badge">
+                <i class="bi bi-mortarboard-fill me-1"></i> Alumni Portal
+              </div>
+              <h2 class="login-title">Old Student Results</h2>
+              <p class="login-subtitle">Enter your Enrollment Number or Registered Email ID to receive an OTP.</p>
+            </div>
+
+            <!-- Flash Alerts -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                {% for category, message in messages %}
+                  <div class="alert alert-{{ category }} d-flex align-items-center mb-3" role="alert">
+                    <i class="bi {% if category == 'success' %}bi-check-circle-fill{% elif category == 'danger' %}bi-exclamation-triangle-fill{% else %}bi-info-circle-fill{% endif %} me-2 fs-5"></i>
+                    <div>{{ message }}</div>
+                  </div>
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
+
+            <!-- Search Form -->
+            <form id="alumniSearchForm" action="{{ url_for('alumni.alumni_request_otp') }}" method="POST">
+              
+              <!-- Identifier Input -->
+              <div class="mb-3">
+                <label for="identifier" class="form-label">Enrollment Number or Registered Email</label>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <i class="bi bi-person-badge-fill"></i>
+                  </span>
+                  <input 
+                    type="text" 
+                    class="form-control" 
+                    id="identifier" 
+                    name="identifier" 
+                    placeholder="e.g. BCA15226000020 or student@gmail.com" 
+                    required 
+                    autocomplete="off"
+                    autofocus
+                  >
+                </div>
+                <div class="form-text small text-muted mt-1">
+                  Enter your enrollment number or the email registered during your BCA studies.
+                </div>
+              </div>
+
+              <!-- Submit Button -->
+              <button type="submit" class="btn btn-login-primary mt-2" id="btnSubmitOtp">
+                <span id="btnText">Verify & Send OTP</span>
+                <i class="bi bi-arrow-right-short fs-4"></i>
+              </button>
+
+              <!-- Back To Home Button -->
+              <a href="{{ url_for('home') }}" class="btn btn-back-home mt-2">
+                <i class="bi bi-house-door"></i>
+                <span>Back to Home</span>
+              </a>
+
+              <!-- Link for Currently Enrolled Students -->
+              <div class="mt-3 p-2 text-center rounded-3 bg-light border border-light-subtle">
+                <span class="text-muted small">Currently studying?</span>
+                <a href="{{ url_for('student_login') }}" class="small fw-bold text-primary text-decoration-none ms-1">
+                  Sign In to Student Portal <i class="bi bi-arrow-right"></i>
+                </a>
+              </div>
+
+            </form>
+
+            <!-- Bottom Version Info -->
+            <div class="login-footer">
+              <span>{{ college.college_name if college else 'CampusSync ERP' }}</span>
+              <span class="version-tag">Alumni Results</span>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Bootstrap 5 JavaScript Bundle CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Custom Login JavaScript for Theme Toggle -->
+  <script src="{{ url_for('static', filename='js/login.js') }}"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const searchForm = document.getElementById('alumniSearchForm');
+      const submitBtn = document.getElementById('btnSubmitOtp');
+      const identifierInput = document.getElementById('identifier');
+
+      if (searchForm && submitBtn) {
+        searchForm.addEventListener('submit', function(e) {
+          if (!identifierInput.value.trim()) {
+            e.preventDefault();
+            identifierInput.focus();
+            return false;
+          }
+
+          // Disable button immediately on click with spinner to prevent multiple tries
+          setTimeout(function() {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `
+              <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+              <span>Sending OTP...</span>
+            `;
+          }, 0);
+        });
+      }
+    });
+  </script>
+
+</body>
+</html>

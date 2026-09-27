@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Old Students (Alumni) – Admin – CampusSync</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/common.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/admin.css') }}" rel="stylesheet">
+    <style>
+        .filter-card {
+            background: #ffffff;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            padding: 16px 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        }
+        .old-students-table {
+            background: #ffffff;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            overflow: hidden;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.02);
+        }
+        .old-students-table thead th {
+            background: #f8fafc;
+            color: #475569;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 700;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 12px 14px;
+        }
+        .old-students-table tbody td {
+            padding: 12px 14px;
+            vertical-align: middle;
+            font-size: 0.875rem;
+            border-bottom: 1px solid #f1f5f9;
+        }
+    </style>
+</head>
+
+<body class="admin-theme">
+    <div class="wrapper">
+        {% include 'components/sidebar.html' %}
+        <div id="content">
+            {% include 'components/topbar.html' %}
+            <div class="content-body">
+
+                <!-- Page Header -->
+                <div class="page-header d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+                    <div>
+                        <h2 class="fw-bold mb-1">
+                            <i class="bi bi-mortarboard-fill text-primary me-2"></i>Old Students Archive (Alumni)
+                        </h2>
+                        <p class="text-muted mb-0 small">
+                            Directory of BCA graduated students strictly from historical archive records
+                        </p>
+                    </div>
+
+                    <!-- Export Report Action Buttons -->
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <a href="{{ url_for('admin.admin_old_students_export_excel', academic_year=selected_year) }}" 
+                           class="btn btn-outline-success btn-sm fw-semibold shadow-xs">
+                            <i class="bi bi-file-earmark-excel-fill me-1"></i> Export Excel (.xlsx)
+                        </a>
+                        <a href="{{ url_for('admin.admin_old_students_export_pdf', academic_year=selected_year) }}" 
+                           class="btn btn-outline-danger btn-sm fw-semibold shadow-xs">
+                            <i class="bi bi-file-earmark-pdf-fill me-1"></i> Download PDF Report
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Flash Message Container -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }} alert-dismissible fade show shadow-xs border-0 mb-3" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <!-- Metrics & Source Banner -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <div class="bg-white p-3 rounded-3 border border-light-subtle shadow-xs">
+                            <span class="text-muted small fw-semibold text-uppercase">Total Graduated Students</span>
+                            <div class="fs-4 fw-bold text-dark mt-1">{{ total_students }}</div>
+                            <div class="text-muted small mt-1">Filtered in view</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="bg-white p-3 rounded-3 border border-light-subtle shadow-xs">
+                            <span class="text-muted small fw-semibold text-uppercase">Graduating Batches</span>
+                            <div class="fs-4 fw-bold text-primary mt-1">{{ total_batches }} Years</div>
+                            <div class="text-muted small mt-1">Historical Academic Cycles</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="bg-white p-3 rounded-3 border border-light-subtle shadow-xs">
+                            <span class="text-muted small fw-semibold text-uppercase">Data Isolation</span>
+                            <div class="mt-1">
+                                <span class="badge bg-success-subtle text-success border border-success-subtle fs-7">
+                                    <i class="bi bi-database-check me-1"></i> Archived Table Only
+                                </span>
+                            </div>
+                            <div class="text-muted small mt-1">Zero interference with active students</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filter & Search Card -->
+                <div class="filter-card mb-4">
+                    <form method="GET" action="{{ url_for('admin.admin_old_students') }}" class="row g-3 align-items-center">
+                        <!-- Year Dropdown -->
+                        <div class="col-md-4 col-sm-6">
+                            <label class="form-label small fw-bold text-secondary mb-1">Select Academic Year</label>
+                            <select name="academic_year" class="form-select form-select-sm" onchange="this.form.submit()">
+                                <option value="All" {% if selected_year == 'All' %}selected{% endif %}>All Graduated Batches (All Years)</option>
+                                {% for yr in available_years %}
+                                    <option value="{{ yr }}" {% if selected_year == yr %}selected{% endif %}>{{ yr }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Search Box -->
+                        <div class="col-md-6 col-sm-6">
+                            <label class="form-label small fw-bold text-secondary mb-1">Search Students</label>
+                            <div class="input-group input-group-sm">
+                                <input type="text" name="q" class="form-control" placeholder="Search by Full Name, Enrollment No, or Roll No..." value="{{ search_query }}">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-search me-1"></i> Search
+                                </button>
+                                {% if search_query or selected_year != 'All' %}
+                                    <a href="{{ url_for('admin.admin_old_students') }}" class="btn btn-outline-secondary" title="Reset Filters">
+                                        <i class="bi bi-x-circle"></i> Reset
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="col-md-2 text-md-end pt-md-3">
+                            <span class="badge bg-light text-secondary border">Showing {{ students|length }} records</span>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Old Students Directory Table -->
+                <div class="table-responsive old-students-table mb-4">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;" class="text-center">Sr</th>
+                                <th style="width: 80px;" class="text-center">Roll No</th>
+                                <th style="width: 140px;">Enrollment No</th>
+                                <th>Student Full Name</th>
+                                <th>Contact Information</th>
+                                <th style="width: 90px;" class="text-center">Course</th>
+                                <th style="width: 100px;" class="text-center">Passing Year</th>
+                                <th style="width: 110px;" class="text-center">Archived Date</th>
+                                <th style="width: 150px;" class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if students %}
+                                {% for st in students %}
+                                    <tr>
+                                        <td class="text-center text-muted fw-bold">{{ loop.index }}</td>
+                                        <td class="text-center fw-bold">{{ st.roll_number }}</td>
+                                        <td>
+                                            <span class="badge bg-light text-dark border font-monospace">{{ st.enrollment_no }}</span>
+                                        </td>
+                                        <td>
+                                            <div class="fw-semibold text-dark">{{ st.full_name }}</div>
+                                            <small class="text-muted">Final: Semester {{ st.final_semester }}</small>
+                                        </td>
+                                        <td>
+                                            <div class="small text-truncate" style="max-width: 220px;" title="{{ st.email }}">
+                                                <i class="bi bi-envelope text-muted me-1"></i>{{ st.email }}
+                                            </div>
+                                            {% if st.mobile %}
+                                                <div class="small text-muted">
+                                                    <i class="bi bi-telephone text-muted me-1"></i>{{ st.mobile }}
+                                                </div>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                                                {{ st.course or 'BCA' }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center fw-semibold text-secondary">
+                                            {{ st.academic_year or '-' }}
+                                        </td>
+                                        <td class="text-center text-muted small">
+                                            {{ st.archived_at.strftime('%d-%b-%Y') if st.archived_at else '-' }}
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="btn-group btn-group-sm">
+                                                <button type="button" class="btn btn-outline-primary" 
+                                                        onclick="viewOldStudentMarks({{ st.id }}, '{{ st.full_name }}', '{{ st.enrollment_no }}')"
+                                                        title="View Historical Semester Marks">
+                                                    <i class="bi bi-eye"></i> Marks
+                                                </button>
+                                                <a href="{{ url_for('admin.admin_old_student_pdf', student_id=st.id) }}" 
+                                                   class="btn btn-outline-danger" 
+                                                   title="Download Marksheet PDF">
+                                                    <i class="bi bi-file-earmark-pdf"></i>
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="9" class="text-center py-5 text-muted">
+                                        <i class="bi bi-mortarboard fs-1 text-secondary d-block mb-2"></i>
+                                        <h6 class="fw-bold">No Archived Students Found</h6>
+                                        <p class="small mb-0">
+                                            {% if search_query or selected_year != 'All' %}
+                                                No old students match your filter criteria. Try resetting filters.
+                                            {% else %}
+                                                Graduated Semester 6 students will appear here automatically when academic year rollover or graduation archiving is executed.
+                                            {% endif %}
+                                        </p>
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Marks Preview Modal -->
+    <div class="modal fade" id="marksPreviewModal" tabindex="-1" aria-labelledby="marksPreviewModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-dark text-white">
+                    <div>
+                        <h5 class="modal-title fw-bold" id="marksPreviewModalLabel">
+                            <i class="bi bi-journal-bookmark-fill me-2"></i>Historical Semester Marks
+                        </h5>
+                        <small id="modalStudentSubtitle" class="text-white-50"></small>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4" id="modalMarksContent">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="text-muted small mt-2">Loading marks from archive tables...</p>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <a id="btnModalDownloadPdf" href="#" class="btn btn-danger btn-sm">
+                        <i class="bi bi-file-earmark-pdf-fill me-1"></i> Download Consolidated PDF
+                    </a>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function viewOldStudentMarks(studentId, studentName, enrollmentNo) {
+            const modalEl = document.getElementById('marksPreviewModal');
+            const modal = new bootstrap.Modal(modalEl);
+            document.getElementById('modalStudentSubtitle').textContent = `${studentName} (${enrollmentNo})`;
+            document.getElementById('btnModalDownloadPdf').href = `/admin/old-students/student/${studentId}/pdf`;
+            
+            const contentDiv = document.getElementById('modalMarksContent');
+            contentDiv.innerHTML = `
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="text-muted small mt-2">Loading marks from archive tables...</p>
+                </div>
+            `;
+            
+            modal.show();
+
+            fetch(`/admin/old-students/student/${studentId}/marks`)
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.success) {
+                        contentDiv.innerHTML = `<div class="alert alert-danger">${data.message || 'Error loading records.'}</div>`;
+                        return;
+                    }
+
+                    const semesters = data.semesters;
+                    const summary = data.summary;
+
+                    if (!semesters || Object.keys(semesters).length === 0) {
+                        contentDiv.innerHTML = `
+                            <div class="alert alert-info text-center my-3">
+                                <i class="bi bi-info-circle me-1"></i> No individual subject marks are recorded in the archive for this student yet.
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    let html = `
+                        <div class="d-flex justify-content-between align-items-center bg-light p-3 rounded mb-3 border">
+                            <div>
+                                <span class="text-muted small">Total Marks:</span>
+                                <strong class="text-primary ms-1">${summary.total_obtained} / ${summary.total_max}</strong>
+                            </div>
+                            <div>
+                                <span class="text-muted small">Overall Percentage:</span>
+                                <strong class="text-info ms-1">${summary.overall_percentage}%</strong>
+                            </div>
+                            <div>
+                                <span class="text-muted small">Division:</span>
+                                <span class="badge bg-success ms-1">${summary.class}</span>
+                            </div>
+                        </div>
+                    `;
+
+                    for (const [semNum, semInfo] of Object.entries(semesters)) {
+                        html += `
+                            <div class="card mb-3 border border-light-subtle">
+                                <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
+                                    <strong class="text-primary"><i class="bi bi-bookmark me-1"></i> Semester ${semNum} (${semInfo.academic_year || '-'})</strong>
+                                    <div>
+                                        <span class="badge bg-light text-dark border me-2">Total: ${semInfo.total_obtained}/${semInfo.total_max} (${semInfo.percentage}%)</span>
+                                        <a href="/admin/old-students/student/${studentId}/pdf?semester=${semNum}" class="btn btn-outline-danger btn-xs py-0 px-2" style="font-size:0.75rem;">
+                                            <i class="bi bi-file-pdf"></i> Sem ${semNum} PDF
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-striped mb-0 small">
+                                        <thead>
+                                            <tr>
+                                                <th>Code</th>
+                                                <th>Subject Name</th>
+                                                <th class="text-center">Marks Obtained</th>
+                                                <th class="text-center">Max</th>
+                                                <th class="text-center">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                        `;
+
+                        semInfo.subjects.forEach(sub => {
+                            const badgeClass = sub.status === 'PASS' ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger';
+                            html += `
+                                <tr>
+                                    <td><code>${sub.subject_code}</code></td>
+                                    <td>${sub.subject_name}</td>
+                                    <td class="text-center fw-bold text-primary">${sub.marks_obtained}</td>
+                                    <td class="text-center text-muted">${sub.max_marks}</td>
+                                    <td class="text-center"><span class="badge ${badgeClass}">${sub.status}</span></td>
+                                </tr>
+                            `;
+                        });
+
+                        html += `
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    contentDiv.innerHTML = html;
+                })
+                .catch(err => {
+                    contentDiv.innerHTML = `<div class="alert alert-danger">Network error: ${err.message}</div>`;
+                });
+        }
+    </script>
+    <script src="{{ url_for('static', filename='js/common.js') }}"></script>
+</body>
+
+</html>

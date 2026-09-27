@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Lecture Attendance — {{ college.college_short_name if college and college.college_short_name else 'CampusSync' }}</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <!-- HTML5-QRCode Scanner Library for real camera scanning -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <!-- CampusSync Styles -->
+    <link href="{{ url_for('static', filename='css/common.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/student.css') }}" rel="stylesheet">
+
+    <style>
+        body.student-theme {
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+
+        
+        /* Hide Idle Overlay when camera is active */
+        #viewportIdleOverlay.overlay-hidden {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+
+        #reader video {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover !important;
+            border-radius: 18px !important;
+        }
+        #reader {
+            border: none !important;
+        }
+    
+        /* Viewfinder Viewport */
+        .scanner-viewport {
+            position: relative;
+            width: 100%;
+            max-width: 440px;
+            height: 310px;
+            margin: 0 auto;
+            background: #0f172a;
+            border-radius: 20px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
+        }
+
+        /* Corner Target Brackets */
+        .viewfinder-bracket {
+            position: absolute;
+            width: 28px;
+            height: 28px;
+            border-color: #38bdf8;
+            border-style: solid;
+            pointer-events: none;
+            z-index: 6;
+        }
+        .bracket-tl { top: 18px; left: 18px; border-width: 3px 0 0 3px; border-top-left-radius: 8px; }
+        .bracket-tr { top: 18px; right: 18px; border-width: 3px 3px 0 0; border-top-right-radius: 8px; }
+        .bracket-bl { bottom: 18px; left: 18px; border-width: 0 0 3px 3px; border-bottom-left-radius: 8px; }
+        .bracket-br { bottom: 18px; right: 18px; border-width: 0 3px 3px 0; border-bottom-right-radius: 8px; }
+
+        /* Live Indicator */
+        .live-signal-dot {
+            width: 9px;
+            height: 9px;
+            background: #10b981;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            animation: pulseSignal 1.8s infinite;
+        }
+        @keyframes pulseSignal {
+            0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.8); }
+            70% { transform: scale(1.1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        /* Active Lecture Card */
+        .lecture-active-card {
+            background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%);
+            border: 1px solid #bfdbfe;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.06);
+        }
+
+        /* Success Result Card */
+        .success-result-card {
+            background: #f0fdf4;
+            border: 1.5px solid #86efac;
+            border-radius: 16px;
+            padding: 24px;
+            animation: slideUp 0.3s ease;
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Empty State Card */
+        .empty-session-card {
+            background: #ffffff;
+            border: 1px dashed #cbd5e1;
+            border-radius: 18px;
+            padding: 48px 24px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body class="student-theme">
+<div class="wrapper">
+    <!-- Reusable Smart Sidebar Component -->
+    {% include 'components/sidebar.html' %}
+
+    <div id="content">
+        <!-- Reusable Smart Topbar Component with Mobile Menu Button -->
+        {% include 'components/topbar.html' %}
+
+        <div class="content-body p-3 p-md-4">
+
+            <!-- Flash Alert Container -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                <div class="mb-3">
+                  {% for category, message in messages %}
+                    <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show d-flex align-items-center" role="alert">
+                      <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+                      <div>{{ message }}</div>
+                      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% endif %}
+            {% endwith %}
+
+            <!-- Page Header -->
+            <div class="page-header d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 pb-3 border-bottom mb-4">
+                <div>
+                    <nav aria-label="breadcrumb" class="mb-1">
+                        <ol class="breadcrumb mb-0" style="font-size:.8rem;">
+                            <li class="breadcrumb-item"><a href="{{ url_for('student_dashboard') }}" class="text-decoration-none text-secondary">Student Portal</a></li>
+                            <li class="breadcrumb-item active text-dark fw-medium" aria-current="page">Scan QR Attendance</li>
+                        </ol>
+                    </nav>
+                    <h2 class="h3 fw-bold mb-1 text-dark">
+                        <i class="bi bi-qr-code-scan text-primary me-2"></i>Lecture Attendance
+                    </h2>
+                    <p class="text-muted mb-0 small" id="pageHeaderSubtext">
+                        {% if scan_status == 'rejected' %}
+                            <span class="text-danger fw-bold"><i class="bi bi-x-circle-fill me-1"></i> Attendance Rejected by Faculty: Marked ABSENT (Proxy Violation).</span>
+                        {% elif scan_status == 'pending' %}
+                            <span class="text-warning fw-bold"><i class="bi bi-clock-history me-1"></i> Attendance Scan Under Review: Awaiting Faculty Decision.</span>
+                        {% elif already_marked or scan_status == 'verified' %}
+                            <span class="text-success fw-bold"><i class="bi bi-check-circle-fill me-1"></i> Your attendance for this lecture has been recorded as PRESENT.</span>
+                        {% else %}
+                            Scan the dynamic classroom QR code displayed on the projector to record your attendance.
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <a href="{{ url_for('student_attendance') }}" class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                        <i class="bi bi-calendar-check me-1"></i> My Attendance
+                    </a>
+                </div>
+            </div>
+
+            {% if active_session %}
+            <!-- ======================================================== -->
+            <!-- STATE A: LIVE ATTENDANCE SESSION IS ACTIVE               -->
+            <!-- (Shows Lecture Details & Enables QR Scanner)             -->
+            <!-- ======================================================== -->
+            <div id="activeSessionContainer">
+                <div class="row g-4 justify-content-center">
+                    
+                    <!-- Left: Camera QR Scanner / Verified Status Box -->
+                    <div class="col-lg-6 col-md-7">
+                        <div class="card shadow-sm border-0 h-100" style="border-radius: 16px;">
+                            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                                <h6 class="fw-bold m-0 text-dark">
+                                    <i class="bi bi-camera-video-fill me-2 text-primary"></i>Lecture Scanner
+                                </h6>
+                                <span id="cardHeaderBadge" class="badge {% if scan_status == 'rejected' %}bg-danger text-white{% elif scan_status == 'pending' %}bg-warning text-dark{% elif already_marked or scan_status == 'verified' %}bg-success text-white{% else %}bg-success-subtle text-success border border-success-subtle{% endif %} d-inline-flex align-items-center gap-1">
+                                    {% if scan_status == 'rejected' %}
+                                        <i class="bi bi-shield-x me-1"></i> Rejected (Absent)
+                                    {% elif scan_status == 'pending' %}
+                                        <i class="bi bi-hourglass-split me-1"></i> Under Review
+                                    {% elif already_marked or scan_status == 'verified' %}
+                                        <i class="bi bi-check2-circle me-1"></i> Verified
+                                    {% else %}
+                                        <span class="live-signal-dot"></span> Ready to Scan
+                                    {% endif %}
+                                </span>
+                            </div>
+
+                            <div class="card-body p-4 text-center">
+
+                                <!-- Prominent In-Card Status Alert Banner -->
+                                <div id="scanStatusAlert" class="alert d-none my-2 text-start small border-0 shadow-sm" role="alert"></div>
+
+                                <!-- 0. Rejected Proxy State Box (shown when faculty rejected proxy) -->
+                                {% if scan_status == 'rejected' %}
+                                <div id="rejectedSecurityViewport" class="p-4 text-center rounded-4 mb-3" style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border: 2px solid #fca5a5;">
+                                    <div class="rounded-circle bg-danger text-white d-inline-flex align-items-center justify-content-center p-3 mb-3 shadow-sm" style="width: 70px; height: 70px;">
+                                        <i class="bi bi-shield-slash-fill fs-1"></i>
+                                    </div>
+                                    <h4 class="fw-bold text-danger mb-1">Attendance Rejected</h4>
+                                    <div class="badge bg-danger px-3 py-1 mb-2 fs-7"><i class="bi bi-person-x-fill me-1"></i> Status: ABSENT (Proxy Flagged)</div>
+                                    <p class="text-dark small mb-3">Your attendance scan was flagged for a security violation and has been <strong>rejected by the faculty</strong>. You are officially marked <strong>ABSENT</strong> for this lecture.</p>
+                                    {% if security_notice %}
+                                    <div class="alert alert-danger py-2 px-3 small border-0 mb-3 text-start">
+                                        <i class="bi bi-exclamation-octagon-fill me-1"></i> <strong>Faculty Reason:</strong> {{ security_notice }}
+                                    </div>
+                                    {% endif %}
+                                    <div class="mt-2">
+                                        <a href="{{ url_for('student_attendance') }}" class="btn btn-outline-danger btn-sm rounded-pill px-3">
+                                            <i class="bi bi-calendar-x me-1"></i> View Attendance Register
+                                        </a>
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                <!-- 0.5. Pending Proxy Review State Box (shown when under review) -->
+                                {% if scan_status == 'pending' %}
+                                <div id="pendingSecurityViewport" class="p-4 text-center rounded-4 mb-3" style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 2px solid #fde68a;">
+                                    <div class="rounded-circle bg-warning text-dark d-inline-flex align-items-center justify-content-center p-3 mb-3 shadow-sm" style="width: 70px; height: 70px;">
+                                        <i class="bi bi-hourglass-top fs-1"></i>
+                                    </div>
+                                    <h4 class="fw-bold text-warning-emphasis mb-1">Scan Under Review</h4>
+                                    <div class="badge bg-warning text-dark px-3 py-1 mb-2 fs-7"><i class="bi bi-clock-history me-1"></i> Status: PENDING FACULTY REVIEW</div>
+                                    <p class="text-dark small mb-3">Your attendance scan was flagged for review and is currently awaiting faculty verification. Please wait.</p>
+                                    {% if security_notice %}
+                                    <div class="alert alert-warning py-2 px-3 small border-0 mb-3 text-start">
+                                        <i class="bi bi-info-circle-fill me-1"></i> {{ security_notice }}
+                                    </div>
+                                    {% endif %}
+                                    <div class="mt-2">
+                                        <button type="button" class="btn btn-outline-dark btn-sm rounded-pill px-3" onclick="window.location.reload()">
+                                            <i class="bi bi-arrow-clockwise me-1"></i> Refresh Status
+                                        </button>
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                <!-- 1. Verified Success State Box (shown when marked) -->
+                                <div id="verifiedSuccessViewport" class="p-4 text-center rounded-4 {% if scan_status != 'verified' and not already_marked %}d-none{% endif %}" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 2px solid #86efac;">
+                                    <div class="rounded-circle bg-success text-white d-inline-flex align-items-center justify-content-center p-3 mb-3 shadow-sm" style="width: 70px; height: 70px;">
+                                        <i class="bi bi-check-lg fs-1"></i>
+                                    </div>
+                                    <h4 class="fw-bold text-success mb-1">Attendance Marked!</h4>
+                                    <div class="badge bg-success px-3 py-1 mb-2 fs-7"><i class="bi bi-person-check-fill me-1"></i> Status: PRESENT</div>
+                                    <p class="text-dark small mb-3">You are officially recorded present for <strong>{{ active_session.subject.subject_name if active_session.subject else 'this lecture' }}</strong>.</p>
+                                    <div class="p-2 bg-white rounded border small text-muted font-monospace d-inline-flex gap-2">
+                                        <span>Marked Time:</span>
+                                        <strong class="text-dark" id="scanTimestampTextTop">{{ marked_at_str or 'Recorded' }}</strong>
+                                    </div>
+                                    <div class="mt-3">
+                                        <a href="{{ url_for('student_attendance') }}" class="btn btn-outline-success btn-sm rounded-pill px-3">
+                                            <i class="bi bi-calendar-check me-1"></i> View Attendance Register
+                                        </a>
+                                    </div>
+                                </div>
+
+                                <!-- 2. Scanner Viewport (Hidden once marked or rejected/pending) -->
+                                <div class="scanner-viewport mb-3 {% if scan_status in ['rejected', 'pending', 'verified'] or already_marked %}d-none{% endif %}" id="scannerViewport">
+                                    <div class="viewfinder-bracket bracket-tl"></div>
+                                    <div class="viewfinder-bracket bracket-tr"></div>
+                                    <div class="viewfinder-bracket bracket-bl"></div>
+                                    <div class="viewfinder-bracket bracket-br"></div>
+
+                                    <!-- Camera element or html5-qrcode reader div -->
+                                    <div id="reader" style="width: 100%; height: 100%;"></div>
+
+                                    <!-- Idle Placeholder Overlay -->
+                                    <div id="viewportIdleOverlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.95); z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                                        <div class="rounded-circle bg-dark border border-secondary p-3 mb-2 text-info">
+                                            <i class="bi bi-camera fs-2"></i>
+                                        </div>
+                                        <p class="text-white small fw-medium mb-1" id="viewportPromptTitle">Align Camera with Classroom QR</p>
+                                        <span class="text-muted" style="font-size: 0.8rem;" id="viewportPromptSub">Hold your phone steady towards the projector</span>
+                                    </div>
+                                </div>
+
+                                <!-- Scanner Primary Action Controls -->
+                                <div class="d-flex justify-content-center gap-2 mb-3 flex-wrap {% if scan_status in ['rejected', 'pending', 'verified'] or already_marked %}d-none{% endif %}" id="scannerButtonsContainer">
+                                    <button type="button" class="btn btn-primary px-4 fw-semibold" id="btnStartScan" onclick="startCameraScanner()">
+                                        <i class="bi bi-camera-video me-1"></i> Start Camera
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary px-3 d-none" id="btnStopScan" onclick="stopCameraScanner()">
+                                        <i class="bi bi-stop-circle me-1"></i> Stop Camera
+                                    </button>
+                                    <button type="button" class="btn btn-outline-success px-3 fw-semibold" id="btnMarkAttendance" onclick="triggerDirectScanSubmission()">
+                                        <i class="bi bi-check2-circle me-1"></i> Mark Attendance
+                                    </button>
+                                </div>
+
+                                <!-- Location & Device Detection Status -->
+                                <div class="p-2 px-3 bg-light rounded-pill d-inline-flex align-items-center gap-2 border text-muted" style="font-size: 0.82rem;">
+                                    <i class="bi bi-geo-alt-fill text-primary"></i>
+                                    <span id="gpsStatusText">Detecting Campus GPS (Max 800m)...</span>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Lecture Basic Details & Attendance Result -->
+                    <div class="col-lg-6 col-md-5">
+                        
+                        <!-- 1. Active Lecture Basic Details Card -->
+                        <div class="lecture-active-card p-4 mb-3">
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <span class="badge bg-primary text-white px-2 py-1 text-uppercase fw-bold" style="font-size: 0.75rem;">
+                                    Live Lecture
+                                </span>
+                                <span class="text-success small fw-bold">
+                                    <i class="bi bi-broadcast me-1"></i> QR Active
+                                </span>
+                            </div>
+
+                            <h4 class="fw-bold text-dark mb-1">
+                                {{ active_session.subject.subject_code if active_session.subject else 'SUB' }} — {{ active_session.subject.subject_name if active_session.subject else 'Lecture' }}
+                            </h4>
+                            <p class="text-muted small mb-3">
+                                <i class="bi bi-person-badge text-primary me-1"></i> Faculty: <strong>{{ active_session.faculty.full_name if active_session.faculty else 'Faculty' }}</strong>
+                            </p>
+
+                            <div class="row g-2 pt-2 border-top">
+                                <div class="col-6">
+                                    <span class="text-muted text-uppercase d-block" style="font-size: 0.72rem;">Class</span>
+                                    <span class="fw-bold text-dark">Sem {{ active_session.semester }} — Div {{ active_session.division }}</span>
+                                </div>
+                                <div class="col-6">
+                                    <span class="text-muted text-uppercase d-block" style="font-size: 0.72rem;">Session</span>
+                                    <span class="fw-bold text-dark">{{ active_session.lecture_no }} ({{ active_session.lecture_date }})</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. Attendance Rejected Card in Sidebar -->
+                        {% if scan_status == 'rejected' %}
+                        <div id="attendanceRejectedCard" class="card border-danger mb-3 shadow-sm" style="border-radius: 16px; background: #fff5f5; border: 2px solid #fca5a5;">
+                            <div class="card-body p-3">
+                                <div class="d-flex align-items-start gap-3">
+                                    <div class="rounded-circle bg-danger text-white p-2 d-flex align-items-center justify-content-center" style="width: 44px; height: 44px; flex-shrink: 0;">
+                                        <i class="bi bi-x-lg fs-4"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h5 class="fw-bold text-danger mb-1">Attendance Rejected</h5>
+                                        <p class="text-dark small mb-2">
+                                            Status: <strong>ABSENT</strong> (Proxy violation rejected by faculty).
+                                        </p>
+                                        {% if security_notice %}
+                                        <div class="text-danger small font-monospace">
+                                            <i class="bi bi-shield-x me-1"></i> {{ security_notice }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- 2.1 Attendance Confirmation Card (Shown when marked) -->
+                        <div id="attendanceSuccessCard" class="success-result-card mb-3 {% if scan_status != 'verified' and not already_marked %}d-none{% endif %}">
+                            <div class="d-flex align-items-start gap-3">
+                                <div class="rounded-circle bg-success text-white p-2 d-flex align-items-center justify-content-center" style="width: 44px; height: 44px; flex-shrink: 0;">
+                                    <i class="bi bi-check-lg fs-4"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h5 class="fw-bold text-success mb-1">Attendance Recorded!</h5>
+                                    <p class="text-dark small mb-2">
+                                        You have been marked <strong>Present</strong> for <strong>{{ active_session.subject.subject_name if active_session.subject else 'this lecture' }}</strong>.
+                                    </p>
+                                    <div class="p-2 bg-white rounded border small text-muted font-monospace d-flex justify-content-between">
+                                        <span>Marked Time:</span>
+                                        <strong class="text-dark" id="scanTimestampText">{{ marked_at_str or 'Recorded' }}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3. Current Student Info Card -->
+                        <div class="card shadow-sm border-0" style="border-radius: 16px;">
+                            <div class="card-body p-4">
+                                <div class="d-flex align-items-center justify-content-between mb-3">
+                                    <h6 class="fw-bold text-dark mb-0">Student Profile</h6>
+                                    <span class="badge bg-light text-muted border">Roll #{{ student.roll_number }}</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="rounded-circle bg-primary-subtle text-primary p-3 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                        <i class="bi bi-person-fill fs-4"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="fw-bold text-dark mb-0">{{ student.full_name }}</h5>
+                                        <span class="text-muted small">Enrollment: {{ student.enrollment_no or 'N/A' }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            {% else %}
+            <!-- ======================================================== -->
+            <!-- STATE B: NO ATTENDANCE SESSION ACTIVE                    -->
+            <!-- (Scanner is disabled, clean message shown)               -->
+            <!-- ======================================================== -->
+            <div id="noSessionContainer">
+                <div class="row justify-content-center">
+                    <div class="col-lg-7 col-md-9">
+                        <div class="empty-session-card shadow-sm">
+                            <div class="rounded-circle bg-light text-secondary d-inline-flex align-items-center justify-content-center p-4 mb-3" style="width: 80px; height: 80px;">
+                                <i class="bi bi-calendar-x fs-1 text-muted"></i>
+                            </div>
+                            <h4 class="fw-bold text-dark mb-2">No Active Attendance Session</h4>
+                            <p class="text-muted mb-4" style="max-width: 480px; margin: 0 auto;">
+                                There is currently no active QR attendance session running for your class 
+                                (<strong>Semester {{ student.semester }} — Division {{ student.division }}</strong>).
+                            </p>
+                            <div class="p-3 bg-light rounded-3 d-inline-block border text-secondary small mb-4">
+                                <i class="bi bi-info-circle text-primary me-1"></i>
+                                The QR scanner will automatically enable once your professor launches the attendance QR on the classroom projector.
+                            </div>
+                            <div>
+                                <a href="{{ url_for('student_dashboard') }}" class="btn btn-outline-secondary btn-sm px-3 rounded-pill">
+                                    <i class="bi bi-house me-1"></i> Return to Dashboard
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- 1. State-of-the-Art Attendance Success Modal Popup -->
+<!-- ========================================== -->
+<div class="modal fade" id="scanSuccessModal" tabindex="-1" aria-labelledby="scanSuccessModalTitle" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered modal-md">
+    <div class="modal-content border-0 shadow-lg text-center" style="border-radius: 24px; overflow: hidden; background: #ffffff;">
+      <!-- Top green accent bar -->
+      <div style="height: 6px; background: linear-gradient(90deg, #10b981, #34d399);"></div>
+      
+      <div class="modal-body p-4 p-md-5">
+        <!-- Glowing Green Check Circle -->
+        <div class="d-inline-flex align-items-center justify-content-center mb-3" style="width: 76px; height: 76px; border-radius: 50%; background: #ecfdf5; border: 2px solid #a7f3d0; box-shadow: 0 0 0 8px rgba(209, 250, 229, 0.4);">
+          <i class="bi bi-check-circle-fill text-success" style="font-size: 2.5rem;"></i>
+        </div>
+
+        <h4 class="fw-bold text-dark mb-1" id="scanSuccessModalTitle">Attendance Verified!</h4>
+        <div class="d-inline-block badge px-3 py-1 rounded-pill mb-3" style="background: #d1fae5; color: #065f46; font-size: 0.85rem; font-weight: 600;">
+          <i class="bi bi-check2-circle me-1"></i> Status: PRESENT
+        </div>
+
+        <!-- Details Card -->
+        <div class="p-3 mb-3 text-start small" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px;">
+          <div class="d-flex justify-content-between py-1 border-bottom border-light-subtle">
+            <span class="text-muted">Subject:</span>
+            <span class="fw-bold text-dark" id="modalSubjectText">{{ active_session.subject.subject_name if active_session and active_session.subject else 'Lecture' }}</span>
+          </div>
+          <div class="d-flex justify-content-between py-1 border-bottom border-light-subtle">
+            <span class="text-muted">Lecture No:</span>
+            <span class="fw-bold text-dark" id="modalLectureNo">{{ active_session.lecture_no if active_session else '1' }}</span>
+          </div>
+          <div class="d-flex justify-content-between py-1 border-bottom border-light-subtle">
+            <span class="text-muted">Verified Time:</span>
+            <span class="fw-bold text-primary font-monospace" id="modalScanTime">--:--:--</span>
+          </div>
+          <div class="d-flex justify-content-between py-1">
+            <span class="text-muted">Security Check:</span>
+            <span class="fw-bold text-success"><i class="bi bi-shield-check me-1"></i> Device & GPS Verified</span>
+          </div>
+        </div>
+
+        <!-- Gujarati Confirmation Note -->
+        <div class="p-2.5 px-3 text-start small mb-4" style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 14px; color: #166534;">
+          <i class="bi bi-info-circle-fill me-1"></i> Your attendance has been successfully recorded in the institutional system.
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="d-flex flex-column flex-sm-row justify-content-center gap-2 pt-1">
+          <button type="button" class="btn btn-outline-secondary px-4 py-2.5 rounded-pill fw-medium" data-bs-dismiss="modal">
+            Close
+          </button>
+          <a href="{{ url_for('student_dashboard') }}" class="btn btn-success px-4 py-2.5 rounded-pill fw-semibold shadow" style="background: linear-gradient(135deg, #059669, #10b981); border: none;">
+            <i class="bi bi-speedometer2 me-1"></i> View Dashboard
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- 2. State-of-the-Art Security / Warning / Error Alert Modal Popup -->
+<!-- ========================================== -->
+<div class="modal fade" id="scanAlertModal" tabindex="-1" aria-labelledby="scanAlertModalTitle" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered modal-md">
+    <div class="modal-content border-0 shadow-lg text-center" style="border-radius: 24px; overflow: hidden; background: #ffffff;">
+      <!-- Dynamic top accent bar -->
+      <div id="scanAlertAccentBar" style="height: 6px; background: linear-gradient(90deg, #ef4444, #f87171);"></div>
+      
+      <div class="modal-body p-4 p-md-5">
+        <!-- Glowing Dynamic Icon Circle -->
+        <div id="scanAlertIconCircle" class="d-inline-flex align-items-center justify-content-center mb-3" style="width: 76px; height: 76px; border-radius: 50%; background: #fef2f2; border: 2px solid #fecaca; box-shadow: 0 0 0 8px rgba(254, 226, 226, 0.4);">
+          <i id="scanAlertIcon" class="bi bi-shield-slash-fill text-danger" style="font-size: 2.4rem;"></i>
+        </div>
+
+        <h4 class="fw-bold text-dark mb-1" id="scanAlertModalTitle">Security Alert</h4>
+        <div id="scanAlertBadge" class="d-inline-block badge px-3 py-1 rounded-pill mb-3" style="background: #fee2e2; color: #991b1b; font-size: 0.82rem; font-weight: 600;">
+          ⚠️ Attendance Notice
+        </div>
+
+        <!-- Message Box -->
+        <div class="p-3 mb-3 text-start small" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; line-height: 1.6;">
+          <div class="fw-semibold text-dark mb-1" id="scanAlertMainText">Notice Details</div>
+          <div class="text-secondary" id="scanAlertSubText">Description</div>
+        </div>
+
+        <!-- Security Guidance Note -->
+        <div id="scanAlertGuidanceCard" class="p-3 text-start small mb-4" style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 14px; color: #92400e; line-height: 1.55;">
+          <i class="bi bi-exclamation-triangle-fill me-1 text-warning"></i>
+          <span id="scanAlertGuidanceText">Details regarding this alert have been submitted to your faculty for review.</span>
+        </div>
+
+        <!-- Action Button -->
+        <div class="d-flex justify-content-center pt-1">
+          <button type="button" class="btn btn-dark px-5 py-2.5 rounded-pill fw-semibold shadow-sm" data-bs-dismiss="modal" id="scanAlertCloseBtn">
+            Understood
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Toast Notification -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
+    <div id="scanToast" class="toast align-items-center text-white bg-success border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body d-flex align-items-center gap-2">
+                <i class="bi bi-check-circle-fill fs-5" id="toastIcon"></i>
+                <span id="scanToastText">Attendance Recorded Successfully!</span>
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap 5 JS Bundle -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<!-- CampusSync Common JS -->
+<script src="{{ url_for('static', filename='js/common.js') }}"></script>
+<!-- Immutable Hardware Fingerprint Engine -->
+<script src="{{ url_for('static', filename='js/device_fingerprint.js') }}?v=2.0"></script>
+<script src="{{ url_for('static', filename='js/webauthn_device.js') }}?v=2.0"></script>
+
+<script>
+    const activeSessionId = {{ active_session.id if active_session else 'null' }};
+    const activeSessionToken = "{{ active_session.qr_session_token if active_session and active_session.qr_session_token else '' }}";
+    let html5QrCode = null;
+    let cachedCoords = { lat: null, lng: null };
+
+    document.addEventListener("DOMContentLoaded", function() {
+        initGPS();
+    });
+
+    // 1. Immutable Hardware Device Fingerprint (Survives full Cache/Cookie/History clearing)
+    function getDeviceFingerprint() {
+        if (window.CampusSyncDevice && typeof window.CampusSyncDevice.getHardwareFingerprint === 'function') {
+            return window.CampusSyncDevice.getHardwareFingerprint();
+        }
+        let f = null;
+        try { f = localStorage.getItem('cs_device_fingerprint'); } catch(e) {}
+        if (!f) f = 'DEV-' + Math.random().toString(36).substring(2, 10).toUpperCase();
+        try { localStorage.setItem('cs_device_fingerprint', f); } catch(e) {}
+        return f;
+    }
+
+    function getDeviceModel() {
+        if (window.CampusSyncDevice && typeof window.CampusSyncDevice.getDeviceModel === 'function') {
+            return window.CampusSyncDevice.getDeviceModel();
+        }
+        return (navigator.userAgentData ? navigator.userAgentData.platform : (navigator.platform || "Mobile Browser"));
+    }
+
+    // 2. Initialize Geolocation
+    function initGPS() {
+        const gpsEl = document.getElementById('gpsStatusText');
+        if (!navigator.geolocation) {
+            if (gpsEl) gpsEl.innerText = "GPS Not Supported";
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                cachedCoords.lat = pos.coords.latitude;
+                cachedCoords.lng = pos.coords.longitude;
+                if (gpsEl) gpsEl.innerHTML = `<span class="text-success fw-semibold"><i class="bi bi-check-circle-fill me-1"></i>Campus GPS Acquired (Allowed: 800m)</span>`;
+            },
+            (err) => {
+                console.warn("GPS error:", err);
+                let gpsErrMsg = "GPS Location Unavailable";
+                if (err.code === 1) {
+                    gpsErrMsg = "Location permission denied. Enable GPS for geofence verification.";
+                } else if (err.code === 2) {
+                    gpsErrMsg = "GPS signal unavailable. Ensure location is enabled.";
+                } else if (err.code === 3) {
+                    gpsErrMsg = "GPS timeout. Retrying with network location.";
+                }
+                if (gpsEl) gpsEl.innerHTML = `<span class="text-warning"><i class="bi bi-geo-alt me-1"></i>${gpsErrMsg}</span>`;
+            },
+            { enableHighAccuracy: true, timeout: 7000 }
+        );
+    }
+
+    // 3. Camera QR Scanner Controls (HTML5-QRCode)
+    function startCameraScanner() {
+        const overlay = document.getElementById('viewportIdleOverlay');
+        const btnStart = document.getElementById('btnStartScan');
+        const btnStop = document.getElementById('btnStopScan');
+
+        try {
+            if (typeof Html5Qrcode !== 'undefined') {
+                if (overlay) {
+                    overlay.classList.add('overlay-hidden');
+                    overlay.classList.add('d-none');
+                    overlay.style.setProperty('display', 'none', 'important');
+                }
+                if (btnStart) btnStart.classList.add('d-none');
+                if (btnStop) btnStop.classList.remove('d-none');
+
+                html5QrCode = new Html5Qrcode("reader");
+                html5QrCode.start(
+                    { facingMode: "environment" },
+                    { fps: 10, qrbox: { width: 250, height: 250 } },
+                    (decodedText, decodedResult) => {
+                        stopCameraScanner();
+                        handleScannedToken(decodedText);
+                    },
+                    (errorMessage) => {
+                        // frame scanning...
+                    }
+                ).catch(err => {
+                    console.warn("Camera start failed, falling back:", err);
+                    if (overlay) {
+                        overlay.classList.remove('overlay-hidden');
+                        overlay.classList.remove('d-none');
+                        overlay.style.setProperty('display', 'flex', 'important');
+                    }
+                    if (btnStart) btnStart.classList.remove('d-none');
+                    if (btnStop) btnStop.classList.add('d-none');
+                    let camErr = "Camera is not accessible. Please ensure permissions are granted or use direct submission.";
+                    const errStr = (err && err.toString ? err.toString() : "").toLowerCase();
+                    if (errStr.includes("notallowederror") || errStr.includes("permission")) {
+                        camErr = "Camera permission denied. Please allow camera access in browser settings to scan QR.";
+                    } else if (errStr.includes("notfounderror") || errStr.includes("device")) {
+                        camErr = "No camera found on this device. Please scan using a device with an integrated camera.";
+                    } else if (errStr.includes("notreadableerror") || errStr.includes("in use")) {
+                        camErr = "Camera is currently in use by another app. Please close other camera apps and retry.";
+                    } else if (errStr.includes("securecontext") || !window.isSecureContext) {
+                        camErr = "Camera access requires a secure connection (HTTPS or localhost).";
+                    }
+                    showToast(camErr, false);
+                    showInCardAlert(camErr, false);
+                });
+            } else {
+                showToast("Scanner engine loading. Please wait a moment and try again.", false);
+            }
+        } catch (e) {
+            console.error(e);
+            showToast("An unexpected error occurred while initializing the camera scanner.", false);
+        }
+    }
+
+    function stopCameraScanner() {
+        const overlay = document.getElementById('viewportIdleOverlay');
+        const btnStart = document.getElementById('btnStartScan');
+        const btnStop = document.getElementById('btnStopScan');
+
+        if (html5QrCode) {
+            html5QrCode.stop().then(() => {
+                html5QrCode.clear();
+                html5QrCode = null;
+            }).catch(err => console.warn(err));
+        }
+        if (overlay) {
+            overlay.classList.remove('overlay-hidden');
+            overlay.classList.remove('d-none');
+            overlay.style.setProperty('display', 'flex', 'important');
+        }
+        if (btnStart) btnStart.classList.remove('d-none');
+        if (btnStop) btnStop.classList.add('d-none');
+    }
+
+    // 4. Handle Scanned Result
+    function handleScannedToken(scannedString) {
+        let tokenToSubmit = activeSessionToken;
+
+        try {
+            const parsed = JSON.parse(scannedString);
+            if (parsed && parsed.token) {
+                tokenToSubmit = parsed.token;
+            }
+        } catch(e) {
+            if (scannedString && scannedString.startsWith("CS-")) {
+                tokenToSubmit = scannedString.trim();
+            }
+        }
+
+        submitScanToBackend(tokenToSubmit);
+    }
+
+    function triggerDirectScanSubmission() {
+        submitScanToBackend(activeSessionToken);
+    }
+
+    // 5. Submit Scan to Backend with GPS & Hardware WebAuthn Screen Lock Verification
+    async function submitScanToBackend(token) {
+        if (!activeSessionId) {
+            showToast("No active lecture session found.", false);
+            showInCardAlert("No active lecture session found.", false);
+            return;
+        }
+
+        const btnMark = document.getElementById('btnMarkAttendance');
+        const origBtnText = btnMark ? btnMark.innerHTML : '';
+        if (btnMark) {
+            btnMark.disabled = true;
+            btnMark.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Verifying Screen Lock...';
+        }
+
+        // Trigger native Phone Screen Lock / Biometrics via WebAuthn
+        let authResult = null;
+        try {
+            if (!window.CampusSyncWebAuthn) {
+                throw new Error("WebAuthn security engine failed to load. Please refresh the page.");
+            }
+            authResult = await window.CampusSyncWebAuthn.verifyOrRegister(function(statusMsg) {
+                if (btnMark) {
+                    btnMark.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> ' + statusMsg;
+                }
+            });
+        } catch (authErr) {
+            console.error("WebAuthn verification error:", authErr);
+            if (btnMark) {
+                btnMark.disabled = false;
+                btnMark.innerHTML = origBtnText;
+            }
+            const errMsg = authErr.message || "Screen lock / Biometric verification failed.";
+            showInCardAlert(errMsg, false);
+            showToast(errMsg, false);
+            showProfessionalAlertModal(errMsg);
+            return;
+        }
+
+        if (btnMark) {
+            btnMark.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Recording Attendance...';
+        }
+
+        const payload = {
+            session_id: activeSessionId,
+            token: token,
+            latitude: cachedCoords.lat,
+            longitude: cachedCoords.lng,
+            device_fingerprint: authResult.credentialId,
+            device_model: authResult.deviceModel || getDeviceModel()
+        };
+
+        fetch("{{ url_for('student_scan') }}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-Requested-With": "XMLHttpRequest"
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (btnMark) {
+                btnMark.disabled = false;
+                btnMark.innerHTML = '<i class="bi bi-check2-circle me-1"></i> Mark Attendance';
+            }
+
+            if (data.success) {
+                const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+                // 1. Hide the camera box and 'Align Camera' text completely
+                const scannerViewport = document.getElementById('scannerViewport');
+                const scannerBtns = document.getElementById('scannerButtonsContainer');
+                if (scannerViewport) scannerViewport.classList.add('d-none');
+                if (scannerBtns) scannerBtns.classList.add('d-none');
+
+                // 2. Display the verified success box in the top card
+                const verifiedViewport = document.getElementById('verifiedSuccessViewport');
+                const timeTextTop = document.getElementById('scanTimestampTextTop');
+                if (timeTextTop) timeTextTop.innerText = nowTime;
+                if (verifiedViewport) verifiedViewport.classList.remove('d-none');
+
+                // 3. Update header badge & subtext
+                const cardBadge = document.getElementById('cardHeaderBadge');
+                if (cardBadge) {
+                    cardBadge.className = 'badge bg-success text-white d-inline-flex align-items-center gap-1';
+                    cardBadge.innerHTML = '<i class="bi bi-check2-circle me-1"></i> Verified';
+                }
+                const pageSub = document.getElementById('pageHeaderSubtext');
+                if (pageSub) {
+                    pageSub.innerHTML = '<span class="text-success fw-bold"><i class="bi bi-check-circle-fill me-1"></i> Your attendance for this lecture has been recorded as PRESENT.</span>';
+                }
+
+                // 4. Update the right-side attendance card
+                const card = document.getElementById('attendanceSuccessCard');
+                const timeText = document.getElementById('scanTimestampText');
+                if (timeText) timeText.innerText = nowTime;
+                if (card) {
+                    card.classList.remove('d-none');
+                    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+
+                // Clear any prior alert
+                showInCardAlert(data.message || "Attendance recorded successfully!", true);
+                showToast(data.message, true);
+
+                // Trigger Professional Success Modal Popup
+                const modalTime = document.getElementById('modalScanTime');
+                if (modalTime) modalTime.innerText = nowTime;
+                const successModal = new bootstrap.Modal(document.getElementById('scanSuccessModal'));
+                successModal.show();
+            } else {
+                showInCardAlert(data.message || "Failed to record attendance.", false);
+                showToast(data.message || "Failed to record attendance.", false);
+
+                // Trigger Professional Security / Error Alert Modal Popup
+                showProfessionalAlertModal(data.message || "Failed to record attendance.");
+                
+            }
+        })
+        .catch(err => {
+            console.error("Scan submission error:", err);
+            if (btnMark) {
+                btnMark.disabled = false;
+                btnMark.innerHTML = '<i class="bi bi-check2-circle me-1"></i> Mark Attendance';
+            }
+            showInCardAlert("Network error submitting attendance. Please try again.", false);
+            showToast("Network error submitting attendance.", false);
+        });
+    }
+
+    
+    // Dedicated Controller for Professional Alert Modal
+    function showProfessionalAlertModal(msg) {
+        const modalTitle = document.getElementById('scanAlertModalTitle');
+        const modalBadge = document.getElementById('scanAlertBadge');
+        const iconCircle = document.getElementById('scanAlertIconCircle');
+        const iconEl = document.getElementById('scanAlertIcon');
+        const accentBar = document.getElementById('scanAlertAccentBar');
+        const mainText = document.getElementById('scanAlertMainText');
+        const subText = document.getElementById('scanAlertSubText');
+        const gujText = document.getElementById('scanAlertGuidanceText');
+        const gujCard = document.getElementById('scanAlertGuidanceCard');
+
+        const lowerMsg = (msg || "").toLowerCase();
+
+        if (lowerMsg.includes('screen lock') || lowerMsg.includes('biometric') || lowerMsg.includes('cancelled') || lowerMsg.includes('authenticator')) {
+            // SCREEN LOCK / WEBAUTHN ALERT
+            accentBar.style.background = 'linear-gradient(90deg, #4f46e5, #7c3aed)';
+            iconCircle.style.background = '#eef2ff';
+            iconCircle.style.border = '2px solid #c7d2fe';
+            iconCircle.style.boxShadow = '0 0 0 8px rgba(224, 231, 255, 0.4)';
+            iconEl.className = 'bi bi-shield-lock-fill text-primary';
+
+            modalTitle.innerText = 'Screen Lock Verification Required';
+            modalBadge.className = 'd-inline-block badge px-3 py-1 rounded-pill mb-3 bg-primary-subtle text-primary-emphasis';
+            modalBadge.innerHTML = '<i class="bi bi-fingerprint me-1"></i> Biometric / Screen Lock Security';
+
+            mainText.innerHTML = '<span class="text-primary fw-bold"><i class="bi bi-fingerprint me-1"></i> Device Verification:</span>';
+            subText.innerText = msg;
+
+            if (guidanceCard) guidanceCard.style.display = 'block';
+            if (guidanceText) guidanceText.innerHTML = 'Phone Screen Lock (Fingerprint, PIN, or Pattern) verification is mandatory to record attendance on this device.';
+        } else if (lowerMsg.includes('proxy') || lowerMsg.includes('already used') || lowerMsg.includes('duplicate')) {
+            // PROXY / DUPLICATE DEVICE ALERT
+            accentBar.style.background = 'linear-gradient(90deg, #dc2626, #ef4444)';
+            iconCircle.style.background = '#fef2f2';
+            iconCircle.style.border = '2px solid #fecaca';
+            iconCircle.style.boxShadow = '0 0 0 8px rgba(254, 226, 226, 0.4)';
+            iconEl.className = 'bi bi-shield-slash-fill text-danger';
+
+            modalTitle.innerText = 'Security Alert';
+            modalBadge.className = 'd-inline-block badge px-3 py-1 rounded-pill mb-3 bg-danger-subtle text-danger-emphasis';
+            modalBadge.innerHTML = '<i class="bi bi-shield-exclamation me-1"></i> Proxy / Duplicate Device Detected';
+
+            mainText.innerHTML = '<span class="text-danger fw-bold"><i class="bi bi-exclamation-octagon-fill me-1"></i> Device Duplication Flagged:</span>';
+            subText.innerText = msg;
+
+            if (guidanceCard) guidanceCard.style.display = 'block';
+            if (guidanceText) guidanceText.innerHTML = 'This mobile phone was previously used to record attendance for another student. This attempt has been logged for <strong>Pending Faculty Review</strong>.';
+        } else if (lowerMsg.includes('location') || lowerMsg.includes('away') || lowerMsg.includes('geofence')) {
+            // GEOFENCE / OUT OF CAMPUS ALERT
+            accentBar.style.background = 'linear-gradient(90deg, #2563eb, #3b82f6)';
+            iconCircle.style.background = '#eff6ff';
+            iconCircle.style.border = '2px solid #bfdbfe';
+            iconCircle.style.boxShadow = '0 0 0 8px rgba(219, 234, 254, 0.4)';
+            iconEl.className = 'bi bi-geo-alt-fill text-primary';
+
+            modalTitle.innerText = 'Location Outside Campus';
+            modalBadge.className = 'd-inline-block badge px-3 py-1 rounded-pill mb-3 bg-primary-subtle text-primary-emphasis';
+            modalBadge.innerHTML = '<i class="bi bi-pin-map-fill me-1"></i> Geofence Perimeter Exceeded (800m Limit)';
+
+            mainText.innerHTML = '<span class="text-primary fw-bold"><i class="bi bi-geo-fill me-1"></i> GPS Perimeter Check Failed:</span>';
+            subText.innerText = msg;
+
+            if (guidanceCard) guidanceCard.style.display = 'block';
+            if (guidanceText) guidanceText.innerHTML = 'Your detected GPS location is outside the approved classroom / campus perimeter (800m limit). Please mark your attendance while physically present in class.';
+        } else if (lowerMsg.includes('expired') || lowerMsg.includes('10-minute') || lowerMsg.includes('window')) {
+            // EXPIRED SESSION ALERT
+            accentBar.style.background = 'linear-gradient(90deg, #f59e0b, #fbbf24)';
+            iconCircle.style.background = '#fffbeb';
+            iconCircle.style.border = '2px solid #fde68a';
+            iconCircle.style.boxShadow = '0 0 0 8px rgba(254, 243, 199, 0.4)';
+            iconEl.className = 'bi bi-hourglass-bottom text-warning';
+
+            modalTitle.innerText = 'QR Code Expired';
+            modalBadge.className = 'd-inline-block badge px-3 py-1 rounded-pill mb-3 bg-warning-subtle text-warning-emphasis';
+            modalBadge.innerHTML = '<i class="bi bi-clock-history me-1"></i> 10-Minute Attendance Window Ended';
+
+            mainText.innerHTML = '<span class="text-warning-emphasis fw-bold"><i class="bi bi-clock-fill me-1"></i> Attendance Window Closed:</span>';
+            subText.innerText = msg;
+
+            if (guidanceCard) guidanceCard.style.display = 'block';
+            if (guidanceText) guidanceText.innerHTML = 'The 10-minute active attendance window for this lecture has expired. Please ask your faculty member to start a new QR session if needed.';
+        } else {
+            // GENERAL NOTICE
+            accentBar.style.background = 'linear-gradient(90deg, #64748b, #94a3b8)';
+            iconCircle.style.background = '#f1f5f9';
+            iconCircle.style.border = '2px solid #cbd5e1';
+            iconCircle.style.boxShadow = '0 0 0 8px rgba(241, 245, 249, 0.4)';
+            iconEl.className = 'bi bi-info-circle-fill text-secondary';
+
+            modalTitle.innerText = 'Attendance Notice';
+            modalBadge.className = 'd-inline-block badge px-3 py-1 rounded-pill mb-3 bg-secondary-subtle text-secondary-emphasis';
+            modalBadge.innerHTML = '<i class="bi bi-info-circle me-1"></i> Attendance Status Notice';
+
+            mainText.innerHTML = '<span class="text-secondary fw-bold">Notice Details:</span>';
+            subText.innerText = msg;
+
+            if (guidanceCard) guidanceCard.style.display = 'none';
+        }
+
+        const alertModal = new bootstrap.Modal(document.getElementById('scanAlertModal'));
+        alertModal.show();
+    }
+
+    function showInCardAlert(msg, isSuccess = true) {
+        const el = document.getElementById('scanStatusAlert');
+        if (!el) return;
+        el.classList.remove('d-none', 'alert-danger', 'alert-success');
+        if (isSuccess) {
+            el.classList.add('alert-success');
+            el.innerHTML = `<div class="d-flex align-items-center gap-2"><i class="bi bi-check-circle-fill text-success fs-5"></i><div><strong>Success:</strong> ${msg}</div></div>`;
+        } else {
+            el.classList.add('alert-danger');
+            el.innerHTML = `<div class="d-flex align-items-center gap-2"><i class="bi bi-exclamation-triangle-fill text-danger fs-5"></i><div><strong>Notice:</strong> ${msg}</div></div>`;
+        }
+    }
+
+    function showToast(msg, isSuccess = true) {
+        const toastEl = document.getElementById('scanToast');
+        const toastText = document.getElementById('scanToastText');
+        const toastIcon = document.getElementById('toastIcon');
+        if (!toastEl || !toastText) return;
+
+        toastText.innerText = msg;
+        if (isSuccess) {
+            toastEl.className = "toast align-items-center text-white bg-success border-0 shadow";
+            if (toastIcon) toastIcon.className = "bi bi-check-circle-fill fs-5";
+        } else {
+            toastEl.className = "toast align-items-center text-white bg-danger border-0 shadow";
+            if (toastIcon) toastIcon.className = "bi bi-exclamation-triangle-fill fs-5";
+        }
+
+        const bsToast = new bootstrap.Toast(toastEl, { delay: 5000 });
+        bsToast.show();
+    }
+</script>
+<script src="{{ url_for('static', filename='js/common.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assigned Students – {{ college.college_short_name if college and college.college_short_name else 'CampusSync' }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/common.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/faculty.css') }}" rel="stylesheet">
+    <style>
+        .student-table th {
+            background-color: #f1f5f9;
+            color: #334155;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+            padding: 12px 10px;
+            border-bottom: 2px solid #cbd5e1;
+            white-space: nowrap;
+        }
+
+        .student-table td {
+            padding: 10px 10px;
+            vertical-align: middle;
+            font-size: 0.875rem;
+        }
+
+        .detail-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #64748b;
+            letter-spacing: 0.5px;
+            margin-bottom: 2px;
+        }
+
+        .detail-value {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .modal-profile-img {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 3px solid #e2e8f0;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .roll-badge {
+            font-weight: 700;
+            background-color: #eff6ff;
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+<body class="faculty-theme">
+<div class="wrapper">
+    {% include 'components/sidebar.html' %}
+    <div id="content">
+        {% include 'components/topbar.html' %}
+        <div class="content-body">
+
+            <!-- Page Header -->
+            <div class="page-header d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 pb-3 border-bottom mb-3">
+                <div>
+                    <nav aria-label="breadcrumb" class="mb-1">
+                        <ol class="breadcrumb mb-0" style="font-size:.8rem;">
+                            <li class="breadcrumb-item active" aria-current="page">Students</li>
+                            <li class="breadcrumb-item active" aria-current="page">Assigned Students</li>
+                        </ol>
+                    </nav>
+                    <h2 class="h3 fw-bold mb-1">Assigned Students</h2>
+                    <p class="text-muted mb-0">View student rosters for your assigned subject and division combinations.</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('faculty_dashboard') }}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-left me-1"></i> Dashboard
+                    </a>
+                </div>
+            </div>
+
+            <!-- Flash Alerts -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show mb-3" role="alert">
+                            <i class="bi bi-info-circle-fill me-2"></i>{{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            {% if error %}
+                <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ error }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endif %}
+
+            <!-- Filter Controls Card -->
+            <div class="card shadow-sm mb-3">
+                <div class="card-body py-3">
+                    <form method="GET" action="{{ url_for('faculty_students') }}" class="row g-2 align-items-end" id="filterForm">
+                        <div class="col-6 col-md-2">
+                            <label for="academic_year" class="form-label fw-semibold fs-7 mb-1">Academic Year</label>
+                            <select name="academic_year" id="academic_year" class="form-select form-select-sm">
+                                {% for year in available_years %}
+                                <option value="{{ year }}" {% if selected_year == year %}selected{% endif %}>{{ year }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label for="subject_id" class="form-label fw-semibold fs-7 mb-1">Assigned Subject & Division</label>
+                            <select name="subject_id" id="subject_id" class="form-select form-select-sm" onchange="onSubjectChange()">
+                                {% if assigned_subjects %}
+                                    {% for asub in assigned_subjects %}
+                                        <option value="{{ asub.subject_id }}" 
+                                                data-division="{{ asub.division }}"
+                                                data-semester="{{ asub.semester }}"
+                                                {% if selected_subject_id == asub.subject_id and selected_division == asub.division %}selected{% endif %}>
+                                            [{{ asub.subject_code }}] {{ asub.subject_name }} (Sem {{ asub.semester }} - Div {{ asub.division }} · {{ asub.subject_type }})
+                                        </option>
+                                    {% endfor %}
+                                {% else %}
+                                    <option value="">No subjects assigned</option>
+                                {% endif %}
+                            </select>
+                        </div>
+
+                        <div class="col-6 col-md-2">
+                            <label for="division" class="form-label fw-semibold fs-7 mb-1">Division</label>
+                            <input type="text" name="division" id="division" class="form-control form-control-sm bg-light text-center fw-bold" value="{{ selected_division or '' }}" readonly>
+                            <input type="hidden" name="semester" id="semester" value="{{ selected_semester or '' }}">
+                        </div>
+
+                        <div class="col-12 col-md-2">
+                            <button type="submit" class="btn btn-primary btn-sm w-100" {% if not assigned_subjects %}disabled{% endif %}>
+                                <i class="bi bi-filter me-1"></i> Load Students
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Subject Banner -->
+            {% if student_data %}
+            <div class="card shadow-sm mb-3 border-0 bg-white">
+                <div class="card-body p-3 d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2">
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <span class="fs-6 fw-bold text-dark">
+                            <i class="bi bi-journal-text text-primary me-1"></i>{{ student_data.subject.subject_code }} - {{ student_data.subject.subject_name }}
+                        </span>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                            Sem {{ student_data.semester }} · Div {{ student_data.division }}
+                        </span>
+                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">
+                            Academic Year: {{ student_data.academic_year }}
+                        </span>
+                    </div>
+                    <div>
+                        <span class="badge bg-info-subtle text-info border border-info-subtle fs-7">
+                            <i class="bi bi-people-fill me-1"></i> Total Enrolled: {{ student_data.students|length }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Student List Table Card -->
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white py-3 d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2">
+                    <div class="fw-bold fs-6">
+                        <i class="bi bi-person-lines-fill me-2 text-primary"></i>Student Roster
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1">{{ student_data.students|length }}</span>
+                    </div>
+                    {% if student_data.students and student_data.students|length > 0 %}
+                    <div class="w-auto">
+                        <div class="input-group input-group-sm" style="min-width: 220px;">
+                            <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
+                            <input type="text" id="studentSearchInput" class="form-control" placeholder="Search name, roll, enrollment..." onkeyup="filterStudentsTable()">
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="card-body p-0">
+                    {% if student_data.students and student_data.students|length > 0 %}
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0 student-table" id="studentsTable">
+                            <thead>
+                                <tr>
+                                    <th class="ps-4 text-center" style="width: 90px;">Roll No</th>
+                                    <th>Enrollment No</th>
+                                    <th>Student Name</th>
+                                    <th>Email</th>
+                                    <th>Mobile</th>
+                                    <th class="text-center">Semester</th>
+                                    <th class="text-center">Division</th>
+                                    <th class="text-center">Status</th>
+                                    <th class="text-center pe-4" style="width: 110px;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for st in student_data.students %}
+                                <tr>
+                                    <td class="ps-4 text-center">
+                                        <span class="roll-badge">{{ st.roll_number }}</span>
+                                    </td>
+                                    <td class="fw-semibold text-secondary">{{ st.enrollment_no }}</td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            {% if st.profile_photo %}
+                                                <img src="{{ st.profile_photo }}" alt="{{ st.full_name }}" class="rounded-circle" style="width: 30px; height: 30px; object-fit: cover;">
+                                            {% else %}
+                                                <div class="rounded-circle bg-primary-subtle text-primary fw-bold d-flex align-items-center justify-content-center" style="width: 30px; height: 30px; font-size: 0.75rem;">
+                                                    {{ st.full_name[:1].upper() }}
+                                                </div>
+                                            {% endif %}
+                                            <span class="fw-bold text-dark">{{ st.full_name }}</span>
+                                        </div>
+                                    </td>
+                                    <td><a href="mailto:{{ st.email }}" class="text-decoration-none text-muted">{{ st.email }}</a></td>
+                                    <td class="text-muted">{{ st.mobile }}</td>
+                                    <td class="text-center"><span class="badge bg-light text-dark border">Sem {{ st.semester }}</span></td>
+                                    <td class="text-center"><span class="badge bg-light text-dark border">{{ st.division }}</span></td>
+                                    <td class="text-center">
+                                        {% if st.status == 'Active' %}
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle">Active</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">{{ st.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center pe-4">
+                                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="viewStudentDetails({{ st | tojson | forceescape }})">
+                                            <i class="bi bi-eye-fill me-1"></i> View
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-person-x text-muted" style="font-size: 3rem;"></i>
+                        <h5 class="mt-3 text-secondary">No Students Found</h5>
+                        <p class="text-muted small">No students are currently enrolled in the selected Subject (Sem {{ student_data.semester }}) and Division {{ student_data.division }}.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}
+            <div class="card shadow-sm border-0">
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-journal-x text-muted" style="font-size: 3rem;"></i>
+                    <h5 class="mt-3 text-secondary">No Subject Selected</h5>
+                    <p class="text-muted small">Please select an assigned subject and division from the filter bar above to view the student directory.</p>
+                </div>
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+</div>
+
+<!-- Read-Only Student Details Modal -->
+<div class="modal fade" id="studentDetailModal" tabindex="-1" aria-labelledby="studentDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title fw-bold text-dark" id="studentDetailModalLabel">
+                    <i class="bi bi-person-vcard text-primary me-2"></i>Student Information (Read-Only)
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row align-items-center mb-4 pb-3 border-bottom">
+                    <div class="col-auto text-center">
+                        <div id="modalPhotoContainer">
+                            <i class="bi bi-person-circle text-secondary" style="font-size: 5rem;"></i>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <h4 class="fw-bold mb-1" id="modalStudentName">-</h4>
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            <span class="badge bg-primary" id="modalRollNo">Roll No: -</span>
+                            <span class="badge bg-secondary" id="modalEnrollmentNo">Enrollment: -</span>
+                            <span class="badge bg-success-subtle text-success border border-success-subtle" id="modalStatus">Status: Active</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-12 col-md-6">
+                        <div class="p-3 bg-light rounded-3 border">
+                            <div class="detail-label"><i class="bi bi-person me-1"></i>Full Name</div>
+                            <div class="detail-value" id="detailFullName">-</div>
+                        </div>
+                    </div>
+
+                    <div class="col-6 col-md-3">
+                        <div class="p-3 bg-light rounded-3 border">
+                            <div class="detail-label"><i class="bi bi-hash me-1"></i>Roll Number</div>
+                            <div class="detail-value text-primary" id="detailRollNo">-</div>
+                        </div>
+                    </div>
+
+                    <div class="col-6 col-md-3">
+                        <div class="p-3 bg-light rounded-3 border">
+                            <div class="detail-label"><i class="bi bi-card-text me-1"></i>Enrollment No</div>
+                            <div class="detail-value text-secondary" id="detailEnrollmentNo">-</div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <div class="p-3 bg-light rounded-3 border">
+                            <div class="detail-label"><i class="bi bi-envelope me-1"></i>Email Address</div>
+                            <div class="detail-value text-truncate" id="detailEmail">-</div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <div class="p-3 bg-light rounded-3 border">
+                            <div class="detail-label"><i class="bi bi-telephone me-1"></i>Mobile Number</div>
+                            <div class="detail-value" id="detailMobile">-</div>
+                        </div>
+                    </div>
+
+                    <div class="col-6 col-md-4">
+                        <div class="p-3 bg-light rounded-3 border">
+                            <div class="detail-label"><i class="bi bi-calendar-event me-1"></i>Date of Birth</div>
+                            <div class="detail-value" id="detailDOB">-</div>
+                        </div>
+                    </div>
+
+                    <div class="col-6 col-md-4">
+                        <div class="p-3 bg-light rounded-3 border">
+                            <div class="detail-label"><i class="bi bi-journal-code me-1"></i>Course</div>
+                            <div class="detail-value" id="detailCourse">-</div>
+                        </div>
+                    </div>
+
+                    <div class="col-6 col-md-4">
+                        <div class="p-3 bg-light rounded-3 border">
+                            <div class="detail-label"><i class="bi bi-layers me-1"></i>Current Semester</div>
+                            <div class="detail-value" id="detailSemester">-</div>
+                        </div>
+                    </div>
+
+                    <div class="col-6 col-md-4">
+                        <div class="p-3 bg-light rounded-3 border">
+                            <div class="detail-label"><i class="bi bi-diagram-3 me-1"></i>Division</div>
+                            <div class="detail-value" id="detailDivision">-</div>
+                        </div>
+                    </div>
+
+                    <div class="col-6 col-md-4">
+                        <div class="p-3 bg-light rounded-3 border">
+                            <div class="detail-label"><i class="bi bi-calendar3 me-1"></i>Academic Year / Batch</div>
+                            <div class="detail-value" id="detailAcademicYear">-</div>
+                        </div>
+                    </div>
+
+                    <div class="col-6 col-md-4">
+                        <div class="p-3 bg-light rounded-3 border">
+                            <div class="detail-label"><i class="bi bi-shield-check me-1"></i>Account Status</div>
+                            <div class="detail-value" id="detailAccountStatus">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 p-2 bg-info-subtle border border-info-subtle rounded-2 text-info-emphasis d-flex align-items-center gap-2 fs-7">
+                    <i class="bi bi-shield-lock-fill fs-6"></i>
+                    <span><strong>Read-Only Mode:</strong> Faculty members have view-only authorization for student identity records.</span>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    let detailModalInstance = null;
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const modalEl = document.getElementById('studentDetailModal');
+        if (modalEl) {
+            detailModalInstance = new bootstrap.Modal(modalEl);
+        }
+    });
+
+    function onSubjectChange() {
+        const sel = document.getElementById('subject_id');
+        if (!sel || sel.selectedIndex < 0) return;
+        const opt = sel.options[sel.selectedIndex];
+        const div = opt.getAttribute('data-division') || '';
+        const sem = opt.getAttribute('data-semester') || '';
+        const divInput = document.getElementById('division');
+        const semInput = document.getElementById('semester');
+        if (divInput) divInput.value = div;
+        if (semInput) semInput.value = sem;
+    }
+
+    function filterStudentsTable() {
+        const input = document.getElementById('studentSearchInput');
+        if (!input) return;
+        const filter = input.value.toLowerCase().strip ? input.value.toLowerCase().trim() : input.value.toLowerCase();
+        const table = document.getElementById('studentsTable');
+        if (!table) return;
+        const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+
+        for (let i = 0; i < rows.length; i++) {
+            const text = rows[i].textContent || rows[i].innerText;
+            if (text.toLowerCase().indexOf(filter) > -1) {
+                rows[i].style.display = "";
+            } else {
+                rows[i].style.display = "none";
+            }
+        }
+    }
+
+    function viewStudentDetails(student) {
+        if (!student) return;
+
+        // Photo
+        const photoContainer = document.getElementById('modalPhotoContainer');
+        if (student.profile_photo) {
+            photoContainer.innerHTML = `<img src="${student.profile_photo}" alt="${student.full_name}" class="modal-profile-img">`;
+        } else {
+            photoContainer.innerHTML = `<div class="rounded-circle bg-primary-subtle text-primary fw-bold d-flex align-items-center justify-content-center mx-auto" style="width: 90px; height: 90px; font-size: 2.2rem;">${(student.full_name || 'S').charAt(0).toUpperCase()}</div>`;
+        }
+
+        // Header elements
+        document.getElementById('modalStudentName').innerText = student.full_name || 'N/A';
+        document.getElementById('modalRollNo').innerText = `Roll No: ${student.roll_number || 'N/A'}`;
+        document.getElementById('modalEnrollmentNo').innerText = `Enrollment: ${student.enrollment_no || 'N/A'}`;
+        
+        const statusEl = document.getElementById('modalStatus');
+        statusEl.innerText = `Status: ${student.status || 'Active'}`;
+        if (student.status === 'Active') {
+            statusEl.className = 'badge bg-success-subtle text-success border border-success-subtle';
+        } else {
+            statusEl.className = 'badge bg-secondary-subtle text-secondary border border-secondary-subtle';
+        }
+
+        // Details grid
+        document.getElementById('detailFullName').innerText = student.full_name || 'N/A';
+        document.getElementById('detailRollNo').innerText = student.roll_number || 'N/A';
+        document.getElementById('detailEnrollmentNo').innerText = student.enrollment_no || 'N/A';
+        document.getElementById('detailEmail').innerText = student.email || 'N/A';
+        document.getElementById('detailMobile').innerText = student.mobile || 'N/A';
+        document.getElementById('detailDOB').innerText = student.dob || 'N/A';
+        document.getElementById('detailCourse').innerText = student.course || 'BCA';
+        document.getElementById('detailSemester').innerText = student.semester ? `Semester ${student.semester}` : 'N/A';
+        document.getElementById('detailDivision').innerText = student.division || 'N/A';
+        document.getElementById('detailAcademicYear').innerText = student.academic_year || 'N/A';
+        document.getElementById('detailAccountStatus').innerText = student.status || 'Active';
+
+        if (detailModalInstance) {
+            detailModalInstance.show();
+        }
+    }
+</script>
+<script src="{{ url_for('static', filename='js/common.js') }}"></script>
+</body>
+</html>

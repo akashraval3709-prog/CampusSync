@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}CampusSync College – Smart College Management System{% endblock %}</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Common & Public CSS -->
+    <link href="{{ url_for('static', filename='css/common.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/public.css') }}" rel="stylesheet">
+    {% block extra_head %}{% endblock %}
+</head>
+<body id="top" class="d-flex flex-column min-vh-100">
+
+    <!-- ========== NAVBAR ========== -->
+    <header class="cs-navbar py-2 sticky-top">
+        <div class="container d-flex align-items-center justify-content-between gap-2">
+
+            <!-- Brand -->
+            <a href="{{ url_for('home') }}" class="navbar-brand d-flex align-items-center gap-2 text-decoration-none">
+                {% if college and college.logo and college.logo != 'default-logo.png' %}
+                    <img src="{{ url_for('admin.serve_uploads', filename='college/' + college.logo) }}" alt="Logo" class="rounded-circle flex-shrink-0" style="width: 32px; height: 32px; object-fit: contain; background: #ffffff; padding: 2px;">
+                {% else %}
+                    <i class="bi bi-mortarboard-fill flex-shrink-0"></i>
+                {% endif %}
+                <span class="text-truncate" style="max-width: 170px;">{{ college.college_short_name if college and college.college_short_name else (college.college_name if college else 'CampusSync') }}</span>
+                <span class="brand-tag d-none d-sm-inline-block ms-1">ERP v1.0</span>
+            </a>
+
+            <!-- Nav Links (Desktop) -->
+            <nav class="d-none d-lg-flex align-items-center gap-1">
+                <a href="{{ url_for('home') }}" class="nav-link {% if request.endpoint == 'home' %}active fw-bold text-white{% endif %}">Home</a>
+                <a href="{{ url_for('about') }}" class="nav-link {% if request.endpoint == 'about' %}active fw-bold text-white{% endif %}">About Us</a>
+                <a href="{{ url_for('courses') }}" class="nav-link {% if request.endpoint == 'courses' %}active fw-bold text-white{% endif %}">Programs</a>
+                <a href="{{ url_for('facilities') }}" class="nav-link {% if request.endpoint == 'facilities' %}active fw-bold text-white{% endif %}">Facilities</a>
+                <a href="{{ url_for('gallery') }}" class="nav-link {% if request.endpoint == 'gallery' %}active fw-bold text-white{% endif %}">Gallery</a>
+                <a href="{{ url_for('contact') }}" class="nav-link {% if request.endpoint == 'contact' %}active fw-bold text-white{% endif %}">Contact</a>
+            </nav>
+
+            <!-- Login, Results & Mobile Toggle -->
+            <div class="d-flex align-items-center gap-2">
+                <!-- 1. View Result Button (Desktop / Tablet) -->
+                <a href="{{ url_for('alumni.alumni_results') }}" class="btn-nav-alumni d-none d-sm-inline-flex align-items-center gap-1" title="View historical marks and download PDF marksheets">
+                    <i class="bi bi-mortarboard-fill"></i> <span>View Result</span>
+                </a>
+
+                <!-- 2. Login Dropdown Menu -->
+                <div class="dropdown">
+                    <button class="btn-nav-login dropdown-toggle d-inline-flex align-items-center gap-1.5" type="button" id="headerLoginDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-box-arrow-in-right"></i>
+                        <span>Login</span>
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-end cs-login-dropdown shadow-lg border-0 p-2 mt-2" aria-labelledby="headerLoginDropdown">
+                        <div class="dropdown-header d-flex align-items-center justify-content-between px-2 py-1">
+                            <span class="text-uppercase fw-bold text-muted" style="font-size: 0.7rem; letter-spacing: 0.05em;">Select Portal</span>
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 0.65rem;">CampusSync</span>
+                        </div>
+                        
+                        <!-- Student Login -->
+                        <a class="cs-login-item dropdown-item d-flex align-items-center gap-3 p-2 rounded-3" href="{{ url_for('student_login') }}">
+                            <div class="cs-login-item-icon student">
+                                <i class="bi bi-person-fill"></i>
+                            </div>
+                            <div class="cs-login-item-text">
+                                <div class="cs-login-item-title">Student Login</div>
+                                <div class="cs-login-item-desc">Attendance, marks &amp; notices</div>
+                            </div>
+                            <i class="bi bi-chevron-right cs-login-item-arrow ms-auto"></i>
+                        </a>
+
+                        <!-- Faculty Login -->
+                        <a class="cs-login-item dropdown-item d-flex align-items-center gap-3 p-2 rounded-3" href="{{ url_for('faculty_login') }}">
+                            <div class="cs-login-item-icon faculty">
+                                <i class="bi bi-briefcase-fill"></i>
+                            </div>
+                            <div class="cs-login-item-text">
+                                <div class="cs-login-item-title">Faculty Login</div>
+                                <div class="cs-login-item-desc">QR attendance, grading &amp; registers</div>
+                            </div>
+                            <i class="bi bi-chevron-right cs-login-item-arrow ms-auto"></i>
+                        </a>
+
+                        <div class="dropdown-divider my-1"></div>
+
+                        <!-- Admin Login -->
+                        <a class="cs-login-item dropdown-item d-flex align-items-center gap-3 p-2 rounded-3" href="{{ url_for('admin_login') }}">
+                            <div class="cs-login-item-icon admin">
+                                <i class="bi bi-shield-lock-fill"></i>
+                            </div>
+                            <div class="cs-login-item-text">
+                                <div class="cs-login-item-title">Admin Login</div>
+                                <div class="cs-login-item-desc">Control center &amp; system settings</div>
+                            </div>
+                            <i class="bi bi-chevron-right cs-login-item-arrow ms-auto"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- 3. Mobile Hamburger Toggle -->
+                <button class="btn btn-outline-light btn-sm d-lg-none p-1.5 border-0 d-inline-flex align-items-center justify-content-center" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobilePublicNav" aria-controls="mobilePublicNav" aria-label="Toggle Navigation Menu" style="width: 38px; height: 38px;">
+                    <i class="bi bi-list fs-3"></i>
+                </button>
+            </div>
+
+        </div>
+    </header>
+
+    <!-- Mobile Offcanvas Navigation Drawer -->
+    <div class="offcanvas offcanvas-start bg-dark text-white d-lg-none" tabindex="-1" id="mobilePublicNav" aria-labelledby="mobilePublicNavLabel" style="width: 290px;">
+        <div class="offcanvas-header border-bottom border-secondary border-opacity-25 py-3">
+            <div class="d-flex align-items-center gap-2 overflow-hidden">
+                {% if college and college.logo and college.logo != 'default-logo.png' %}
+                    <img src="{{ url_for('admin.serve_uploads', filename='college/' + college.logo) }}" alt="Logo" class="rounded-circle flex-shrink-0" style="width: 30px; height: 30px; object-fit: contain; background: #ffffff; padding: 2px;">
+                {% else %}
+                    <i class="bi bi-mortarboard-fill text-primary fs-5 flex-shrink-0"></i>
+                {% endif %}
+                <h5 class="offcanvas-title fw-bold m-0 fs-6 text-white text-truncate" id="mobilePublicNavLabel">{{ college.college_short_name if college and college.college_short_name else (college.college_name if college else 'CampusSync') }}</h5>
+            </div>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body d-flex flex-column justify-content-between p-3">
+            <nav class="nav flex-column gap-1.5 mb-4">
+                <a href="{{ url_for('home') }}" class="nav-link py-2 px-3 rounded-3 text-white d-flex align-items-center gap-2.5 {% if request.endpoint == 'home' %}bg-primary{% else %}bg-secondary bg-opacity-25{% endif %}">
+                    <i class="bi bi-house-door-fill text-info"></i> Home
+                </a>
+                <a href="{{ url_for('about') }}" class="nav-link py-2 px-3 rounded-3 text-white d-flex align-items-center gap-2.5 {% if request.endpoint == 'about' %}bg-primary{% else %}bg-secondary bg-opacity-25{% endif %}">
+                    <i class="bi bi-info-circle-fill text-info"></i> About Us
+                </a>
+                <a href="{{ url_for('courses') }}" class="nav-link py-2 px-3 rounded-3 text-white d-flex align-items-center gap-2.5 {% if request.endpoint == 'courses' %}bg-primary{% else %}bg-secondary bg-opacity-25{% endif %}">
+                    <i class="bi bi-mortarboard-fill text-info"></i> Programs &amp; Courses
+                </a>
+                <a href="{{ url_for('facilities') }}" class="nav-link py-2 px-3 rounded-3 text-white d-flex align-items-center gap-2.5 {% if request.endpoint == 'facilities' %}bg-primary{% else %}bg-secondary bg-opacity-25{% endif %}">
+                    <i class="bi bi-building-check text-info"></i> Campus Facilities
+                </a>
+                <a href="{{ url_for('gallery') }}" class="nav-link py-2 px-3 rounded-3 text-white d-flex align-items-center gap-2.5 {% if request.endpoint == 'gallery' %}bg-primary{% else %}bg-secondary bg-opacity-25{% endif %}">
+                    <i class="bi bi-images text-info"></i> Photo Gallery
+                </a>
+                <a href="{{ url_for('contact') }}" class="nav-link py-2 px-3 rounded-3 text-white d-flex align-items-center gap-2.5 {% if request.endpoint == 'contact' %}bg-primary{% else %}bg-secondary bg-opacity-25{% endif %}">
+                    <i class="bi bi-telephone-fill text-info"></i> Contact Us
+                </a>
+            </nav>
+            <div class="border-top border-secondary border-opacity-25 pt-3">
+                <a href="{{ url_for('alumni.alumni_results') }}" class="btn btn-outline-warning w-100 py-2 d-flex align-items-center justify-content-center gap-2 fw-semibold">
+                    <i class="bi bi-award-fill"></i> View Result Marksheets
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow-1">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- ========== FOOTER ========== -->
+    <footer class="cs-footer">
+        <div class="cs-footer-ambient-orb"></div>
+        <div class="container position-relative" style="z-index: 1;">
+            
+            <!-- Pre-Footer Banner Row -->
+            <div class="row align-items-center justify-content-between pb-4 mb-5 border-bottom border-secondary border-opacity-25 g-3">
+                <div class="col-lg-7 col-md-8">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="cs-footer-badge-icon">
+                            <i class="bi bi-mortarboard-fill text-primary fs-3"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-white mb-1 fw-bold" style="font-size: 1.15rem;">{{ college.college_name if college else 'CampusSync Academic ERP System' }}</h4>
+                            <p class="mb-0 small" style="color: #cbd5e1; max-width: 580px;">Unified digital campus infrastructure powering smart attendance, verified digital transcripts, and academic workflows.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-5 col-md-4 text-md-end d-flex align-items-center justify-content-md-end gap-2 flex-wrap">
+                    <a href="{{ url_for('alumni.alumni_results') }}" class="btn btn-outline-warning btn-sm px-3 py-2 fw-semibold rounded-pill" title="Check old semester internal marks">
+                        <i class="bi bi-patch-check-fill me-1"></i> Alumni Results
+                    </a>
+                    <a href="{{ url_for('contact') }}" class="btn btn-primary btn-sm px-3 py-2 fw-semibold rounded-pill">
+                        <i class="bi bi-envelope-paper-fill me-1"></i> Admissions Inquiry
+                    </a>
+                </div>
+            </div>
+
+            <!-- Main Footer Columns -->
+            <div class="row g-4 mb-2">
+                <!-- Column 1: College Info & Branding -->
+                <div class="col-lg-4 col-md-6">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        {% if college and college.logo and college.logo != 'default-logo.png' %}
+                            <img src="{{ url_for('admin.serve_uploads', filename='college/' + college.logo) }}" alt="Logo" class="footer-brand-logo">
+                        {% else %}
+                            <div class="footer-brand-logo d-flex align-items-center justify-content-center bg-primary text-white">
+                                <i class="bi bi-mortarboard-fill fs-5"></i>
+                            </div>
+                        {% endif %}
+                        <div>
+                            <h5 class="footer-brand-title mb-0">{{ college.college_short_name if college and college.college_short_name else (college.college_name if college else 'CampusSync ERP') }}</h5>
+                            <span style="font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: #38bdf8; font-weight: 600;">Smart Campus ERP System</span>
+                        </div>
+                    </div>
+
+                    <p class="footer-desc mb-3">
+                        {{ college.description if college and college.description else 'Next-generation smart campus management suite uniting students, educators, and administrators through real-time attendance, verifiable academic records, and paperless workflows.' }}
+                    </p>
+
+                    <!-- Status Pill -->
+                    <div class="mb-3">
+                        <div class="cs-footer-status">
+                            <span class="cs-status-dot"></span>
+                            <span>CampusSync v2.4 Operational • 99.9% Uptime</span>
+                        </div>
+                    </div>
+
+                    <!-- Social Media Links -->
+                    <div class="d-flex gap-2">
+                        <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" class="social-icon-btn social-linkedin" title="LinkedIn"><i class="bi bi-linkedin"></i></a>
+                        <a href="https://github.com" target="_blank" rel="noopener noreferrer" class="social-icon-btn social-github" title="GitHub"><i class="bi bi-github"></i></a>
+                        <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" class="social-icon-btn social-twitter" title="X (Twitter)"><i class="bi bi-twitter-x"></i></a>
+                        <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" class="social-icon-btn social-facebook" title="Facebook"><i class="bi bi-facebook"></i></a>
+                    </div>
+                </div>
+
+                <!-- Column 2: Public Navigation Links -->
+                <div class="col-lg-2 col-md-6">
+                    <h6 class="footer-heading">Quick Links</h6>
+                    <ul class="footer-link-list">
+                        <li><a href="{{ url_for('home') }}" class="footer-nav-link"><i class="bi bi-chevron-right"></i> Home</a></li>
+                        <li><a href="{{ url_for('about') }}" class="footer-nav-link"><i class="bi bi-chevron-right"></i> About Us</a></li>
+                        <li><a href="{{ url_for('courses') }}" class="footer-nav-link"><i class="bi bi-chevron-right"></i> Academic Programs</a></li>
+                        <li><a href="{{ url_for('facilities') }}" class="footer-nav-link"><i class="bi bi-chevron-right"></i> Campus Facilities</a></li>
+                        <li><a href="{{ url_for('gallery') }}" class="footer-nav-link"><i class="bi bi-chevron-right"></i> Campus Gallery</a></li>
+                        <li><a href="{{ url_for('contact') }}" class="footer-nav-link"><i class="bi bi-chevron-right"></i> Contact & Helpdesk</a></li>
+                        <li><a href="{{ url_for('alumni.alumni_results') }}" class="footer-nav-link text-warning fw-semibold"><i class="bi bi-patch-check-fill text-warning"></i> Alumni Results</a></li>
+                    </ul>
+                </div>
+
+                <!-- Column 3: Contact & Campus Details -->
+                <div class="col-lg-3 col-md-6">
+                    <h6 class="footer-heading">Campus Contact</h6>
+                    <div class="footer-contact-item">
+                        <div class="footer-contact-icon">
+                            <i class="bi bi-geo-alt-fill"></i>
+                        </div>
+                        <div>
+                            <span class="d-block text-white fw-semibold small">Main Campus</span>
+                            <span style="color: #cbd5e1;">{{ college.address if college and college.address else 'Main Campus, University Road' }}{% if college and college.city %}, {{ college.city }}{% endif %}{% if college and college.state %}, {{ college.state }}{% endif %}{% if college and college.pincode %} - {{ college.pincode }}{% endif %}</span>
+                        </div>
+                    </div>
+
+                    <div class="footer-contact-item">
+                        <div class="footer-contact-icon">
+                            <i class="bi bi-envelope-fill"></i>
+                        </div>
+                        <div>
+                            <span class="d-block text-white fw-semibold small">Official Email</span>
+                            <a href="mailto:{{ college.email if college and college.email else 'support@campussync.edu' }}">{{ college.email if college and college.email else 'support@campussync.edu' }}</a>
+                        </div>
+                    </div>
+
+                    <div class="footer-contact-item">
+                        <div class="footer-contact-icon">
+                            <i class="bi bi-telephone-fill"></i>
+                        </div>
+                        <div>
+                            <span class="d-block text-white fw-semibold small">Helpdesk Helpline</span>
+                            <a href="tel:{{ college.phone if college and college.phone else '+919876543210' }}">{{ college.phone if college and college.phone else '+91 98765 43210' }}</a>
+                        </div>
+                    </div>
+
+                    <div class="cs-footer-cert-badge mt-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-shield-check text-success fs-5"></i>
+                            <span style="font-size: 0.78rem; color: #a7f3d0; font-weight: 500;">AICTE Approved & NAAC Certified Records</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Column 4: System Architecture & Developer Credits -->
+                <div class="col-lg-3 col-md-6">
+                    <h6 class="footer-heading">Engineering</h6>
+                    <div class="cs-footer-dev-card">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <i class="bi bi-code-square text-primary"></i>
+                            <span class="fw-bold text-white small">Lead System Architects</span>
+                        </div>
+
+                        <!-- Devid Parmar -->
+                        <div class="cs-dev-chip mb-2">
+                            <div class="cs-dev-avatar devid">DP</div>
+                            <div>
+                                <span class="text-white fw-bold d-block" style="font-size: 0.84rem; line-height: 1.2;">Devid Parmar</span>
+                                <small style="color: #94a3b8; font-size: 0.73rem;">Full-Stack Architect</small>
+                            </div>
+                        </div>
+
+                        <!-- Akash Raval -->
+                        <div class="cs-dev-chip">
+                            <div class="cs-dev-avatar akash">AR</div>
+                            <div>
+                                <span class="text-white fw-bold d-block" style="font-size: 0.84rem; line-height: 1.2;">Akash Raval</span>
+                                <small style="color: #94a3b8; font-size: 0.73rem;">Systems & Architecture</small>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-1 flex-wrap mt-2 pt-2 border-top border-secondary border-opacity-25">
+                            <span class="badge" style="background: rgba(37,99,235,0.18); color: #93c5fd; font-size: 0.68rem; border: 1px solid rgba(37,99,235,0.35);">Python 3.11</span>
+                            <span class="badge" style="background: rgba(16,185,129,0.18); color: #6ee7b7; font-size: 0.68rem; border: 1px solid rgba(16,185,129,0.35);">Flask ERP</span>
+                            <span class="badge" style="background: rgba(245,158,11,0.18); color: #fde68a; font-size: 0.68rem; border: 1px solid rgba(245,158,11,0.35);">MySQL DB</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Copyright & Compliance Bar -->
+            <div class="cs-footer-bottom d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+                <div class="d-flex align-items-center gap-2">
+                    <span>&copy; 2026 <strong class="text-white">{{ college.college_name if college else 'CampusSync ERP Systems' }}</strong>. All rights reserved.</span>
+                </div>
+                <div class="d-flex align-items-center gap-3 flex-wrap justify-content-center">
+                    <a href="{{ url_for('about') }}" class="small text-decoration-none" style="color: #94a3b8;">About Institute</a>
+                    <span class="text-secondary opacity-75">&bull;</span>
+                    <a href="{{ url_for('courses') }}" class="small text-decoration-none" style="color: #94a3b8;">Programs</a>
+                    <span class="text-secondary opacity-75">&bull;</span>
+                    <a href="{{ url_for('facilities') }}" class="small text-decoration-none" style="color: #94a3b8;">Campus Life</a>
+                    <span class="text-secondary opacity-75">&bull;</span>
+                    <a href="{{ url_for('alumni.alumni_results') }}" class="small text-decoration-none text-warning">Alumni Verification</a>
+                    <span class="text-secondary opacity-75">&bull;</span>
+                    <span class="small" style="color: #cbd5e1;"><i class="bi bi-heart-fill text-danger me-1"></i> Academic Excellence</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Back to Top -->
+    <a href="#top" class="back-to-top" title="Back to top"><i class="bi bi-arrow-up"></i></a>
+
+    <!-- Bootstrap 5 Bundle JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

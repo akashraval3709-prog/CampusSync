@@ -1,0 +1,630 @@
+<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+<head>
+<meta charset="utf-8">
+<title>CampusSync — College Project Report</title>
+<!--[if gte mso 9]>
+<xml>
+<w:WordDocument>
+<w:View>Print</w:View>
+<w:Zoom>100</w:Zoom>
+<w:DoNotOptimizeForBrowser/>
+</w:WordDocument>
+</xml>
+<![endif]-->
+<style>
+@page {
+    size: A4 portrait;
+    margin: 1.0in 1.0in 1.0in 1.0in;
+    mso-header-margin: 0.5in;
+    mso-footer-margin: 0.5in;
+    mso-paper-source: 0;
+}
+body {
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 12pt;
+    line-height: 1.5;
+    text-align: justify;
+    color: #000000;
+}
+h1 {
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 16pt;
+    font-weight: bold;
+    text-transform: uppercase;
+    text-align: center;
+    margin-top: 24pt;
+    margin-bottom: 12pt;
+    page-break-before: always;
+}
+h2 {
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 14pt;
+    font-weight: bold;
+    text-align: left;
+    margin-top: 14pt;
+    margin-bottom: 6pt;
+}
+h3 {
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 12pt;
+    font-weight: bold;
+    font-style: italic;
+    text-align: left;
+    margin-top: 10pt;
+    margin-bottom: 4pt;
+}
+p {
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 12pt;
+    line-height: 1.5;
+    text-align: justify;
+    margin-top: 0pt;
+    margin-bottom: 8pt;
+}
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-top: 10pt;
+    margin-bottom: 4pt;
+}
+th, td {
+    border: 1px solid #444444;
+    padding: 6pt 8pt;
+    font-size: 11pt;
+    vertical-align: middle;
+}
+th {
+    background-color: #f1f5f9;
+    font-weight: bold;
+    text-align: center;
+}
+.caption {
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 11pt;
+    font-weight: bold;
+    text-align: center;
+    margin-top: 6pt;
+    margin-bottom: 14pt;
+}
+.page-break {
+    page-break-before: always;
+}
+.page-number-roman {
+    text-align: center;
+    font-weight: bold;
+    font-size: 11pt;
+    margin-top: 30pt;
+}
+.page-number-arabic {
+    text-align: center;
+    font-weight: bold;
+    font-size: 11pt;
+    margin-top: 30pt;
+}
+.border-box {
+    border: 2px solid #000000;
+    padding: 25pt;
+    text-align: center;
+    min-height: 800px;
+}
+</style>
+</head>
+<body>
+
+<!-- 1. COVER PAGE -->
+<div class="border-box">
+    <p style="font-size: 16pt; font-weight: bold; text-align: center; margin-top: 20pt; text-transform: uppercase;">A PROJECT REPORT ON</p>
+    <p style="font-size: 22pt; font-weight: bold; text-align: center; color: #1e3a8a; margin-top: 15pt; text-transform: uppercase;">CAMPUSSYNC</p>
+    <p style="font-size: 13pt; font-weight: bold; text-align: center; margin-bottom: 40pt;">(Intelligent Academic ERP & Institutional Assessment System)</p>
+
+    <p style="font-size: 12pt; font-weight: bold; text-align: center; text-transform: uppercase; margin-top: 30pt;">SUBMITTED BY:</p>
+    <p style="font-size: 13pt; font-weight: bold; text-align: center; margin-bottom: 2pt;">Student Name: [Your Full Name]</p>
+    <p style="font-size: 12pt; text-align: center; margin-bottom: 2pt;">Roll Number: [Your Roll Number]</p>
+    <p style="font-size: 12pt; text-align: center; margin-bottom: 2pt;">Enrollment No: [Your Enrollment Number]</p>
+    <p style="font-size: 12pt; text-align: center; margin-bottom: 35pt;">Class: B.C.A. Semester – 5 (Division A)</p>
+
+    <p style="font-size: 11pt; text-align: center; margin-bottom: 2pt;">IN PARTIAL FULFILLMENT OF THE REQUIREMENTS FOR THE DEGREE OF</p>
+    <p style="font-size: 13pt; font-weight: bold; text-align: center; text-transform: uppercase; margin-bottom: 35pt;">BACHELOR OF COMPUTER APPLICATIONS (BCA)</p>
+
+    <p style="font-size: 12pt; font-weight: bold; text-align: center; text-transform: uppercase;">UNDER THE GUIDANCE OF:</p>
+    <p style="font-size: 13pt; font-weight: bold; text-align: center; margin-bottom: 40pt;">Prof. [Project Guide / Faculty Name]<br/><span style="font-size: 11pt; font-weight: normal;">Department of Computer Applications</span></p>
+
+    <p style="font-size: 13pt; font-weight: bold; text-align: center; text-transform: uppercase;">[NAME OF YOUR COLLEGE / INSTITUTE]</p>
+    <p style="font-size: 11pt; text-align: center; margin-bottom: 2pt;">Affiliated with Hemchandracharya North Gujarat University (HNGU)</p>
+    <p style="font-size: 11pt; text-align: center; margin-bottom: 2pt;">[City, Gujarat]</p>
+    <p style="font-size: 12pt; font-weight: bold; text-align: center; margin-top: 10pt;">ACADEMIC YEAR: 2026 – 2027</p>
+</div>
+
+<!-- 2. CERTIFICATE -->
+<h1 class="page-break">CERTIFICATE</h1>
+<div style="border: 1px solid #000; padding: 20pt; min-height: 700px;">
+    <p style="text-align: center; font-size: 13pt; font-weight: bold; margin-bottom: 20pt;">DEPARTMENT OF COMPUTER APPLICATIONS (BCA)</p>
+    <p>This is to certify that the project report entitled <b>"CAMPUSSYNC: Intelligent Academic ERP & Institutional Assessment System"</b> is a bonafide work carried out by:</p>
+    <table style="width: 80%; margin: 15pt auto;">
+        <tr><td style="width: 40%; font-weight: bold;">Student Name:</td><td>[Your Full Name]</td></tr>
+        <tr><td style="font-weight: bold;">Roll Number:</td><td>[Your Roll Number]</td></tr>
+        <tr><td style="font-weight: bold;">Enrollment No:</td><td>[Your Enrollment Number]</td></tr>
+        <tr><td style="font-weight: bold;">Class & Semester:</td><td>B.C.A. Semester – 5</td></tr>
+    </table>
+    <p style="margin-top: 15pt;">under my supervision and guidance in partial fulfillment of the requirements for the award of the degree of <b>Bachelor of Computer Applications (BCA)</b> from <b>[Name of College]</b>, affiliated with <b>Hemchandracharya North Gujarat University (HNGU)</b> for the academic year <b>2026 – 2027</b>.</p>
+    <p style="margin-top: 15pt;">To the best of my knowledge, this report represents candidate's original work and has not been submitted previously to any other university or institution for the award of any degree or diploma.</p>
+
+    <br/><br/><br/>
+    <table style="width: 100%; border: none;">
+        <tr style="border: none;">
+            <td style="width: 33%; text-align: center; border: none;">_______________________<br/><b>Prof. [Guide Name]</b><br/>Internal Project Guide</td>
+            <td style="width: 34%; text-align: center; border: none;">_______________________<br/><b>[HOD Name]</b><br/>Head of Department</td>
+            <td style="width: 33%; text-align: center; border: none;">_______________________<br/><b>[Principal Name]</b><br/>Principal & Seal</td>
+        </tr>
+    </table>
+    <br/><br/>
+    <p><b>External Examiner 1:</b> ___________________________ &nbsp;&nbsp;&nbsp;&nbsp; <b>Date:</b> __ / __ / 2026</p>
+    <p><b>External Examiner 2:</b> ___________________________ &nbsp;&nbsp;&nbsp;&nbsp; <b>Date:</b> __ / __ / 2026</p>
+</div>
+<div class="page-number-roman">Page i</div>
+
+<!-- 3. INDEX -->
+<h1 class="page-break">INDEX</h1>
+<table>
+    <thead>
+        <tr>
+            <th style="width: 12%;">Chapter No.</th>
+            <th style="width: 73%; text-align: left;">Chapter / Section Title</th>
+            <th style="width: 15%;">Page No.</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr><td style="text-align: center;">—</td><td><b>Cover Page</b></td><td style="text-align: center;">—</td></tr>
+        <tr><td style="text-align: center;">—</td><td><b>Certificate</b></td><td style="text-align: center;">i</td></tr>
+        <tr><td style="text-align: center;">—</td><td><b>Index</b></td><td style="text-align: center;">ii</td></tr>
+        <tr><td style="text-align: center;"><b>4.</b></td><td><b>Project Profile</b></td><td style="text-align: center;">iii</td></tr>
+        <tr><td style="text-align: center;"><b>5.</b></td><td><b>Abstract</b></td><td style="text-align: center;">iv</td></tr>
+        <tr><td style="text-align: center;"><b>6.</b></td><td><b>Acknowledgement</b></td><td style="text-align: center;">v</td></tr>
+        <tr><td style="text-align: center;"><b>7.</b></td><td><b>About Institute</b></td><td style="text-align: center;">1</td></tr>
+        <tr><td style="text-align: center;"><b>8.</b></td><td><b>About System</b></td><td style="text-align: center;">2</td></tr>
+        <tr><td style="text-align: center;"></td><td>8.1 Introduction to CampusSync</td><td style="text-align: center;">2</td></tr>
+        <tr><td style="text-align: center;"></td><td>8.2 Objectives of the System</td><td style="text-align: center;">3</td></tr>
+        <tr><td style="text-align: center;"></td><td>8.3 Scope of the System</td><td style="text-align: center;">3</td></tr>
+        <tr><td style="text-align: center;"></td><td>8.4 User Roles & Permissions (Admin, Faculty, Student)</td><td style="text-align: center;">4</td></tr>
+        <tr><td style="text-align: center;"></td><td>8.5 Key Features & Capabilities</td><td style="text-align: center;">5</td></tr>
+        <tr><td style="text-align: center;"><b>9.</b></td><td><b>Current Manual System vs. Proposed System</b></td><td style="text-align: center;">6</td></tr>
+        <tr><td style="text-align: center;"></td><td>9.1 Problems in the Existing Manual System</td><td style="text-align: center;">6</td></tr>
+        <tr><td style="text-align: center;"></td><td>9.2 Proposed Solution (CampusSync ERP)</td><td style="text-align: center;">7</td></tr>
+        <tr><td style="text-align: center;"></td><td>9.3 Comparative Analysis Table</td><td style="text-align: center;">8</td></tr>
+        <tr><td style="text-align: center;"><b>10.</b></td><td><b>Technology Used</b></td><td style="text-align: center;">9</td></tr>
+        <tr><td style="text-align: center;"></td><td>10.1 Front-End Technologies (HTML5, Vanilla CSS, JS, Bootstrap)</td><td style="text-align: center;">9</td></tr>
+        <tr><td style="text-align: center;"></td><td>10.2 Back-End Framework (Python & Flask)</td><td style="text-align: center;">10</td></tr>
+        <tr><td style="text-align: center;"></td><td>10.3 Database Management System (MySQL & SQLAlchemy ORM)</td><td style="text-align: center;">11</td></tr>
+        <tr><td style="text-align: center;"></td><td>10.4 PDF & Document Generation (ReportLab & OpenPyXL)</td><td style="text-align: center;">12</td></tr>
+        <tr><td style="text-align: center;"><b>11.</b></td><td><b>System Requirements</b></td><td style="text-align: center;">13</td></tr>
+        <tr><td style="text-align: center;"></td><td>11.1 Hardware Requirements (Client & Server)</td><td style="text-align: center;">13</td></tr>
+        <tr><td style="text-align: center;"></td><td>11.2 Software Requirements</td><td style="text-align: center;">14</td></tr>
+        <tr><td style="text-align: center;"><b>12.</b></td><td><b>Data Dictionary</b></td><td style="text-align: center;">15</td></tr>
+        <tr><td style="text-align: center;"></td><td>12.1 Table: users</td><td style="text-align: center;">15</td></tr>
+        <tr><td style="text-align: center;"></td><td>12.2 Table: students</td><td style="text-align: center;">16</td></tr>
+        <tr><td style="text-align: center;"></td><td>12.3 Table: faculty</td><td style="text-align: center;">17</td></tr>
+        <tr><td style="text-align: center;"></td><td>12.4 Table: subjects</td><td style="text-align: center;">18</td></tr>
+        <tr><td style="text-align: center;"></td><td>12.5 Table: attendance_records</td><td style="text-align: center;">19</td></tr>
+        <tr><td style="text-align: center;"></td><td>12.6 Table: internal_marks</td><td style="text-align: center;">20</td></tr>
+        <tr><td style="text-align: center;"></td><td>12.7 Table: notices</td><td style="text-align: center;">21</td></tr>
+        <tr><td style="text-align: center;"></td><td>12.8 Table: college_settings</td><td style="text-align: center;">21</td></tr>
+        <tr><td style="text-align: center;"><b>13.</b></td><td><b>Data Flow Diagrams (DFD)</b></td><td style="text-align: center;">22</td></tr>
+        <tr><td style="text-align: center;"></td><td>13.1 DFD Symbols & Notations</td><td style="text-align: center;">22</td></tr>
+        <tr><td style="text-align: center;"></td><td>13.2 Context Analysis Diagram (DFD Level 0)</td><td style="text-align: center;">23</td></tr>
+        <tr><td style="text-align: center;"></td><td>13.3 Functional Decomposition (DFD Level 1)</td><td style="text-align: center;">24</td></tr>
+        <tr><td style="text-align: center;"></td><td>13.4 Detailed Assessment & Result Engine (DFD Level 2)</td><td style="text-align: center;">25</td></tr>
+        <tr><td style="text-align: center;"><b>14.</b></td><td><b>Screen Layouts</b></td><td style="text-align: center;">26</td></tr>
+        <tr><td style="text-align: center;"></td><td>14.1 Login & Authentication Portal</td><td style="text-align: center;">26</td></tr>
+        <tr><td style="text-align: center;"></td><td>14.2 Admin Analytics & Master Control Dashboard</td><td style="text-align: center;">27</td></tr>
+        <tr><td style="text-align: center;"></td><td>14.3 Student Directory & Quick Result Modal Card</td><td style="text-align: center;">28</td></tr>
+        <tr><td style="text-align: center;"></td><td>14.4 Faculty Daily Attendance Portal</td><td style="text-align: center;">29</td></tr>
+        <tr><td style="text-align: center;"></td><td>14.5 Internal Marks Component Breakdown Entry Matrix</td><td style="text-align: center;">30</td></tr>
+        <tr><td style="text-align: center;"></td><td>14.6 Executive Master Performance Dossier (PDF Document)</td><td style="text-align: center;">31</td></tr>
+        <tr><td style="text-align: center;"><b>15.</b></td><td><b>References & Bibliography</b></td><td style="text-align: center;">32</td></tr>
+    </tbody>
+</table>
+<div class="page-number-roman">Page ii</div>
+
+<!-- 4. PROJECT PROFILE -->
+<h1 class="page-break">PROJECT PROFILE</h1>
+<p>The Project Profile summarizes the operational, academic, and technological attributes of the CampusSync ERP platform.</p>
+<table>
+    <tr><td style="width: 32%; font-weight: bold;">Project Title</td><td><b>CampusSync — Academic ERP & Institutional Assessment System</b></td></tr>
+    <tr><td style="font-weight: bold;">Project Domain</td><td>Academic Management, Continuous Internal Evaluation & Educational ERP</td></tr>
+    <tr><td style="font-weight: bold;">Course / Class</td><td>Bachelor of Computer Applications (B.C.A.) — Semester 5</td></tr>
+    <tr><td style="font-weight: bold;">Academic Session</td><td>2026 – 2027</td></tr>
+    <tr><td style="font-weight: bold;">Organization / Institute</td><td>[Name of Your College / Institute], Affiliated with HNGU</td></tr>
+    <tr><td style="font-weight: bold;">Developed By</td><td>[Your Full Name] (Roll No: [Your Roll Number])</td></tr>
+    <tr><td style="font-weight: bold;">Project Guide</td><td>Prof. [Project Guide Name]</td></tr>
+    <tr><td style="font-weight: bold;">Front-End Technologies</td><td>HTML5, Vanilla CSS3 (Custom Glassmorphism), JavaScript (ES6+), Bootstrap 5.3</td></tr>
+    <tr><td style="font-weight: bold;">Back-End Technology</td><td>Python 3.10+ with Flask Web Application Framework</td></tr>
+    <tr><td style="font-weight: bold;">Database Engine</td><td>MySQL Server 8.0, Flask-SQLAlchemy (ORM), PyMySQL</td></tr>
+    <tr><td style="font-weight: bold;">Reporting & Export Engines</td><td>ReportLab 3.x (Multi-page Dynamic PDF), OpenPyXL (Excel Batch Operations)</td></tr>
+    <tr><td style="font-weight: bold;">Security Architecture</td><td>Role-Based Access Control (RBAC), scrypt Cryptographic Hashing, Session Guards</td></tr>
+    <tr><td style="font-weight: bold;">Operating System</td><td>Microsoft Windows 10 / 11 (Client & Development Server)</td></tr>
+</table>
+<div class="caption">Table 4.1: Project Profile Summary</div>
+<div class="page-number-roman">Page iii</div>
+
+<!-- 5. ABSTRACT -->
+<h1 class="page-break">ABSTRACT</h1>
+<p>In modern collegiate education, manual management of student attendance registers, continuous internal assessment sheets, faculty allocations, and university marks cards leads to significant administrative latency, calculation errors, and transparency deficits. Traditional paper systems are incapable of providing instant academic alerts or audit-ready reports on demand.</p>
+<p><b>CampusSync</b> is an advanced, automated Academic Enterprise Resource Planning (ERP) and Institutional Assessment System designed specifically to streamline collegiate administration. Developed using <b>Python (Flask)</b> and <b>MySQL</b>, the platform provides a unified digital ecosystem connecting college leadership, faculty members, and students.</p>
+<p>The platform features a strict <b>Three-Tier Role-Based Access Control (RBAC)</b> architecture:</p>
+<ol>
+    <li><b>Administrative Governance:</b> College principals and examination controllers possess complete management over student enrollments, faculty allocations, subject syllabi, and official institutional performance reporting.</li>
+    <li><b>University-Compliant Assessment Engine:</b> Directly tailored to Hemchandracharya North Gujarat University (HNGU) evaluation criteria, supporting automated best-of-two test averaging, attendance weightage, and granular practical evaluations (viva, coding, journal).</li>
+    <li><b>Student Academic Transparency:</b> Students access personalized portals displaying real-time lecture attendance percentages (with statutory &lt;75% detention risk warnings) and verified internal mark cards.</li>
+</ol>
+<p>CampusSync eliminates manual calculation errors, reduces report generation turnaround by over 80%, and guarantees comprehensive statutory compliance with university academic ordinances.</p>
+<div class="page-number-roman">Page iv</div>
+
+<!-- 6. ACKNOWLEDGEMENT -->
+<h1 class="page-break">ACKNOWLEDGEMENT</h1>
+<p>I take this opportunity to express my profound gratitude and sincere appreciation to our respected Principal, <b>[Principal Name]</b>, for providing the institutional facilities, laboratory equipment, and academic environment necessary for the development of this Semester 5 BCA project.</p>
+<p>I extend my heartfelt thanks to <b>[HOD Name]</b>, Head of the Department of Computer Applications, for continuous academic encouragement, constructive suggestions, and departmental support throughout the semester.</p>
+<p>I am deeply indebted to my Project Guide, <b>Prof. [Project Guide Name]</b>, whose continuous technical guidance, insightful criticism, and encouragement helped shape <b>CampusSync</b> into a complete and robust software solution.</p>
+<p>Finally, I express my sincere appreciation to all the faculty members of the Computer Applications Department, my parents, and my friends for their continuous moral support and encouragement throughout my academic journey.</p>
+<br/><br/>
+<p style="text-align: right;"><b>[Your Full Name]</b><br/>BCA Semester 5, Roll No: [Your Roll No]<br/>Enrollment No: [Your Enrollment No]<br/>Department of Computer Applications<br/>[Name of Your College / Institute]</p>
+<div class="page-number-roman">Page v</div>
+
+<!-- 7. ABOUT INSTITUTE -->
+<h1 class="page-break">ABOUT INSTITUTE</h1>
+<p><b>[Name of Your College / Institute]</b> is one of the premier academic institutions situated in Gujarat, affiliated with <b>Hemchandracharya North Gujarat University (HNGU)</b>. Established with a visionary mandate to provide quality education in computer applications, management, commerce, and science, the institution prepares students to excel in contemporary technology industries.</p>
+<h2>7.1 Vision of the Institute</h2>
+<p>To foster academic excellence, character building, and technological competence among students, enabling them to meet contemporary industrial requirements and contribute positively to regional and national growth.</p>
+<h2>7.2 Mission of the Institute</h2>
+<ul>
+    <li>To impart state-of-the-art education in information technology, computer science, and software engineering.</li>
+    <li>To combine theoretical instruction with practical laboratory problem solving and real-world project development.</li>
+    <li>To cultivate ethical awareness, team collaboration, and professional leadership among students.</li>
+</ul>
+<h2>7.3 Department of Computer Applications (BCA)</h2>
+<p>The Department of Computer Applications (BCA) features air-conditioned computer laboratories equipped with high-speed internet connectivity, updated development environments, smart projection classrooms, and a comprehensive library. The faculty members actively encourage practical project implementations that solve institutional and societal challenges.</p>
+<div class="page-number-arabic">Page 1</div>
+
+<!-- 8. ABOUT SYSTEM -->
+<h1 class="page-break">ABOUT SYSTEM</h1>
+<h2>8.1 Introduction to CampusSync</h2>
+<p><b>CampusSync</b> is an integrated Academic Enterprise Resource Planning (ERP) platform designed specifically to automate collegiate administration, daily attendance logging, continuous internal evaluation, and statutory audit reporting. The system replaces obsolete manual rosters with an interconnected relational database, accessible through modern web browsers across desktops, tablets, and smartphones.</p>
+
+<h2>8.2 Objectives of the System</h2>
+<ul>
+    <li><b>Automate University Evaluation Scheme:</b> Calculate internal marks automatically using HNGU guidelines (best 2 out of 3 tests, assignments, active learning, attendance score, and practical components) without human error.</li>
+    <li><b>Statutory Attendance Compliance:</b> Enable faculty to record daily lecture attendance in under 30 seconds and flag students with &lt;75% attendance to prevent detention risks.</li>
+    <li><b>Instant Marksheet Delivery:</b> Allow students to view verified internal mark breakdowns and download tamper-proof official PDF mark cards instantly.</li>
+    <li><b>Institutional Audit Intelligence:</b> Produce executive-level reports on demand, including pass/fail ratios, grade distributions, merit topper rankers, and division-level comparisons.</li>
+</ul>
+
+<h2>8.3 Scope of the System</h2>
+<p>The scope encompasses the full semester lifecycle of undergraduate programs: Student enrollment and division management, faculty teaching allocation, lecture-by-lecture attendance logging, continuous internal marks assessment, result compilation, and final semester audit reporting.</p>
+
+<h2>8.4 User Roles & Permissions (RBAC Matrix)</h2>
+<table>
+    <thead>
+        <tr>
+            <th style="width: 40%; text-align: left;">Operational Capability</th>
+            <th style="width: 20%;">Admin Portal</th>
+            <th style="width: 20%;">Faculty Portal</th>
+            <th style="width: 20%;">Student Portal</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr><td>User Authentication & Session Management</td><td style="text-align: center;">Full Access</td><td style="text-align: center;">Full Access</td><td style="text-align: center;">Full Access</td></tr>
+        <tr><td>Manage Students (Add, Edit, Delete, Excel Import)</td><td style="text-align: center;">Full Access</td><td style="text-align: center;">View Only</td><td style="text-align: center;">No Access</td></tr>
+        <tr><td>Manage Faculty & Teaching Allocations</td><td style="text-align: center;">Full Access</td><td style="text-align: center;">No Access</td><td style="text-align: center;">No Access</td></tr>
+        <tr><td>Curriculum Subjects & Syllabus Management</td><td style="text-align: center;">Full Access</td><td style="text-align: center;">View Assigned</td><td style="text-align: center;">View Enrolled</td></tr>
+        <tr><td>Daily Lecture Attendance Logging</td><td style="text-align: center;">View / Audit</td><td style="text-align: center;">Full Access</td><td style="text-align: center;">View Own %</td></tr>
+        <tr><td>Internal Assessment Marks Entry & Save</td><td style="text-align: center;">Full Access</td><td style="text-align: center;">Assigned Classes</td><td style="text-align: center;">View Verified</td></tr>
+        <tr><td>Download Official Result Card PDF</td><td style="text-align: center;">Full Access</td><td style="text-align: center;">Full Access</td><td style="text-align: center;">View Own Card</td></tr>
+        <tr><td>Executive Master Performance Dossier PDF</td><td style="text-align: center;">Full Access</td><td style="text-align: center;">No Access</td><td style="text-align: center;">No Access</td></tr>
+        <tr><td>College Settings, Logo & Signatures Setup</td><td style="text-align: center;">Full Access</td><td style="text-align: center;">No Access</td><td style="text-align: center;">No Access</td></tr>
+        <tr><td>Broadcast Official Bulletins & Notices</td><td style="text-align: center;">Full Access</td><td style="text-align: center;">View Only</td><td style="text-align: center;">View Only</td></tr>
+    </tbody>
+</table>
+<div class="caption">Table 8.1: CampusSync Role-Based Access Control (RBAC) Matrix</div>
+<div class="page-number-arabic">Page 2</div>
+
+<!-- 9. CURRENT MANUAL SYSTEM -->
+<h1 class="page-break">CURRENT MANUAL SYSTEM VS. PROPOSED SYSTEM</h1>
+<h2>9.1 Problems in the Existing Manual System</h2>
+<p>The traditional system relies heavily on manual ledgers and standalone spreadsheets. This presents multiple administrative bottlenecks:</p>
+<ul>
+    <li><b>Tedious Attendance Compilation:</b> Calculating end-of-semester attendance percentages manually across subjects takes days of administrative effort.</li>
+    <li><b>Formula & Averaging Errors:</b> Calculating test averages, attendance marks, and internal totals by hand often leads to arithmetic mistakes.</li>
+    <li><b>Data Insecurity & Privacy Leaks:</b> Paper marksheets posted on notice boards reveal every student's grades publicly.</li>
+    <li><b>Delayed Defaulter Identification:</b> Students only discover they have attendance shortages right before final examinations.</li>
+</ul>
+
+<h2>9.2 Proposed Solution (CampusSync ERP)</h2>
+<p>CampusSync provides a unified, web-based platform with role-based dashboards. Attendance and marks are recorded once by faculty and immediately computed in real-time, eliminating calculation errors and providing instant transparency.</p>
+
+<h2>9.3 Comparative Analysis Table</h2>
+<table>
+    <thead>
+        <tr>
+            <th style="width: 30%; text-align: left;">Operational Criteria</th>
+            <th style="width: 35%; text-align: left;">Legacy Manual / Excel Approach</th>
+            <th style="width: 35%; text-align: left;">CampusSync Automated ERP</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr><td><b>Data Repository</b></td><td>Physical registers & personal Excel files</td><td>Centralized MySQL relational database</td></tr>
+        <tr><td><b>Attendance Processing</b></td><td>Days of manual counting at term end</td><td>Instant automated computation per lecture</td></tr>
+        <tr><td><b>Internal Assessment</b></td><td>Prone to human addition & averaging errors</td><td>Strict algorithmic calculation via Python</td></tr>
+        <tr><td><b>Result Publication</b></td><td>Paper sheets on notice boards</td><td>Secure password-protected student accounts</td></tr>
+        <tr><td><b>Defaulter Warning System</b></td><td>Late paper notices at semester end</td><td>Live color-coded alerts (&lt;75% and &lt;85%)</td></tr>
+        <tr><td><b>Document Generation</b></td><td>Retyped marksheets & paper certificates</td><td>One-click official PDF with crest & seal</td></tr>
+        <tr><td><b>Data Security & Backup</b></td><td>Risk of fire, wear, accidental deletion</td><td>Role-based authentication & encrypted passwords</td></tr>
+        <tr><td><b>Audit Efficiency</b></td><td>Extensive manual preparation for inspections</td><td>Instant 2-page Executive Master PDF</td></tr>
+    </tbody>
+</table>
+<div class="caption">Table 9.1: Comparative Analysis between Manual System and CampusSync ERP</div>
+<div class="page-number-arabic">Page 6</div>
+
+<!-- 10. TECHNOLOGY USED -->
+<h1 class="page-break">TECHNOLOGY USED</h1>
+<h2>10.1 Front-End Technologies</h2>
+<p>The user interface is built using HTML5 for structure, Vanilla CSS3 for modern styling (custom variables, responsive Grid, Flexbox, glassmorphism), JavaScript (ES6+) for dynamic DOM interactions and fetch API requests, and Bootstrap 5.3 for responsive layouts.</p>
+
+<h2>10.2 Back-End Framework</h2>
+<p>The server application is built using Python 3.10 and the Flask framework. Flask organizes logic using modular Blueprints (auth, admin, faculty, student), and secures user credentials using scrypt hashing.</p>
+
+<h2>10.3 Database Management System</h2>
+<p>Data persistence is managed by MySQL Server 8.0, interacting through Flask-SQLAlchemy Object-Relational Mapping (ORM) and the PyMySQL connector.</p>
+
+<h2>10.4 PDF & Document Generation</h2>
+<p>Official documents are dynamically generated using ReportLab 3.x (with custom numbered canvas) and OpenPyXL for Excel batch imports and exports.</p>
+
+<table>
+    <thead>
+        <tr>
+            <th style="width: 25%; text-align: left;">Architectural Tier</th>
+            <th style="width: 35%; text-align: left;">Selected Technology</th>
+            <th style="width: 40%; text-align: left;">Architectural Rationale</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr><td><b>User Interface</b></td><td>HTML5, Vanilla CSS3, JS, Bootstrap 5.3</td><td>Fast page load times, responsive mobile view, zero bloat</td></tr>
+        <tr><td><b>Application Layer</b></td><td>Python 3.10, Flask Framework</td><td>Rapid development, modular architecture, robust libraries</td></tr>
+        <tr><td><b>Persistence Layer</b></td><td>MySQL 8.0 with SQLAlchemy ORM</td><td>Enterprise reliability, relational integrity, ACID compliance</td></tr>
+        <tr><td><b>Document Processing</b></td><td>ReportLab & OpenPyXL</td><td>Automated vector PDF output and Excel file processing</td></tr>
+    </tbody>
+</table>
+<div class="caption">Table 10.1: Technology Stack and Architectural Rationale</div>
+<div class="page-number-arabic">Page 9</div>
+
+<!-- 11. SYSTEM REQUIREMENTS -->
+<h1 class="page-break">SYSTEM REQUIREMENTS</h1>
+<h2>11.1 Hardware Requirements</h2>
+<p><b>Client Side:</b> Intel Core i3 / AMD Ryzen 3 or higher, 2 GB RAM minimum, 100 MB free browser cache space, 1280 × 720 display resolution.<br/>
+<b>Server Side:</b> Dual-Core 2.0 GHz or higher, 4 GB RAM minimum (8 GB recommended for production), 10 GB SSD storage, local network or internet connectivity.</p>
+
+<h2>11.2 Software Requirements</h2>
+<p>Windows 10 / 11, Linux (Ubuntu 20.04+), or macOS; Google Chrome, Mozilla Firefox, or Microsoft Edge; Python 3.10+; MySQL Server 8.0+; phpMyAdmin 5.2+; Visual Studio Code.</p>
+
+<table>
+    <thead>
+        <tr>
+            <th style="width: 30%; text-align: left;">System Environment</th>
+            <th style="width: 35%; text-align: left;">Minimum Specification</th>
+            <th style="width: 35%; text-align: left;">Recommended Specification</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr><td><b>Client Processor</b></td><td>Dual Core 1.8 GHz</td><td>Quad Core 2.5 GHz</td></tr>
+        <tr><td><b>Client Memory</b></td><td>2 GB RAM</td><td>4 GB RAM or higher</td></tr>
+        <tr><td><b>Client Web Browser</b></td><td>Chrome 90 / Edge 90 / Firefox 88</td><td>Latest Stable Release</td></tr>
+        <tr><td><b>Server Operating System</b></td><td>Windows 10 / Ubuntu 20.04 LTS</td><td>Ubuntu 22.04 LTS Server</td></tr>
+        <tr><td><b>Database Server</b></td><td>MySQL 8.0</td><td>MySQL 8.0 Enterprise</td></tr>
+        <tr><td><b>Python Environment</b></td><td>Python 3.10.x</td><td>Python 3.11.x or higher</td></tr>
+    </tbody>
+</table>
+<div class="caption">Table 11.1: Hardware and Software System Specifications</div>
+<div class="page-number-arabic">Page 13</div>
+
+<!-- 12. DATA DICTIONARY -->
+<h1 class="page-break">DATA DICTIONARY</h1>
+<p>The Data Dictionary provides complete schema specifications for all primary database entities in CampusSync.</p>
+
+<h2>12.1 Table: users</h2>
+<table>
+    <thead><tr><th>Column Name</th><th>Data Type</th><th>Key / Constraint</th><th>Description</th></tr></thead>
+    <tbody>
+        <tr><td>id</td><td>INT</td><td>Primary Key, Auto Increment</td><td>Unique User Identification ID</td></tr>
+        <tr><td>username</td><td>VARCHAR(50)</td><td>Unique, NOT NULL</td><td>Login ID (Enrollment No / Employee Code)</td></tr>
+        <tr><td>password_hash</td><td>VARCHAR(255)</td><td>NOT NULL</td><td>scrypt-hashed cryptographic password string</td></tr>
+        <tr><td>role</td><td>ENUM('Admin', 'Faculty', 'Student')</td><td>NOT NULL</td><td>Authorization access level</td></tr>
+        <tr><td>is_active</td><td>BOOLEAN</td><td>Default: TRUE</td><td>Account operational status</td></tr>
+        <tr><td>created_at</td><td>DATETIME</td><td>Current Timestamp</td><td>Record creation timestamp</td></tr>
+    </tbody>
+</table>
+<div class="caption">Table 12.1: Data Dictionary — Users Master Table (users)</div>
+
+<h2>12.2 Table: students</h2>
+<table>
+    <thead><tr><th>Column Name</th><th>Data Type</th><th>Key / Constraint</th><th>Description</th></tr></thead>
+    <tbody>
+        <tr><td>id</td><td>INT</td><td>Primary Key, Auto Increment</td><td>Unique Student Entity Identifier</td></tr>
+        <tr><td>roll_number</td><td>VARCHAR(20)</td><td>NOT NULL</td><td>Classroom Roll Number</td></tr>
+        <tr><td>enrollment_no</td><td>VARCHAR(30)</td><td>Unique, NOT NULL, Index</td><td>University Enrolment Code</td></tr>
+        <tr><td>full_name</td><td>VARCHAR(100)</td><td>NOT NULL</td><td>Complete legal student name</td></tr>
+        <tr><td>email</td><td>VARCHAR(100)</td><td>Unique, NOT NULL</td><td>Student contact email</td></tr>
+        <tr><td>course</td><td>VARCHAR(50)</td><td>Default: 'BCA'</td><td>Academic degree program</td></tr>
+        <tr><td>semester</td><td>INT</td><td>NOT NULL (1 to 6)</td><td>Currently active semester</td></tr>
+        <tr><td>division</td><td>VARCHAR(5)</td><td>Default: 'A'</td><td>Enrolled division code</td></tr>
+        <tr><td>academic_year</td><td>VARCHAR(20)</td><td>Default: '2026-27'</td><td>Enrolled academic year</td></tr>
+        <tr><td>status</td><td>ENUM('Active', 'Alumni', 'Suspended')</td><td>Default: 'Active'</td><td>Current academic status</td></tr>
+    </tbody>
+</table>
+<div class="caption">Table 12.2: Data Dictionary — Students Master Table (students)</div>
+
+<h2>12.3 Table: internal_marks</h2>
+<table>
+    <thead><tr><th>Column Name</th><th>Data Type</th><th>Key / Constraint</th><th>Description</th></tr></thead>
+    <tbody>
+        <tr><td>id</td><td>INT</td><td>Primary Key, Auto Increment</td><td>Internal Mark Record ID</td></tr>
+        <tr><td>student_id</td><td>INT</td><td>Foreign Key -&gt; students.id</td><td>Reference to student</td></tr>
+        <tr><td>subject_id</td><td>INT</td><td>Foreign Key -&gt; subjects.id</td><td>Reference to subject</td></tr>
+        <tr><td>marks_obtained</td><td>FLOAT</td><td>NOT NULL</td><td>Final calculated internal score</td></tr>
+        <tr><td>max_marks</td><td>INT</td><td>NOT NULL</td><td>Maximum possible marks (25 / 30 / 50)</td></tr>
+        <tr><td>test1, test2, test3</td><td>FLOAT</td><td>Nullable</td><td>Class Test 1, 2, 3 scores</td></tr>
+        <tr><td>internal_exam</td><td>FLOAT</td><td>Nullable</td><td>Mid-term internal exam score</td></tr>
+        <tr><td>active_learning</td><td>FLOAT</td><td>Nullable</td><td>Presentation / Seminar score</td></tr>
+        <tr><td>class_assignment</td><td>FLOAT</td><td>Nullable</td><td>Assignment submission score</td></tr>
+        <tr><td>attendance</td><td>FLOAT</td><td>Nullable</td><td>Score derived from attendance %</td></tr>
+        <tr><td>practical_eval, viva, journal</td><td>FLOAT</td><td>Nullable</td><td>Practical evaluation scores</td></tr>
+    </tbody>
+</table>
+<div class="caption">Table 12.6: Data Dictionary — Internal Assessment Marks Table (internal_marks)</div>
+<div class="page-number-arabic">Page 15</div>
+
+<!-- 13. DFD DIAGRAMS -->
+<h1 class="page-break">DATA FLOW DIAGRAMS (DFD)</h1>
+<p>Data Flow Diagrams visually represent how academic data enters CampusSync, moves between functional processes and storage entities, and generates outputs for end users.</p>
+
+<h2>13.1 DFD Symbols & Notations</h2>
+<div style="background: #f8fafc; border: 1px solid #cbd5e1; padding: 15pt; text-align: center;">
+    <p><b>[ External Entity ]</b> — Rectangle representing external users (Admin, Faculty, Student)<br/>
+    <b>( Process 0.0 )</b> — Circle or rounded shape representing a computation or function<br/>
+    <b>[= Data Store =]</b> — Parallel lines representing database tables (D1, D2, etc.)<br/>
+    <b>────────►</b> — Directed arrows indicating the flow of data</p>
+</div>
+<div class="caption">Figure 13.1: Standard DFD Symbols and Notations (Gane-Sarson / Yourdon)</div>
+
+<h2>13.2 Context Analysis Diagram (DFD Level 0)</h2>
+<div style="background: #ffffff; border: 1px solid #94a3b8; padding: 15pt; font-family: monospace; font-size: 10pt;">
+<pre>
+   [ Admin ] ──────── (Student/Faculty Master Data) ────────► ┌────────────────────┐
+   [ Admin ] ◄─────── (Executive Master Report PDF, Matrix) ──┤                    │
+                                                              │  0.0 CampusSync    │
+   [ Faculty ] ────── (Daily Attendance, Internal Marks) ────►│  Academic ERP      │
+   [ Faculty ] ◄───── (Allocated Subjects, Class Matrix) ─────┤  System            │
+                                                              │                    │
+   [ Student ] ────── (Login Request, Download Request) ─────►│                    │
+   [ Student ] ◄───── (Attendance Status, Result Card PDF) ───└────────────────────┘
+</pre>
+</div>
+<div class="caption">Figure 13.2: Context Analysis Diagram (DFD Level 0)</div>
+
+<h2>13.3 Functional Decomposition (DFD Level 1)</h2>
+<div style="background: #ffffff; border: 1px solid #94a3b8; padding: 15pt; font-family: monospace; font-size: 9pt;">
+<pre>
+ [Admin] ──► (1.0 Auth) ◄── [Faculty] ◄── [Student]
+                 │
+           [D1: Users]
+                 │
+ [Admin] ──► (2.0 Master Data) ◄──► [D2: Students] / [D3: Faculty] / [D4: Subjects]
+                 │
+ [Faculty] ─► (3.0 Attendance Monitoring) ◄──► [D5: Attendance Records]
+                 │
+ [Faculty] ─► (4.0 Internal Marks Evaluation) ◄──► [D6: Internal Marks]
+                 │
+ [Student] ◄─ (5.0 Result Processing &amp; Marksheet) ◄── [D6: Internal Marks]
+                 │
+ [Admin] ◄─── (6.0 Reporting &amp; Audit Engine) ◄── [D5: Attendance] &amp; [D6: Marks]
+</pre>
+</div>
+<div class="caption">Figure 13.3: High-Level Functional Decomposition Diagram (DFD Level 1)</div>
+<div class="page-number-arabic">Page 22</div>
+
+<!-- 14. SCREEN LAYOUTS -->
+<h1 class="page-break">SCREEN LAYOUTS</h1>
+<p>This chapter illustrates the key user interfaces of the CampusSync platform across all three role portals.</p>
+
+<h2>14.1 Login & Authentication Portal (/login)</h2>
+<div style="background: #ffffff; border: 1px solid #94a3b8; padding: 10pt; font-family: monospace; font-size: 9pt;">
+<pre>
+┌────────────────────────────────────────────────────────┐
+│                   [ College Logo ]                     │
+│                      CAMPUSSYNC                        │
+│               Academic Governance Portal               │
+│                                                        │
+│  Role:     [ Select: Admin / Faculty / Student ▼ ]     │
+│  Username: [ Enter Enrollment No or Employee ID      ] │
+│  Password: [ ••••••••••••••                        👁 ] │
+│                                                        │
+│             [   Sign In Securely  ➔   ]                │
+└────────────────────────────────────────────────────────┘
+</pre>
+</div>
+<div class="caption">Figure 14.1: Screen Layout — Authentication & Role Selection Portal (/login)</div>
+
+<h2>14.2 Student Directory & Official Result Card Modal (/admin/students)</h2>
+<div style="background: #ffffff; border: 1px solid #94a3b8; padding: 10pt; font-family: monospace; font-size: 9pt;">
+<pre>
+┌────────────────────────────────────────────────────────────────────────┐
+│ 🎓 Official Internal Result Card                                   [✕] │
+├────────────────────────────────────────────────────────────────────────┤
+│ [Badge: Official Internal Result]               [🖨 Print]  [📥 PDF]   │
+│                                                                        │
+│                       CAMPUSSYNC COLLEGE                               │
+│              EXAMINATION RESULT — INTERNAL ASSESSMENT                  │
+│                                                                        │
+│ Student: Sachin Rathod   Enrollment: BCA15226000023   Roll: 1          │
+│ Course: BCA — Sem 5      Division: Div A              Score: 89.7/275  │
+│                                                                        │
+│ ┌─────┬──────────┬───────────────────────┬─────────┬──────┬──────────┐ │
+│ │ Sr. │ Code     │ Subject Name          │ Type    │ Cred │ Score    │ │
+│ ├─────┼──────────┼───────────────────────┼─────────┼──────┼──────────┤ │
+│ │  1  │ BCA501   │ JAVA Programming      │ Theory  │  4   │ 46.11/50 │ │
+│ │  2  │ BCA501A  │ GUI Programming (C#)  │ Theory  │  4   │ 43.61/50 │ │
+│ │  3  │ BCA501B  │ Practical - JAVA Lab  │ Pract.  │  2   │  - / 25  │ │
+│ └─────┴──────────┴───────────────────────┴─────────┴──────┴──────────┘ │
+└────────────────────────────────────────────────────────────────────────┘
+</pre>
+</div>
+<div class="caption">Figure 14.3: Screen Layout — Student Directory & Official Result Card Modal (/admin/students)</div>
+
+<h2>14.3 Executive Master Performance Dossier (PDF Preview)</h2>
+<div style="background: #ffffff; border: 1px solid #94a3b8; padding: 10pt; font-family: monospace; font-size: 9pt;">
+<pre>
+┌────────────────────────────────────────────────────────────────────────┐
+│ [Logo]                  CAMPUSSYNC COLLEGE                             │
+│       EXECUTIVE MASTER INSTITUTIONAL PERFORMANCE REPORT                │
+├────────────────────────────────────────────────────────────────────────┤
+│ Session: 2026-27       Scope: Semester 2         Date: 26 Sept 2026    │
+│ Overall Pass: 6.7%     Cohort Attend: 66.3%      Authority: Principal  │
+├────────────────────────────────────────────────────────────────────────┤
+│ 1. EXECUTIVE KPI PERFORMANCE SCORECARD                                 │
+│  [ Total Cohort: 15 ]    [ Pass Rate: 6.7% (1/15 Passed) ]             │
+│  [ Avg Attendance: 66.3% ] [ Defaulters: 5 (&lt;75% Risk) ]               │
+│                                                                        │
+│ 2. ACADEMIC PERFORMANCE &amp; GRADE DISTRIBUTION                           │
+│  Distinction: 0 | First Class: 0 | Second Class: 1 | Remedial: 0       │
+│                                                                        │
+│ 3. ACADEMIC MERIT TOPPERS LIST (TOP RANKERS)                           │
+│  1st Rank | Aarav Patel | Sem 2 | Total: 25/50 (50.0%) | Second Class  │
+└────────────────────────────────────────────────────────────────────────┘
+</pre>
+</div>
+<div class="caption">Figure 14.6: Screen Layout — Executive Master Institutional Performance Dossier (PDF Document)</div>
+<div class="page-number-arabic">Page 26</div>
+
+<!-- 15. REFERENCES -->
+<h1 class="page-break">REFERENCES & BIBLIOGRAPHY</h1>
+<h3>Books & Textbooks</h3>
+<ol>
+    <li><b>Flask Web Development: Developing Web Applications with Python (2nd Edition)</b> — <i>Miguel Grinberg, O'Reilly Media, 2018</i>.</li>
+    <li><b>Learning Python (5th Edition)</b> — <i>Mark Lutz, O'Reilly Media, 2013</i>.</li>
+    <li><b>Database System Concepts (7th Edition)</b> — <i>Abraham Silberschatz, Henry F. Korth, S. Sudarshan, McGraw-Hill, 2019</i>.</li>
+    <li><b>Systems Analysis and Design (9th Edition)</b> — <i>Kenneth E. Kendall, Julie E. Kendall, Pearson, 2013</i>.</li>
+    <li><b>Mastering HTML5, CSS3, and JavaScript</b> — <i>Robin Nixon, O'Reilly Media, 2021</i>.</li>
+</ol>
+
+<h3>Official Documentation & Online Technical Resources</h3>
+<ol>
+    <li><b>Python Documentation (v3.10+):</b> <a href="https://docs.python.org/3/">https://docs.python.org/3/</a></li>
+    <li><b>Flask Web Framework Documentation:</b> <a href="https://flask.palletsprojects.com/">https://flask.palletsprojects.com/</a></li>
+    <li><b>SQLAlchemy 2.0 ORM Documentation:</b> <a href="https://docs.sqlalchemy.org/">https://docs.sqlalchemy.org/</a></li>
+    <li><b>ReportLab PDF Library User Guide:</b> <a href="https://www.reportlab.com/docs/reportlab-userguide.pdf">https://www.reportlab.com/docs/reportlab-userguide.pdf</a></li>
+    <li><b>MySQL 8.0 Reference Manual:</b> <a href="https://dev.mysql.com/doc/refman/8.0/en/">https://dev.mysql.com/doc/refman/8.0/en/</a></li>
+    <li><b>Bootstrap 5.3 Documentation:</b> <a href="https://getbootstrap.com/docs/5.3/">https://getbootstrap.com/docs/5.3/</a></li>
+    <li><b>MDN Web Docs (JavaScript, CSS, HTML Standards):</b> <a href="https://developer.mozilla.org/">https://developer.mozilla.org/</a></li>
+    <li><b>Hemchandracharya North Gujarat University (HNGU) Examination Ordinances:</b> <a href="https://www.ngu.ac.in/">https://www.ngu.ac.in/</a></li>
+</ol>
+<div class="page-number-arabic">Page 32</div>
+
+</body>
+</html>

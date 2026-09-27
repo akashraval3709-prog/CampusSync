@@ -1,0 +1,215 @@
+{% extends 'public/base_public.html' %}
+
+{% block title %}About Us – {{ college.college_name if college else 'CampusSync College' }}{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="pub-hero">
+    <div class="container position-relative" style="z-index: 1;">
+        <div class="pub-hero-pill">
+            <i class="bi bi-patch-check-fill"></i> Institutional Excellence & Legacy
+        </div>
+        <h1 class="pub-hero-title">Empowering Minds, Shaping Tomorrow</h1>
+        <p class="pub-hero-subtitle">
+            Founded with a vision of pedagogical brilliance, {{ college.college_name if college else 'CampusSync College' }} provides cutting-edge education, distinguished research facilities, and an inclusive ecosystem for holistic student development.
+        </p>
+        <div class="pub-breadcrumb">
+            <a href="{{ url_for('home') }}"><i class="bi bi-house-door-fill me-1"></i> Home</a>
+            <span>/</span>
+            <span class="text-white fw-semibold">About Us</span>
+        </div>
+    </div>
+</section>
+
+<!-- Fast Facts / Stats Strip -->
+<section class="py-5 bg-white border-bottom">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-6 col-md-3">
+                <div class="pub-stat-card text-center">
+                    <div class="pub-stat-icon bg-primary-subtle text-primary mx-auto">
+                        <i class="bi bi-award-fill"></i>
+                    </div>
+                    <div class="pub-stat-val">A+</div>
+                    <div class="pub-stat-label">NAAC Accreditation</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="pub-stat-card text-center">
+                    <div class="pub-stat-icon bg-success-subtle text-success mx-auto">
+                        <i class="bi bi-calendar2-check-fill"></i>
+                    </div>
+                    <div class="pub-stat-val">35+</div>
+                    <div class="pub-stat-label">Years of Academic Legacy</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="pub-stat-card text-center">
+                    <div class="pub-stat-icon bg-info-subtle text-info mx-auto">
+                        <i class="bi bi-people-fill"></i>
+                    </div>
+                    <div class="pub-stat-val">12k+</div>
+                    <div class="pub-stat-label">Global Alumni Network</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="pub-stat-card text-center">
+                    <div class="pub-stat-icon bg-warning-subtle text-warning mx-auto">
+                        <i class="bi bi-briefcase-fill"></i>
+                    </div>
+                    <div class="pub-stat-val">98%</div>
+                    <div class="pub-stat-label">Placement Record</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Vision, Mission & Values -->
+<section class="py-5" style="background: #f8fafc;">
+    <div class="container">
+        <div class="text-center mb-5">
+            <span class="badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-size:.78rem;padding:.4em 1.1em;">Guiding Philosophy</span>
+            <h2 class="mt-2 fw-bold text-dark" style="font-size: 1.85rem;">Our Vision, Mission & Core Values</h2>
+            <p class="text-muted mx-auto" style="max-width: 620px; font-size: 0.95rem;">
+                Rooted in academic rigor, ethical innovation, and social consciousness, we groom tomorrow's industry leaders and research pioneers.
+            </p>
+        </div>
+
+        <div class="row g-4">
+            <!-- Vision -->
+            <div class="col-md-4">
+                <div class="pub-value-card">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <div class="pub-stat-icon bg-primary text-white mb-0" style="width: 44px; height: 44px; font-size: 1.25rem;">
+                            <i class="bi bi-eye-fill"></i>
+                        </div>
+                        <h4 class="fw-bold mb-0 text-dark" style="font-size: 1.15rem;">Our Vision</h4>
+                    </div>
+                    <p class="text-muted small mb-0" style="line-height: 1.65;">
+                        To be a pre-eminent global institute recognized for transforming raw intellect into impactful, ethical, and creative leadership across engineering, technology, and applied sciences.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Mission -->
+            <div class="col-md-4">
+                <div class="pub-value-card">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <div class="pub-stat-icon bg-success text-white mb-0" style="width: 44px; height: 44px; font-size: 1.25rem;">
+                            <i class="bi bi-compass-fill"></i>
+                        </div>
+                        <h4 class="fw-bold mb-0 text-dark" style="font-size: 1.15rem;">Our Mission</h4>
+                    </div>
+                    <p class="text-muted small mb-0" style="line-height: 1.65;">
+                        Delivering outcome-based education through industry-aligned curriculum, world-class experiential laboratories, interdisciplinary research, and vibrant community-oriented initiatives.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Core Values -->
+            <div class="col-md-4">
+                <div class="pub-value-card">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <div class="pub-stat-icon bg-warning text-dark mb-0" style="width: 44px; height: 44px; font-size: 1.25rem;">
+                            <i class="bi bi-stars"></i>
+                        </div>
+                        <h4 class="fw-bold mb-0 text-dark" style="font-size: 1.15rem;">Core Values</h4>
+                    </div>
+                    <ul class="list-unstyled text-muted small mb-0" style="line-height: 1.65;">
+                        <li class="mb-1"><i class="bi bi-check2-circle text-primary me-2 fw-bold"></i> Integrity & Ethical Conduct</li>
+                        <li class="mb-1"><i class="bi bi-check2-circle text-primary me-2 fw-bold"></i> Innovation & Research Curiosity</li>
+                        <li class="mb-1"><i class="bi bi-check2-circle text-primary me-2 fw-bold"></i> Inclusivity & Collaborative Spirit</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Dean / Principal's Message -->
+<section class="py-5 bg-white border-top border-bottom">
+    <div class="container">
+        <div class="row align-items-center g-5">
+            <div class="col-lg-5">
+                <div class="position-relative">
+                    <div class="p-4 rounded-4 shadow-sm text-center" style="background: linear-gradient(145deg, #f8fafc 0%, #e2e8f0 100%); border: 1px solid #cbd5e1;">
+                        <div class="mx-auto mb-3 rounded-circle d-flex align-items-center justify-content-center bg-primary text-white shadow" style="width: 120px; height: 120px; font-size: 3rem;">
+                            <i class="bi bi-person-workspace"></i>
+                        </div>
+                        <h4 class="fw-bold text-dark mb-1">Dr. Arvind R. Sharma</h4>
+                        <span class="badge bg-primary-subtle text-primary mb-2">Ph.D. (IIT Delhi), Senior IEEE Member</span>
+                        <p class="text-muted small mb-3">Principal & Academic Dean</p>
+                        <div class="d-flex justify-content-center gap-2">
+                            <span class="badge bg-light text-secondary border">25+ Yrs Academic Leadership</span>
+                            <span class="badge bg-light text-secondary border">40+ Patents Published</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-7">
+                <span class="badge" style="background:#fef3c7;color:#b45309;border:1px solid #fde68a;font-size:.78rem;padding:.4em 1.1em;">Leadership Perspective</span>
+                <h2 class="mt-2 fw-bold text-dark" style="font-size: 1.85rem;">Welcome to a Community of Innovators</h2>
+                <div class="p-3 my-3 rounded-3" style="background: #f8fafc; border-left: 4px solid #2563eb;">
+                    <p class="fst-italic text-dark mb-0" style="font-size: 0.95rem; line-height: 1.7;">
+                        "At {{ college.college_name if college else 'CampusSync' }}, education goes beyond examinations. We groom thinkers, creators, and compassionate problem-solvers ready to command the frontiers of artificial intelligence, sustainable infrastructure, and entrepreneurship."
+                    </p>
+                </div>
+                <p class="text-muted small" style="line-height: 1.65;">
+                    With automated smart attendance, paperless marksheets, dynamic student mentorship, and global university partnerships, our students experience campus life that is digitally fluid and intellectually enriching.
+                </p>
+                <div class="d-flex align-items-center gap-3 mt-4">
+                    <a href="{{ url_for('courses') }}" class="btn btn-primary px-4">
+                        Explore Programs <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                    <a href="{{ url_for('contact') }}" class="btn btn-outline-secondary px-4">
+                        Contact Office
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Accreditations & Recognitions Grid -->
+<section class="py-5" style="background: #f1f5f9;">
+    <div class="container">
+        <div class="text-center mb-5">
+            <span class="badge" style="background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;font-size:.78rem;padding:.4em 1.1em;">Recognitions & Affiliations</span>
+            <h2 class="mt-2 fw-bold text-dark" style="font-size: 1.85rem;">Recognized by Top National Accreditation Bodies</h2>
+        </div>
+
+        <div class="row g-4 text-center">
+            <div class="col-md-3 col-6">
+                <div class="p-4 bg-white rounded-3 shadow-sm border h-100">
+                    <i class="bi bi-shield-check text-primary fs-1 mb-2"></i>
+                    <h5 class="fw-bold mb-1">AICTE Approved</h5>
+                    <small class="text-muted">All India Council for Technical Education</small>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="p-4 bg-white rounded-3 shadow-sm border h-100">
+                    <i class="bi bi-patch-check-fill text-success fs-1 mb-2"></i>
+                    <h5 class="fw-bold mb-1">NAAC 'A+' Grade</h5>
+                    <small class="text-muted">Highest accreditation tier for infrastructure</small>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="p-4 bg-white rounded-3 shadow-sm border h-100">
+                    <i class="bi bi-building-check text-warning fs-1 mb-2"></i>
+                    <h5 class="fw-bold mb-1">UGC 2(f) & 12(B)</h5>
+                    <small class="text-muted">University Grants Commission Recognized</small>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="p-4 bg-white rounded-3 shadow-sm border h-100">
+                    <i class="bi bi-globe2 text-info fs-1 mb-2"></i>
+                    <h5 class="fw-bold mb-1">ISO 9001:2015</h5>
+                    <small class="text-muted">Certified Quality Educational Management</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

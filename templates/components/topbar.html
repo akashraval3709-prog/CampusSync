@@ -1,0 +1,178 @@
+<!-- Reusable Smart Topbar Component (Admin / Faculty / Student) -->
+<div class="topbar">
+    <div class="d-flex align-items-center gap-2">
+        <button id="sidebarCollapse" type="button" class="btn btn-outline-secondary btn-sm" title="Toggle Navigation Menu" aria-label="Toggle Navigation Menu" aria-expanded="false" onclick="window.toggleCampusSidebar(event)">
+            <i class="bi bi-list fs-5"></i>
+        </button>
+        <div class="topbar-brand">
+            {% if request.endpoint and (request.endpoint.startswith('faculty') or 'faculty.' in request.endpoint) %}
+                <span class="badge" style="background:#f0fdf4;color:#14532d;border:1px solid #bbf7d0;font-size:.75rem">Faculty Portal</span>
+            {% elif request.endpoint and (request.endpoint.startswith('student') or 'student.' in request.endpoint) %}
+                <span class="badge" style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;font-size:.75rem">Student Portal</span>
+            {% else %}
+                <span class="badge" style="background:#f1f5f9;color:#334155;border:1px solid #e2e8f0;font-size:.75rem">Admin Panel</span>
+            {% endif %}
+        </div>
+    </div>
+    <div class="topbar-right d-flex align-items-center gap-3">
+        <!-- Quick Notification Bell Icon -->
+        {% if request.endpoint and (request.endpoint.startswith('faculty') or 'faculty.' in request.endpoint) %}
+            <a href="{{ url_for('faculty_notices') }}" class="btn btn-light btn-sm rounded-circle p-2 position-relative" title="Notices &amp; Assignments">
+                <i class="bi bi-bell-fill text-success fs-6"></i>
+            </a>
+        {% elif request.endpoint and (request.endpoint.startswith('student') or 'student.' in request.endpoint) %}
+            <a href="{{ url_for('student_notices') }}" class="btn btn-light btn-sm rounded-circle p-2 position-relative" title="Notices &amp; Assignments">
+                <i class="bi bi-bell-fill text-primary fs-6"></i>
+            </a>
+        {% else %}
+            <a href="{{ url_for('admin_notices') }}" class="btn btn-light btn-sm rounded-circle p-2 position-relative" title="Announcements &amp; Notices">
+                <i class="bi bi-bell-fill text-secondary fs-6"></i>
+            </a>
+        {% endif %}
+        {% if request.endpoint and (request.endpoint.startswith('faculty') or 'faculty.' in request.endpoint) %}
+            <div class="topbar-user">
+                <div class="topbar-avatar" style="background:#10b981;color:#fff;font-weight:700">
+                    {% if current_faculty and current_faculty.profile_photo and current_faculty.profile_photo != 'default-avatar.png' %}
+                        <img src="{{ url_for('admin.serve_uploads', filename='faculty/' + current_faculty.profile_photo) }}" alt="Faculty Avatar" style="width: 32px; height: 32px; object-fit: cover; border-radius: 50%;">
+                    {% else %}
+                        {{ (current_faculty.full_name[0] if current_faculty and current_faculty.full_name else 'F') | upper }}
+                    {% endif %}
+                </div>
+                <span class="d-none d-sm-inline">{{ current_faculty.full_name if current_faculty and current_faculty.full_name else 'Faculty Member' }}</span>
+            </div>
+            <a href="{{ url_for('faculty_logout') }}" class="btn btn-outline-danger btn-sm" title="Logout">
+                <i class="bi bi-box-arrow-right"></i> <span class="d-none d-md-inline">Logout</span>
+            </a>
+        {% elif request.endpoint and (request.endpoint.startswith('student') or 'student.' in request.endpoint) %}
+            <div class="topbar-user">
+                <div class="topbar-avatar" style="background:#2563eb;color:#fff;font-weight:700">S</div>
+                <span class="d-none d-sm-inline">Student Portal</span>
+            </div>
+            <a href="{{ url_for('student_logout') }}" class="btn btn-outline-danger btn-sm" title="Logout">
+                <i class="bi bi-box-arrow-right"></i> <span class="d-none d-md-inline">Logout</span>
+            </a>
+        {% else %}
+            <div class="topbar-user">
+                <div class="topbar-avatar">
+                    {% if current_admin and current_admin.profile_photo and current_admin.profile_photo != 'default-avatar.png' %}
+                        <img src="{{ url_for('admin.serve_uploads', filename='admin/' + current_admin.profile_photo) }}" alt="Admin Avatar" style="width: 32px; height: 32px; object-fit: cover; border-radius: 50%;">
+                    {% else %}
+                        {{ (current_admin.full_name[0] if current_admin and current_admin.full_name else 'A') | upper }}
+                    {% endif %}
+                </div>
+                <span class="d-none d-sm-inline">{{ current_admin.full_name if current_admin and current_admin.full_name else 'Administrator' }}</span>
+            </div>
+            <a href="{{ url_for('admin_logout') }}" class="btn btn-outline-danger btn-sm" title="Logout">
+                <i class="bi bi-box-arrow-right"></i> <span class="d-none d-md-inline">Logout</span>
+            </a>
+        {% endif %}
+        <div class="college-logo-wrapper border-start ps-3 ms-1 d-none d-sm-flex align-items-center">
+            {% if college and college.logo and college.logo != 'default-logo.png' %}
+                <img src="{{ url_for('admin.serve_uploads', filename='college/' + college.logo) }}" alt="College Logo" title="{{ college.college_name }}" style="height: 38px; width: 38px; object-fit: contain; display: block; border-radius: 50%; border: 1px solid #e2e8f0; background: #ffffff;">
+            {% else %}
+                <img src="{{ url_for('static', filename='images/college_logo.png') }}" alt="College Logo" title="{{ college.college_name if college else 'College Logo' }}" style="height: 38px; width: 38px; object-fit: contain; display: block; border-radius: 50%; border: 1px solid #e2e8f0;">
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Instant Mobile Sidebar Toggle Initializer (Fail-Safe Guaranteed) -->
+<script>
+window.toggleCampusSidebar = function(e) {
+    if (e) {
+        if (e._campusSidebarHandled) return;
+        e._campusSidebarHandled = true;
+        if (e.preventDefault) e.preventDefault();
+        if (e.stopPropagation) e.stopPropagation();
+    }
+    const sb = document.getElementById('sidebar');
+    if (!sb) return;
+
+    let bd = document.getElementById('sidebarBackdrop');
+    if (!bd) {
+        bd = document.createElement('div');
+        bd.id = 'sidebarBackdrop';
+        bd.className = 'sidebar-backdrop';
+        document.body.appendChild(bd);
+        bd.addEventListener('click', function() {
+            if (window.closeCampusSidebar) {
+                window.closeCampusSidebar();
+            } else {
+                sb.classList.remove('active');
+                bd.classList.remove('is-visible');
+                document.body.classList.remove('sidebar-open');
+            }
+        });
+    }
+
+    const btn = document.getElementById('sidebarCollapse');
+    if (window.innerWidth < 992) {
+        const willOpen = !sb.classList.contains('active');
+        if (willOpen) {
+            sb.classList.add('active');
+            bd.classList.add('is-visible');
+            document.body.classList.add('sidebar-open');
+            if (btn) btn.setAttribute('aria-expanded', 'true');
+        } else {
+            sb.classList.remove('active');
+            bd.classList.remove('is-visible');
+            document.body.classList.remove('sidebar-open');
+            if (btn) btn.setAttribute('aria-expanded', 'false');
+        }
+    } else {
+        sb.classList.toggle('collapsed');
+        try { localStorage.setItem('sidebar-collapsed', sb.classList.contains('collapsed')); } catch(err) {}
+    }
+};
+
+window.closeCampusSidebar = function() {
+    const sb = document.getElementById('sidebar');
+    const bd = document.getElementById('sidebarBackdrop');
+    const btn = document.getElementById('sidebarCollapse');
+    if (sb) sb.classList.remove('active');
+    if (bd) bd.classList.remove('is-visible');
+    document.body.classList.remove('sidebar-open');
+    if (btn) btn.setAttribute('aria-expanded', 'false');
+};
+</script>
+
+<!-- Client-Side Security: Bfcache Back-Button Blocker & 30-Minute Inactivity Auto-Logout -->
+<script>
+(function() {
+    // 1. Anti-Back-Button: Force page reload if restored from browser cache (Bfcache)
+    window.addEventListener('pageshow', function(event) {
+        if (event.persisted || (window.performance && window.performance.getEntriesByType && window.performance.getEntriesByType("navigation")[0]?.type === "back_forward")) {
+            window.location.reload();
+        }
+    });
+
+    // 2. 30-Minute Client Inactivity Auto-Logout Tracker
+    let inactivityTimer = null;
+    const INACTIVITY_LIMIT_MS = 30 * 60 * 1000; // 30 minutes
+
+    // Determine logout URL based on current portal
+    let logoutUrl = "{{ url_for('student_logout') }}";
+    {% if request.endpoint and (request.endpoint.startswith('faculty') or 'faculty.' in request.endpoint) %}
+        logoutUrl = "{{ url_for('faculty_logout') }}";
+    {% elif request.endpoint and (request.endpoint.startswith('admin') or 'admin.' in request.endpoint) %}
+        logoutUrl = "{{ url_for('admin_logout') }}";
+    {% endif %}
+
+    function resetInactivityTimer() {
+        if (inactivityTimer) clearTimeout(inactivityTimer);
+        inactivityTimer = setTimeout(function() {
+            // Silently redirect to logout without intrusive browser alert popup
+            window.location.href = logoutUrl;
+        }, INACTIVITY_LIMIT_MS);
+    }
+
+    // Reset timer on user interactions
+    const activityEvents = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click'];
+    activityEvents.forEach(function(evt) {
+        document.addEventListener(evt, resetInactivityTimer, { passive: true });
+    });
+
+    // Start timer on page load
+    resetInactivityTimer();
+})();
+</script>
