@@ -19,10 +19,34 @@ from routes.api import api_bp
 # Initialize Flask application
 app = Flask(__name__)
 
+# Apply ProxyFix for reverse proxy deployments (Railway, Cloudflare, Nginx)
+# Accurately detects HTTPS protocol and client IP via X-Forwarded-* headers
+from werkzeug.middleware.proxy_fix import ProxyFix
+app.wsgi_app = ProxyFix(
+    app.wsgi_app,
+    x_for=1,
+    x_proto=1,
+    x_host=1,
+    x_prefix=1
+)
+
 # Load configuration settings (Secret key, Database credentials)
 app.config.from_object(Config)
 db.init_app(app)
 mail.init_app(app)
+
+# ------------------------------------------------------------------------------
+# Security: Enforce HTTPS in Production Deployments
+# ------------------------------------------------------------------------------
+@app.before_request
+def enforce_https():
+    """Redirect plain HTTP requests to HTTPS on production deployments."""
+    if not app.debug:
+        proto = request.headers.get('X-Forwarded-Proto', request.scheme)
+        if proto == 'http':
+            url = request.url.replace('http://', 'https://', 1)
+            return redirect(url, code=301)
+
 
 # ------------------------------------------------------------------------------
 # Security: Session Inactivity Timeout (30 Minutes)
@@ -34,8 +58,8 @@ def enforce_session_inactivity_timeout():
     If 30 minutes pass without requests from the logged-in user, clears session
     and redirects user to the respective login page.
     """
-    # Skip static files and asset routes
-    if request.endpoint == 'static' or request.path.startswith('/static') or request.path.startswith('/assets'):
+    # Skip static files, assets, and uploaded media routes
+    if request.endpoint == 'static' or request.path.startswith('/static') or request.path.startswith('/assets') or request.path.startswith('/uploads'):
         return
 
     is_admin = 'admin_id' in session
@@ -66,7 +90,7 @@ def enforce_session_inactivity_timeout():
 
 
 # ------------------------------------------------------------------------------
-# Security: Anti-Back-Button Cache-Control Headers
+# Security & Performance: Cache-Control Headers
 # ------------------------------------------------------------------------------
 @app.after_request
 def add_cache_control_headers(response):
@@ -74,8 +98,12 @@ def add_cache_control_headers(response):
     Prevents browser from caching authenticated/dynamic pages.
     When a logged-out user clicks the browser 'Back' button, the browser is
     forced to re-request the page from the server, preventing dashboard display.
+
+    Static assets and uploaded media files are cached by the browser for high performance
+    and instant sub-millisecond subsequent loads.
     """
-    if request.path.startswith('/static') or request.path.startswith('/assets'):
+    if request.path.startswith('/static') or request.path.startswith('/assets') or request.path.startswith('/uploads'):
+        response.headers["Cache-Control"] = "public, max-age=86400"
         return response
 
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"

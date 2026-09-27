@@ -38,6 +38,7 @@ class Config:
 
     # Production Database Connection Pool (prevents 'MySQL server has gone away' on hosting servers)
     SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_size': 10,
         'pool_pre_ping': True,
         'pool_recycle': 280,
         'pool_timeout': 30,

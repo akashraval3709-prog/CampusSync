@@ -944,9 +944,9 @@ def update_college_settings_route():
 # --- Uploads File Serving Route ---
 @admin_bp.route('/uploads/<path:filename>', endpoint='serve_uploads')
 def serve_uploads(filename):
-    """Serves uploaded files from the uploads directory."""
+    """Serves uploaded files from the uploads directory with caching enabled for high performance."""
     uploads_dir = os.path.join(current_app.root_path, 'uploads')
-    return send_from_directory(uploads_dir, filename)
+    return send_from_directory(uploads_dir, filename, max_age=86400)
 
 # --- Live Browser Email Preview Route ---
 @admin_bp.route('/email-preview', endpoint='email_preview')
