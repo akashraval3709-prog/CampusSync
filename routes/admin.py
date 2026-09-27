@@ -37,7 +37,10 @@ def inject_current_admin():
     """Injects current logged-in Admin object and College Settings into all admin templates."""
     context = dict(current_admin=None, college=get_college_settings())
     if "admin_id" in session:
-        context["current_admin"] = get_admin_by_id(session["admin_id"])
+        from flask import g
+        if not hasattr(g, 'current_admin'):
+            g.current_admin = get_admin_by_id(session["admin_id"])
+        context["current_admin"] = g.current_admin
     return context
 
 # --- Admin Dashboard Route ---

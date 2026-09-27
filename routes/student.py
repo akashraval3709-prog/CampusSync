@@ -19,11 +19,15 @@ student_bp = Blueprint('student', __name__)
 def inject_current_student():
     """Injects current logged-in Student object into all student templates."""
     if "student_id" in session:
-        student = get_student_by_id(session["student_id"])
-        if not student or getattr(student, 'status', None) != 'Active':
-            session.pop("student_id", None)
-            return dict(current_student=None)
-        return dict(current_student=student)
+        from flask import g
+        if not hasattr(g, 'current_student'):
+            student = get_student_by_id(session["student_id"])
+            if not student or getattr(student, 'status', None) != 'Active':
+                session.pop("student_id", None)
+                g.current_student = None
+            else:
+                g.current_student = student
+        return dict(current_student=g.current_student)
     return dict(current_student=None)
 
 
@@ -234,8 +238,9 @@ def student_dashboard():
     if "student_id" not in session:
         return redirect(url_for('student_login'))
 
-    # Fetch student details from database using session student ID
-    student = get_student_by_id(session["student_id"])
+    # Fetch student details from request context or database
+    from flask import g
+    student = getattr(g, 'current_student', None) or get_student_by_id(session["student_id"])
 
     # If student record not found, clear session and redirect to login
     if not student:

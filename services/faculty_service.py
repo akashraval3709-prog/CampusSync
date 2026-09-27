@@ -652,7 +652,13 @@ def get_faculty_assigned_subjects(faculty_id, filter_by_cycle=True):
     Returns:
         list[dict]: List of assigned subjects with code, name, semester, division, status.
     """
-    assignments = FacultySubjectAssignment.query.filter_by(faculty_id=faculty_id, status='Active').all()
+    from sqlalchemy.orm import joinedload
+    assignments = (
+        FacultySubjectAssignment.query
+        .options(joinedload(FacultySubjectAssignment.subject))
+        .filter_by(faculty_id=faculty_id, status='Active')
+        .all()
+    )
 
     active_sems = None
     if filter_by_cycle:

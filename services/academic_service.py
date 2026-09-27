@@ -7,15 +7,37 @@ Provides simple functions to manage current Academic Year,
 Semester Cycle (Odd/Even), and Cycle Start/End dates.
 """
 
+import time
 from datetime import datetime
 from models import AcademicSetting, Student, InternalMark, ArchivedStudent, ArchivedInternalMark
 from extensions import db
 
-def get_academic_settings():
+_cached_academic_snapshot = None
+_cached_academic_time = 0
+ACADEMIC_CACHE_TTL = 120  # 2 minutes in-memory cache
+
+class AcademicSettingSnapshot:
+    """Thread-safe detached snapshot of AcademicSetting for 0ms lookups."""
+    def __init__(self, record):
+        for col in record.__table__.columns:
+            setattr(self, col.name, getattr(record, col.name))
+
+def invalidate_academic_cache():
+    """Invalidates the in-memory academic settings cache."""
+    global _cached_academic_snapshot, _cached_academic_time
+    _cached_academic_snapshot = None
+    _cached_academic_time = 0
+
+def get_academic_settings(force_refresh=False):
     """
-    Get current academic settings.
+    Get current academic settings with high-speed in-memory caching.
     Creates a default record if database table is empty.
     """
+    global _cached_academic_snapshot, _cached_academic_time
+    now = time.time()
+    if not force_refresh and _cached_academic_snapshot is not None and (now - _cached_academic_time < ACADEMIC_CACHE_TTL):
+        return _cached_academic_snapshot
+
     settings = AcademicSetting.query.first()
     
     # Create default record if database table is empty
@@ -29,7 +51,9 @@ def get_academic_settings():
         db.session.add(settings)
         db.session.commit()
         
-    return settings
+    _cached_academic_snapshot = AcademicSettingSnapshot(settings)
+    _cached_academic_time = now
+    return _cached_academic_snapshot
 
 def get_active_semesters(semester_cycle=None):
     """
@@ -452,6 +476,7 @@ def update_academic_settings(form_data):
 
         # Commit changes to database
         db.session.commit()
+        invalidate_academic_cache()
         return settings, None, archived_count, promoted_count
 
     except Exception as e:

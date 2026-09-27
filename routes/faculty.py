@@ -39,8 +39,10 @@ faculty_bp = Blueprint('faculty', __name__)
 def inject_current_faculty():
     """Injects current logged-in Faculty object into all faculty templates."""
     if "faculty_id" in session:
-        faculty = get_faculty_model(session["faculty_id"])
-        return dict(current_faculty=faculty)
+        from flask import g
+        if not hasattr(g, 'current_faculty'):
+            g.current_faculty = get_faculty_model(session["faculty_id"])
+        return dict(current_faculty=g.current_faculty)
     return dict(current_faculty=None)
 
 
@@ -189,7 +191,8 @@ def faculty_dashboard():
     - Queries assigned subjects joined with Subject table.
     """
     faculty_id = session.get("faculty_id")
-    faculty = get_faculty_model(faculty_id)
+    from flask import g
+    faculty = getattr(g, 'current_faculty', None) or get_faculty_model(faculty_id)
     dashboard_data = get_faculty_dashboard_data(faculty_id)
 
     return render_template(

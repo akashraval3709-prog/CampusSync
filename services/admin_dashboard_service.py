@@ -41,18 +41,19 @@ def get_admin_dashboard_data():
     total_subjects = Subject.query.filter(Subject.status == 'Active', Subject.semester.in_(active_semesters)).count()
     total_sessions = LectureAttendanceSession.query.filter(LectureAttendanceSession.semester.in_(active_semesters)).count()
 
-    # 2. Campus-Wide Average Attendance Percentage
-    records = AttendanceRecord.query.join(Student).filter(
+    # 2. Campus-Wide Average Attendance Percentage (High-speed single SQL aggregate)
+    att_stats = db.session.query(
+        func.coalesce(func.sum(AttendanceRecord.total_lectures), 0),
+        func.coalesce(func.sum(AttendanceRecord.attended_lectures), 0)
+    ).join(Student).filter(
         Student.status == 'Active',
         Student.semester.in_(active_semesters),
         AttendanceRecord.total_lectures > 0
-    ).all()
-    if records:
-        tot_conducted = sum(r.total_lectures for r in records)
-        tot_attended = sum(r.attended_lectures for r in records)
-        avg_attendance = round((tot_attended / float(tot_conducted)) * 100.0, 1) if tot_conducted > 0 else 0.0
-    else:
-        avg_attendance = 0.0
+    ).first()
+
+    tot_conducted = att_stats[0] if att_stats else 0
+    tot_attended = att_stats[1] if att_stats else 0
+    avg_attendance = round((float(tot_attended) / float(tot_conducted)) * 100.0, 1) if tot_conducted > 0 else 0.0
 
     # 3. Semester-Wise Student Distribution (Active cycle semesters only)
     sem_counts_raw = dict(
@@ -74,19 +75,43 @@ def get_admin_dashboard_data():
     # 4. Recent Student Registrations (Latest 5 active cycle students)
     recent_students = Student.query.filter(Student.status == 'Active', Student.semester.in_(active_semesters)).order_by(Student.id.desc()).limit(5).all()
 
-    # 5. Recent Lecture Attendance Sessions (Latest 5 active cycle sessions)
+    # 5. Recent Lecture Attendance Sessions (Batch-eager loaded in 2 queries instead of 20)
+    from sqlalchemy.orm import joinedload
     recent_sessions_raw = (
         LectureAttendanceSession.query
+        .options(
+            joinedload(LectureAttendanceSession.subject),
+            joinedload(LectureAttendanceSession.faculty)
+        )
         .filter(LectureAttendanceSession.semester.in_(active_semesters))
         .order_by(LectureAttendanceSession.lecture_date.desc(), LectureAttendanceSession.id.desc())
         .limit(5)
         .all()
     )
+
+    session_ids = [s.id for s in recent_sessions_raw]
+    counts_map = {}
+    if session_ids:
+        rows = db.session.query(
+            LectureAttendanceStudent.session_id,
+            LectureAttendanceStudent.status,
+            func.count(LectureAttendanceStudent.id)
+        ).filter(
+            LectureAttendanceStudent.session_id.in_(session_ids)
+        ).group_by(
+            LectureAttendanceStudent.session_id,
+            LectureAttendanceStudent.status
+        ).all()
+        for sid, st, cnt in rows:
+            if sid not in counts_map:
+                counts_map[sid] = {"present": 0, "total": 0}
+            counts_map[sid]["total"] += cnt
+            if st == 'Present':
+                counts_map[sid]["present"] += cnt
+
     recent_sessions = []
     for sess in recent_sessions_raw:
-        # Count present students in session
-        pres_cnt = LectureAttendanceStudent.query.filter_by(session_id=sess.id, status='Present').count()
-        tot_cnt = LectureAttendanceStudent.query.filter_by(session_id=sess.id).count()
+        c_info = counts_map.get(sess.id, {"present": 0, "total": 0})
         recent_sessions.append({
             "id": sess.id,
             "date": sess.lecture_date.strftime('%d-%m-%Y') if sess.lecture_date else "—",
@@ -96,8 +121,8 @@ def get_admin_dashboard_data():
             "faculty_name": sess.faculty.full_name if sess.faculty else "Faculty",
             "semester": sess.semester,
             "division": sess.division,
-            "present_count": pres_cnt,
-            "total_count": tot_cnt
+            "present_count": c_info["present"],
+            "total_count": c_info["total"]
         })
 
     # 6. Result Declaration Status
