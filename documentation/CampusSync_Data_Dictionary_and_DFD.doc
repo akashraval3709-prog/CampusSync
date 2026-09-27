@@ -1,0 +1,1157 @@
+<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+<head>
+<meta charset="utf-8">
+<title>CampusSync ERP - Data Dictionary & DFD Documentation</title>
+<style>
+    body {
+        font-family: 'Times New Roman', Times, serif;
+        font-size: 12pt;
+        line-height: 1.5;
+        color: #000000;
+        margin: 1in;
+    }
+    h1 {
+        font-size: 20pt;
+        text-align: center;
+        font-weight: bold;
+        text-transform: uppercase;
+        margin-bottom: 5px;
+        color: #1a365d;
+    }
+    h2 {
+        font-size: 15pt;
+        font-weight: bold;
+        border-bottom: 2px solid #2b6cb0;
+        padding-bottom: 4px;
+        margin-top: 25px;
+        margin-bottom: 12px;
+        color: #2b6cb0;
+        text-transform: uppercase;
+    }
+    h3 {
+        font-size: 13pt;
+        font-weight: bold;
+        margin-top: 18px;
+        margin-bottom: 8px;
+        color: #2d3748;
+    }
+    p {
+        margin-top: 0;
+        margin-bottom: 10px;
+        text-align: justify;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+        margin-bottom: 20px;
+        font-size: 10.5pt;
+    }
+    th, td {
+        border: 1px solid #4a5568;
+        padding: 6px 10px;
+        text-align: left;
+        vertical-align: top;
+    }
+    th {
+        background-color: #edf2f7;
+        font-weight: bold;
+        color: #1a202c;
+    }
+    .page-break {
+        page-break-before: always;
+    }
+    .diagram-box {
+        border: 2px solid #4a5568;
+        background-color: #f7fafc;
+        padding: 15px;
+        margin: 15px 0;
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 10pt;
+        white-space: pre-wrap;
+        line-height: 1.3;
+    }
+    .project-header {
+        text-align: center;
+        margin-bottom: 30px;
+        border-bottom: 3px double #1a365d;
+        padding-bottom: 15px;
+    }
+    .project-sub {
+        font-size: 12pt;
+        font-style: italic;
+        color: #4a5568;
+    }
+    .badge-pk {
+        font-weight: bold;
+        color: #9b2c2c;
+    }
+    .badge-fk {
+        font-weight: bold;
+        color: #2b6cb0;
+    }
+</style>
+</head>
+<body>
+
+<div class="project-header">
+    <h1>CampusSync - Smart Campus ERP</h1>
+    <div class="project-sub">Project System Architecture &amp; Database Design Documentation</div>
+    <div style="margin-top: 8px; font-weight: bold;">Semester 5 Project Report Submission</div>
+</div>
+
+<!-- ========================================== -->
+<!-- 2. DATA DICTIONARY                         -->
+<!-- ========================================== -->
+<h2>2. Data Dictionary</h2>
+
+<p>
+    A Data Dictionary is a centralized repository of information about data such as meaning, relationships to other data, origin, usage, and format. In the <strong>CampusSync ERP</strong> system, MySQL relational database is utilized to maintain institutional integrity across administrators, faculty members, enrolled students, daily QR attendance records, semester marks, and public website CMS content.
+</p>
+
+<!-- Table 1: students -->
+<h3>2.1 Table Name: <code>students</code></h3>
+<p><strong>Description:</strong> Stores comprehensive student profiles, credentials, academic enrollment, division, and session tracking.</p>
+<table>
+    <thead>
+        <tr>
+            <th>Field Name</th>
+            <th>Data Type</th>
+            <th>Size / Constraints</th>
+            <th>Nullable</th>
+            <th>Key</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><code>id</code></td>
+            <td>INT</td>
+            <td>Auto-Increment</td>
+            <td>NO</td>
+            <td><span class="badge-pk">PRIMARY KEY</span></td>
+            <td>Unique student identifier</td>
+        </tr>
+        <tr>
+            <td><code>enrollment_number</code></td>
+            <td>VARCHAR</td>
+            <td>50, Unique</td>
+            <td>NO</td>
+            <td>UNIQUE</td>
+            <td>University/College Enrollment ID</td>
+        </tr>
+        <tr>
+            <td><code>name</code></td>
+            <td>VARCHAR</td>
+            <td>150</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Full legal name of student</td>
+        </tr>
+        <tr>
+            <td><code>email</code></td>
+            <td>VARCHAR</td>
+            <td>150, Unique</td>
+            <td>NO</td>
+            <td>UNIQUE</td>
+            <td>Registered email for notifications/OTP</td>
+        </tr>
+        <tr>
+            <td><code>password_hash</code></td>
+            <td>VARCHAR</td>
+            <td>255</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Secure bcrypt/pbkdf2 password hash</td>
+        </tr>
+        <tr>
+            <td><code>course</code></td>
+            <td>VARCHAR</td>
+            <td>50</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Degree program (e.g. BCA, B.Sc. IT)</td>
+        </tr>
+        <tr>
+            <td><code>semester</code></td>
+            <td>INT</td>
+            <td>1 to 6</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Current semester number</td>
+        </tr>
+        <tr>
+            <td><code>division</code></td>
+            <td>VARCHAR</td>
+            <td>10</td>
+            <td>YES</td>
+            <td>-</td>
+            <td>Assigned division (A, B, C)</td>
+        </tr>
+        <tr>
+            <td><code>roll_number</code></td>
+            <td>INT</td>
+            <td>-</td>
+            <td>YES</td>
+            <td>-</td>
+            <td>Assigned class roll number</td>
+        </tr>
+        <tr>
+            <td><code>academic_year</code></td>
+            <td>VARCHAR</td>
+            <td>20</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Academic session (e.g. 2025-2026)</td>
+        </tr>
+        <tr>
+            <td><code>status</code></td>
+            <td>ENUM</td>
+            <td>'Active', 'Inactive', 'Archived'</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Enrollment lifecycle status</td>
+        </tr>
+        <tr>
+            <td><code>created_at</code></td>
+            <td>TIMESTAMP</td>
+            <td>Default Current</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Timestamp when account was created</td>
+        </tr>
+    </tbody>
+</table>
+
+<!-- Table 2: faculty -->
+<h3>2.2 Table Name: <code>faculty</code></h3>
+<p><strong>Description:</strong> Contains academic faculty member details, departmental affiliation, and portal credentials.</p>
+<table>
+    <thead>
+        <tr>
+            <th>Field Name</th>
+            <th>Data Type</th>
+            <th>Size / Constraints</th>
+            <th>Nullable</th>
+            <th>Key</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><code>id</code></td>
+            <td>INT</td>
+            <td>Auto-Increment</td>
+            <td>NO</td>
+            <td><span class="badge-pk">PRIMARY KEY</span></td>
+            <td>Unique faculty member ID</td>
+        </tr>
+        <tr>
+            <td><code>faculty_id</code></td>
+            <td>VARCHAR</td>
+            <td>50, Unique</td>
+            <td>NO</td>
+            <td>UNIQUE</td>
+            <td>Institutional Employee/Staff ID</td>
+        </tr>
+        <tr>
+            <td><code>name</code></td>
+            <td>VARCHAR</td>
+            <td>150</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Professor / Instructor full name</td>
+        </tr>
+        <tr>
+            <td><code>email</code></td>
+            <td>VARCHAR</td>
+            <td>150, Unique</td>
+            <td>NO</td>
+            <td>UNIQUE</td>
+            <td>Faculty official email address</td>
+        </tr>
+        <tr>
+            <td><code>password_hash</code></td>
+            <td>VARCHAR</td>
+            <td>255</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Secure password hash</td>
+        </tr>
+        <tr>
+            <td><code>department</code></td>
+            <td>VARCHAR</td>
+            <td>100</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Department (Computer Science, IT)</td>
+        </tr>
+        <tr>
+            <td><code>designation</code></td>
+            <td>VARCHAR</td>
+            <td>100</td>
+            <td>YES</td>
+            <td>-</td>
+            <td>Title (Assistant Professor, HOD)</td>
+        </tr>
+        <tr>
+            <td><code>phone</code></td>
+            <td>VARCHAR</td>
+            <td>20</td>
+            <td>YES</td>
+            <td>-</td>
+            <td>Faculty mobile contact number</td>
+        </tr>
+        <tr>
+            <td><code>status</code></td>
+            <td>ENUM</td>
+            <td>'Active', 'Inactive'</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Current service status</td>
+        </tr>
+    </tbody>
+</table>
+
+<!-- Table 3: admins -->
+<h3>2.3 Table Name: <code>admins</code></h3>
+<p><strong>Description:</strong> High-privileged institutional administrator accounts responsible for ERP control and configurations.</p>
+<table>
+    <thead>
+        <tr>
+            <th>Field Name</th>
+            <th>Data Type</th>
+            <th>Size / Constraints</th>
+            <th>Nullable</th>
+            <th>Key</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><code>id</code></td>
+            <td>INT</td>
+            <td>Auto-Increment</td>
+            <td>NO</td>
+            <td><span class="badge-pk">PRIMARY KEY</span></td>
+            <td>Unique admin identifier</td>
+        </tr>
+        <tr>
+            <td><code>username</code></td>
+            <td>VARCHAR</td>
+            <td>50, Unique</td>
+            <td>NO</td>
+            <td>UNIQUE</td>
+            <td>Admin login handle</td>
+        </tr>
+        <tr>
+            <td><code>name</code></td>
+            <td>VARCHAR</td>
+            <td>150</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Full name of administrator</td>
+        </tr>
+        <tr>
+            <td><code>email</code></td>
+            <td>VARCHAR</td>
+            <td>150, Unique</td>
+            <td>NO</td>
+            <td>UNIQUE</td>
+            <td>Admin alert & recovery email</td>
+        </tr>
+        <tr>
+            <td><code>password_hash</code></td>
+            <td>VARCHAR</td>
+            <td>255</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Hashed administrative password</td>
+        </tr>
+        <tr>
+            <td><code>role</code></td>
+            <td>VARCHAR</td>
+            <td>50</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Role type (SuperAdmin, StaffAdmin)</td>
+        </tr>
+    </tbody>
+</table>
+
+<!-- Table 4: subjects -->
+<h3>2.4 Table Name: <code>subjects</code></h3>
+<p><strong>Description:</strong> Defines all academic course curricula, theory/practical credits, and grading allocations.</p>
+<table>
+    <thead>
+        <tr>
+            <th>Field Name</th>
+            <th>Data Type</th>
+            <th>Size / Constraints</th>
+            <th>Nullable</th>
+            <th>Key</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><code>id</code></td>
+            <td>INT</td>
+            <td>Auto-Increment</td>
+            <td>NO</td>
+            <td><span class="badge-pk">PRIMARY KEY</span></td>
+            <td>Subject unique ID</td>
+        </tr>
+        <tr>
+            <td><code>subject_code</code></td>
+            <td>VARCHAR</td>
+            <td>50, Unique</td>
+            <td>NO</td>
+            <td>UNIQUE</td>
+            <td>Curriculum Subject Code (e.g. CS501)</td>
+        </tr>
+        <tr>
+            <td><code>subject_name</code></td>
+            <td>VARCHAR</td>
+            <td>150</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Title (e.g. Web Technology, Python)</td>
+        </tr>
+        <tr>
+            <td><code>course</code></td>
+            <td>VARCHAR</td>
+            <td>50</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Degree program (e.g. BCA)</td>
+        </tr>
+        <tr>
+            <td><code>semester</code></td>
+            <td>INT</td>
+            <td>1 to 6</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Semester curriculum semester</td>
+        </tr>
+        <tr>
+            <td><code>total_lectures</code></td>
+            <td>INT</td>
+            <td>Default 60</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Planned semester lecture sessions</td>
+        </tr>
+        <tr>
+            <td><code>internal_marks</code></td>
+            <td>INT</td>
+            <td>Default 30</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Max internal evaluation weightage</td>
+        </tr>
+    </tbody>
+</table>
+
+<!-- Table 5: faculty_subject_assignments -->
+<h3>2.5 Table Name: <code>faculty_subject_assignments</code></h3>
+<p><strong>Description:</strong> Bridges faculty members to specific course subjects and division classrooms.</p>
+<table>
+    <thead>
+        <tr>
+            <th>Field Name</th>
+            <th>Data Type</th>
+            <th>Size / Constraints</th>
+            <th>Nullable</th>
+            <th>Key</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><code>id</code></td>
+            <td>INT</td>
+            <td>Auto-Increment</td>
+            <td>NO</td>
+            <td><span class="badge-pk">PRIMARY KEY</span></td>
+            <td>Assignment identifier</td>
+        </tr>
+        <tr>
+            <td><code>faculty_id</code></td>
+            <td>INT</td>
+            <td>-</td>
+            <td>NO</td>
+            <td><span class="badge-fk">FOREIGN KEY</span></td>
+            <td>References <code>faculty.id</code></td>
+        </tr>
+        <tr>
+            <td><code>subject_id</code></td>
+            <td>INT</td>
+            <td>-</td>
+            <td>NO</td>
+            <td><span class="badge-fk">FOREIGN KEY</span></td>
+            <td>References <code>subjects.id</code></td>
+        </tr>
+        <tr>
+            <td><code>division</code></td>
+            <td>VARCHAR</td>
+            <td>10</td>
+            <td>YES</td>
+            <td>-</td>
+            <td>Target division (e.g. 'A')</td>
+        </tr>
+        <tr>
+            <td><code>academic_year</code></td>
+            <td>VARCHAR</td>
+            <td>20</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>e.g. '2025-2026'</td>
+        </tr>
+    </tbody>
+</table>
+
+<!-- Table 6: attendance_records -->
+<h3>2.6 Table Name: <code>attendance_records</code></h3>
+<p><strong>Description:</strong> Real-time QR and manual student attendance transactions logged per lecture session.</p>
+<table>
+    <thead>
+        <tr>
+            <th>Field Name</th>
+            <th>Data Type</th>
+            <th>Size / Constraints</th>
+            <th>Nullable</th>
+            <th>Key</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><code>id</code></td>
+            <td>INT</td>
+            <td>Auto-Increment</td>
+            <td>NO</td>
+            <td><span class="badge-pk">PRIMARY KEY</span></td>
+            <td>Attendance transaction ID</td>
+        </tr>
+        <tr>
+            <td><code>student_id</code></td>
+            <td>INT</td>
+            <td>-</td>
+            <td>NO</td>
+            <td><span class="badge-fk">FOREIGN KEY</span></td>
+            <td>References <code>students.id</code></td>
+        </tr>
+        <tr>
+            <td><code>subject_id</code></td>
+            <td>INT</td>
+            <td>-</td>
+            <td>NO</td>
+            <td><span class="badge-fk">FOREIGN KEY</span></td>
+            <td>References <code>subjects.id</code></td>
+        </tr>
+        <tr>
+            <td><code>faculty_id</code></td>
+            <td>INT</td>
+            <td>-</td>
+            <td>NO</td>
+            <td><span class="badge-fk">FOREIGN KEY</span></td>
+            <td>References <code>faculty.id</code></td>
+        </tr>
+        <tr>
+            <td><code>date</code></td>
+            <td>DATE</td>
+            <td>-</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Lecture delivery date</td>
+        </tr>
+        <tr>
+            <td><code>time_slot</code></td>
+            <td>VARCHAR</td>
+            <td>50</td>
+            <td>YES</td>
+            <td>-</td>
+            <td>Lecture period slot (e.g. 09:00 - 10:00)</td>
+        </tr>
+        <tr>
+            <td><code>status</code></td>
+            <td>ENUM</td>
+            <td>'Present', 'Absent'</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Student attendance outcome</td>
+        </tr>
+        <tr>
+            <td><code>method</code></td>
+            <td>ENUM</td>
+            <td>'QR', 'Manual'</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Attendance capture mechanism</td>
+        </tr>
+        <tr>
+            <td><code>marked_at</code></td>
+            <td>TIMESTAMP</td>
+            <td>Current Timestamp</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Exact timestamp when scan happened</td>
+        </tr>
+    </tbody>
+</table>
+
+<!-- Table 7: internal_marks -->
+<h3>2.7 Table Name: <code>internal_marks</code></h3>
+<p><strong>Description:</strong> Semester evaluation breakdown per subject (Unit tests, assignments, attendance component).</p>
+<table>
+    <thead>
+        <tr>
+            <th>Field Name</th>
+            <th>Data Type</th>
+            <th>Size / Constraints</th>
+            <th>Nullable</th>
+            <th>Key</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><code>id</code></td>
+            <td>INT</td>
+            <td>Auto-Increment</td>
+            <td>NO</td>
+            <td><span class="badge-pk">PRIMARY KEY</span></td>
+            <td>Marks entry ID</td>
+        </tr>
+        <tr>
+            <td><code>student_id</code></td>
+            <td>INT</td>
+            <td>-</td>
+            <td>NO</td>
+            <td><span class="badge-fk">FOREIGN KEY</span></td>
+            <td>References <code>students.id</code></td>
+        </tr>
+        <tr>
+            <td><code>subject_id</code></td>
+            <td>INT</td>
+            <td>-</td>
+            <td>NO</td>
+            <td><span class="badge-fk">FOREIGN KEY</span></td>
+            <td>References <code>subjects.id</code></td>
+        </tr>
+        <tr>
+            <td><code>unit_test</code></td>
+            <td>FLOAT</td>
+            <td>Default 0.0</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Mid-term / Unit test score</td>
+        </tr>
+        <tr>
+            <td><code>assignment_marks</code></td>
+            <td>FLOAT</td>
+            <td>Default 0.0</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Continuous assignment score</td>
+        </tr>
+        <tr>
+            <td><code>attendance_marks</code></td>
+            <td>FLOAT</td>
+            <td>Default 0.0</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Attendance compliance weightage</td>
+        </tr>
+        <tr>
+            <td><code>total_internal</code></td>
+            <td>FLOAT</td>
+            <td>Default 0.0</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Aggregated internal total (out of 30)</td>
+        </tr>
+        <tr>
+            <td><code>submitted_by_id</code></td>
+            <td>INT</td>
+            <td>-</td>
+            <td>YES</td>
+            <td><span class="badge-fk">FOREIGN KEY</span></td>
+            <td>References <code>faculty.id</code></td>
+        </tr>
+    </tbody>
+</table>
+
+<!-- Table 8: notifications -->
+<h3>2.8 Table Name: <code>notifications</code></h3>
+<p><strong>Description:</strong> Campus circulars, exam schedules, and holiday announcements published across portals.</p>
+<table>
+    <thead>
+        <tr>
+            <th>Field Name</th>
+            <th>Data Type</th>
+            <th>Size / Constraints</th>
+            <th>Nullable</th>
+            <th>Key</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><code>id</code></td>
+            <td>INT</td>
+            <td>Auto-Increment</td>
+            <td>NO</td>
+            <td><span class="badge-pk">PRIMARY KEY</span></td>
+            <td>Circular notification ID</td>
+        </tr>
+        <tr>
+            <td><code>title</code></td>
+            <td>VARCHAR</td>
+            <td>200</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Circular headline</td>
+        </tr>
+        <tr>
+            <td><code>message</code></td>
+            <td>TEXT</td>
+            <td>-</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Detailed body text of announcement</td>
+        </tr>
+        <tr>
+            <td><code>category</code></td>
+            <td>VARCHAR</td>
+            <td>50</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Category (Exam, Holiday, Event)</td>
+        </tr>
+        <tr>
+            <td><code>target_audience</code></td>
+            <td>ENUM</td>
+            <td>'All', 'Student', 'Faculty', 'Public'</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Access permission filter</td>
+        </tr>
+        <tr>
+            <td><code>photo_file</code></td>
+            <td>VARCHAR</td>
+            <td>255</td>
+            <td>YES</td>
+            <td>-</td>
+            <td>Attached PDF/image document path</td>
+        </tr>
+        <tr>
+            <td><code>is_public</code></td>
+            <td>BOOLEAN</td>
+            <td>Default False</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Display on public landing notice board</td>
+        </tr>
+    </tbody>
+</table>
+
+<!-- Table 9: gallery_items -->
+<h3>2.9 Table Name: <code>gallery_items</code></h3>
+<p><strong>Description:</strong> Stores photographs across Campus Life, Events, Sports, Academics, Achievements, and Celebrations.</p>
+<table>
+    <thead>
+        <tr>
+            <th>Field Name</th>
+            <th>Data Type</th>
+            <th>Size / Constraints</th>
+            <th>Nullable</th>
+            <th>Key</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><code>id</code></td>
+            <td>INT</td>
+            <td>Auto-Increment</td>
+            <td>NO</td>
+            <td><span class="badge-pk">PRIMARY KEY</span></td>
+            <td>Gallery photo unique ID</td>
+        </tr>
+        <tr>
+            <td><code>title</code></td>
+            <td>VARCHAR</td>
+            <td>150</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Photo title / Caption</td>
+        </tr>
+        <tr>
+            <td><code>category</code></td>
+            <td>VARCHAR</td>
+            <td>50</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Category (e.g. Sports, Celebrations)</td>
+        </tr>
+        <tr>
+            <td><code>description</code></td>
+            <td>TEXT</td>
+            <td>-</td>
+            <td>YES</td>
+            <td>-</td>
+            <td>Detailed caption / context</td>
+        </tr>
+        <tr>
+            <td><code>image_file</code></td>
+            <td>VARCHAR</td>
+            <td>255</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Uploaded filename in <code>uploads/gallery</code></td>
+        </tr>
+        <tr>
+            <td><code>is_featured</code></td>
+            <td>BOOLEAN</td>
+            <td>Default False</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Feature on homepage landing carousel</td>
+        </tr>
+        <tr>
+            <td><code>views_count</code></td>
+            <td>INT</td>
+            <td>Default 0</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Total views logged by viewers</td>
+        </tr>
+        <tr>
+            <td><code>status</code></td>
+            <td>ENUM</td>
+            <td>'Active', 'Inactive'</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Public visibility status</td>
+        </tr>
+    </tbody>
+</table>
+
+<!-- Table 10: home_page_settings -->
+<h3>2.10 Table Name: <code>home_page_settings</code></h3>
+<p><strong>Description:</strong> Singleton configuration managing hero banners, live statistical counters, news ticker, and feature highlights.</p>
+<table>
+    <thead>
+        <tr>
+            <th>Field Name</th>
+            <th>Data Type</th>
+            <th>Size / Constraints</th>
+            <th>Nullable</th>
+            <th>Key</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><code>id</code></td>
+            <td>INT</td>
+            <td>Auto-Increment</td>
+            <td>NO</td>
+            <td><span class="badge-pk">PRIMARY KEY</span></td>
+            <td>Singleton config record ID</td>
+        </tr>
+        <tr>
+            <td><code>hero_headline</code></td>
+            <td>VARCHAR</td>
+            <td>255</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Main landing page headline</td>
+        </tr>
+        <tr>
+            <td><code>hero_subtitle</code></td>
+            <td>TEXT</td>
+            <td>-</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Landing page mission tagline</td>
+        </tr>
+        <tr>
+            <td><code>hero_pill_badge</code></td>
+            <td>VARCHAR</td>
+            <td>120</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Top pill badge text</td>
+        </tr>
+        <tr>
+            <td><code>hero_banner_image</code></td>
+            <td>VARCHAR</td>
+            <td>255</td>
+            <td>YES</td>
+            <td>-</td>
+            <td>Custom hero background image path</td>
+        </tr>
+        <tr>
+            <td><code>stat1_number</code></td>
+            <td>VARCHAR</td>
+            <td>50</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Stat 1 Counter (e.g. '5,000+')</td>
+        </tr>
+        <tr>
+            <td><code>stat1_label</code></td>
+            <td>VARCHAR</td>
+            <td>100</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Stat 1 Label ('Enrolled Students')</td>
+        </tr>
+        <tr>
+            <td><code>stat1_active</code></td>
+            <td>BOOLEAN</td>
+            <td>Default True</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Toggle switch for Stat 1</td>
+        </tr>
+        <tr>
+            <td><code>ticker_active</code></td>
+            <td>BOOLEAN</td>
+            <td>Default True</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Toggle switch for breaking news ticker</td>
+        </tr>
+        <tr>
+            <td><code>ticker_text</code></td>
+            <td>TEXT</td>
+            <td>-</td>
+            <td>NO</td>
+            <td>-</td>
+            <td>Breaking news text scrolling on homepage</td>
+        </tr>
+    </tbody>
+</table>
+
+<div class="page-break"></div>
+
+<!-- ========================================== -->
+<!-- 3. DATA FLOW DIAGRAMS (DFD)                -->
+<!-- ========================================== -->
+<h2>3. Data Flow Diagrams (DFD)</h2>
+
+<p>
+    A <strong>Data Flow Diagram (DFD)</strong> is a graphical representation of the "flow" of data through an information system. It models the processes, data stores, external entities, and data paths within the <strong>CampusSync ERP</strong> system.
+</p>
+
+<h3>3.1 DFD Standard Symbols &amp; Notations</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Symbol Component</th>
+            <th>Shape / Notation</th>
+            <th>Description &amp; Purpose</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>External Entity</strong></td>
+            <td>Rectangle <code>[ Entity Name ]</code></td>
+            <td>Sources and destinations of data outside the system boundary (Student, Faculty, Admin, Alumni).</td>
+        </tr>
+        <tr>
+            <td><strong>Process</strong></td>
+            <td>Circle / Rounded Box <code>( Process Name )</code></td>
+            <td>Transformation of data inputs into data outputs (e.g. Generate QR, Grade Marks).</td>
+        </tr>
+        <tr>
+            <td><strong>Data Store</strong></td>
+            <td>Open-ended Box <code>== [D#] Store Name ==</code></td>
+            <td>Data repositories and database tables at rest (e.g. D4 Attendance Records).</td>
+        </tr>
+        <tr>
+            <td><strong>Data Flow</strong></td>
+            <td>Directed Arrow <code>─── Flow Name ───&gt;</code></td>
+            <td>Path along which data moves between entities, processes, and stores.</td>
+        </tr>
+    </tbody>
+</table>
+
+<hr style="border: 1px dashed #cbd5e1; margin: 25px 0;">
+
+<!-- Level 0 DFD -->
+<h3>3.2 Level 0 DFD: Context Analysis Diagram</h3>
+<p>
+    The <strong>Context Diagram (Level 0 DFD)</strong> establishes the system boundary of CampusSync by demonstrating how external user roles interact directly with the central system engine.
+</p>
+
+<div class="diagram-box">
+                    ┌─────────────────────────┐
+                    │      STUDENT USER       │
+                    └───────────┬─────────────┘
+                                │ ▲
+              1. Login & Scan QR│ │ 2. Live Attendance %,
+             3. View Sem Marks  │ │    Notices, Marksheets
+                                ▼ │
+    ┌───────────────────────────┴─┴───────────────────────────┐
+    │                                                         │
+    │               0.0 CAMPUSSYNC ERP SYSTEM                 │
+    │                 (Core Central Engine)                   │
+    │                                                         │
+    └───────────┬─▲─────────────────────────────┬─▲───────────┘
+                │ │                             │ │
+  4. Dynamic QR │ │ 5. Class Registers,         │ │ 8. Verify OTP,
+  6. Submit Mark│ │    Subject Lists            │ │    Download PDF
+                │ │                             │ │
+                ▼ │                             ▼ │
+  ┌─────────────┴─┴─────────┐         ┌─────────┴─┴───────────┐
+  │      FACULTY USER       │         │  ALUMNI / PUBLIC USER │
+  └─────────────────────────┘         └───────────────────────┘
+                ▲
+                │ 9. Configs, CMS, Master Records
+                │ 10. Audit Logs & System Analytics
+                ▼
+  ┌─────────────────────────┐
+  │   ADMINISTRATOR USER    │
+  └─────────────────────────┘
+</div>
+
+<p><strong>Entity Inflow / Outflow Summary Table:</strong></p>
+<table>
+    <thead>
+        <tr>
+            <th>External Entity</th>
+            <th>Data Inputs (To System)</th>
+            <th>Data Outputs (From System)</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>Student</strong></td>
+            <td>Login credentials, QR code scan data, Profile changes, Password OTP</td>
+            <td>Subject-wise attendance percentages, Internal marks, Campus circulars</td>
+        </tr>
+        <tr>
+            <td><strong>Faculty</strong></td>
+            <td>Dynamic QR generation requests, Manual attendance, Internal marks</td>
+            <td>Assigned student lists, Official registers, Course syllabus details</td>
+        </tr>
+        <tr>
+            <td><strong>Administrator</strong></td>
+            <td>Master student/faculty accounts, Course setup, Notices, Gallery images, CMS</td>
+            <td>Institution pass-rate analytics, Audit logs, System status</td>
+        </tr>
+        <tr>
+            <td><strong>Alumni / Public</strong></td>
+            <td>Enrollment number, Semester, Email OTP verification, General inquiries</td>
+            <td>Consolidated semester marksheet PDF, Public photo gallery, Announcements</td>
+        </tr>
+    </tbody>
+</table>
+
+<div class="page-break"></div>
+
+<!-- Level 1 DFD -->
+<h3>3.3 Level 1 DFD: Decomposed Functional Modules</h3>
+<p>
+    Level 1 DFD breaks down <strong>0.0 CampusSync ERP</strong> into its 6 primary sub-processes and maps them to respective database tables.
+</p>
+
+<div class="diagram-box">
+  [ STUDENT ] ──(Credentials)──&gt; ( 1.0 Authentication ) &lt;──[ D1 Students ]
+  [ FACULTY ] ──(Credentials)──&gt; (     &amp; Security     ) &lt;──[ D2 Faculty ]
+  [ ADMIN   ] ──(Credentials)──&gt; (    Management      ) &lt;──[ D3 Admins ]
+                                           │
+                        Session Auth Token │
+                                           ▼
+  [ FACULTY ] ──(Lecture Info)─&gt; ( 2.0 Smart QR &amp;      ) ──(Log Attendance)──&gt; [ D4 AttendanceRecords ]
+  [ STUDENT ] ──(Scan QR Data)─&gt; ( Attendance Engine   ) ──(Update %)────────&gt; [ D1 Students ]
+                                           │
+  [ FACULTY ] ──(Unit Test/Assn)&gt;( 3.0 Internal Marks  ) ──(Save Scores)─────&gt; [ D5 InternalMarks ]
+  [ STUDENT ] &lt;─(View Results)── ( &amp; Academic Grading  ) ──(Syllabus Credits)&gt; [ D6 Subjects ]
+                                           │
+  [ ADMIN   ] ──(New Notice)───&gt; ( 4.0 Circulars &amp;     ) ──(Store Post)──────&gt; [ D7 Notifications ]
+  [ PUBLIC  ] &lt;─(Read Notice)─── ( Notice Board System )
+                                           │
+  [ ADMIN   ] ──(Upload Photo)─&gt; ( 5.0 Campus Gallery  ) ──(Save Images)─────&gt; [ D8 GalleryItems ]
+  [ ADMIN   ] ──(Banner/CMS)───&gt; ( &amp; Homepage CMS      ) ──(Save Settings)───&gt; [ D9 HomePageSettings ]
+                                           │
+  [ ALUMNI  ] ──(Enrollment/OTP)&gt;( 6.0 Alumni Result   ) ──(Fetch History)───&gt; [ D10 ArchivedStudents ]
+  [ ALUMNI  ] &lt;─(Download PDF)── ( Verification Engine ) ──(Generate PDF)────&gt; [ D11 ArchivedMarks ]
+</div>
+
+<p><strong>Core Processes in Level 1 DFD:</strong></p>
+<ul>
+    <li><strong>1.0 Authentication &amp; Security:</strong> Validates user role (Student, Faculty, Admin), verifies hashed passwords, manages session timeouts.</li>
+    <li><strong>2.0 Smart QR &amp; Attendance Engine:</strong> Dynamic QR generation with countdown timers to eliminate proxy attendance.</li>
+    <li><strong>3.0 Internal Marks &amp; Grading:</strong> Calculates continuous evaluation (Unit tests, assignments, attendance component).</li>
+    <li><strong>4.0 Circulars &amp; Notice Board:</strong> Disseminates institutional notices filtered by target audience.</li>
+    <li><strong>5.0 Campus Gallery &amp; Homepage CMS:</strong> Full-resolution photo gallery with categorization and live home page content editor.</li>
+    <li><strong>6.0 Alumni Result Verification:</strong> Secure historical marksheet retrieval using Two-Factor Email OTP verification.</li>
+</ul>
+
+<hr style="border: 1px dashed #cbd5e1; margin: 25px 0;">
+
+<!-- Level 2 DFD -->
+<h3>3.4 Level 2 DFD: Smart QR-based Attendance Flow (Process 2.0)</h3>
+<p>
+    This diagram details the real-time operational flow of the QR-based smart attendance subsystem (Process 2.0).
+</p>
+
+<div class="diagram-box">
+  [ Faculty User ]
+         │
+         ▼ (Select Subject &amp; Division)
+  ┌────────────────────────────────────────────────────────┐
+  │ 2.1 Generate Dynamic QR Session                        │
+  │     - Assign unique session UUID                       │
+  │     - Set expiry window (e.g. 15-30 seconds)           │
+  │     - Display live QR code on classroom projector      │
+  └──────────────────────────┬─────────────────────────────┘
+                             │ (Session Token)
+                             ▼
+  [ Student Mobile Device ]  │
+         │                   │
+         ▼ (Scan Live QR via Camera)
+  ┌──────────────────────────┴─────────────────────────────┐
+  │ 2.2 Validate QR Scan Request                           │
+  │     - Check Session Expiry (Timestamp &lt; ExpireTime)    │
+  │     - Check Student Enrollment &amp; Division Match        │
+  │     - Check Duplicate Scan (Anti-Proxy Engine)         │
+  └──────────────────────────┬─────────────────────────────┘
+                             │
+            ┌────────────────┴────────────────┐
+            ▼ [Valid Scan]                    ▼ [Invalid / Expired]
+  ┌───────────────────────────────┐  ┌───────────────────────────────┐
+  │ 2.3 Record Presence           │  │ 2.4 Reject Scan               │
+  │     - Insert into D4 Database │  │     - Alert Student Device    │
+  │     - Method: 'QR'            │  │     - Log Security Warning    │
+  │     - Status: 'Present'       │  └───────────────────────────────┘
+  └──────────────┬────────────────┘
+                 │
+                 ▼
+  ┌───────────────────────────────┐
+  │ 2.5 Recalculate %             │
+  │     - Present Lectures / Total│
+  │     - Push update to Student  │
+  └───────────────────────────────┘
+</div>
+
+<p><strong>Sub-process Logic Highlights:</strong></p>
+<ol>
+    <li><strong>Dynamic Expiration:</strong> QR codes rotate on faculty screens to prevent unauthorized sharing outside classroom.</li>
+    <li><strong>Anti-Proxy Constraint:</strong> A student cannot scan twice for the same lecture session.</li>
+    <li><strong>Dual Mode Fallback:</strong> If a student has camera/device failure, faculty can mark attendance via the Manual Register view.</li>
+</ol>
+
+<br>
+<p style="text-align: center; color: #718096; font-size: 10pt; border-top: 1px solid #e2e8f0; padding-top: 10px;">
+    <strong>CampusSync ERP Documentation</strong> &bull; Department of Computer Applications &bull; Academic Year 2025-26
+</p>
+
+</body>
+</html>

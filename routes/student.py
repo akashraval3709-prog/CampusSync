@@ -35,31 +35,111 @@ def student_login():
     Handles Student Login logic:
     - GET: Displays student login page.
     - POST: Verifies student email and password, creates session upon success.
+    - Prevents device duplication (1 Phone = 1 Student).
     """
-    # Check if student is already logged in
-    if "student_id" in session:
+    # Check if student is already logged in (GET requests only)
+    if request.method == 'GET' and "student_id" in session:
         return redirect(url_for('student_dashboard'))
 
     if request.method == 'POST':
-        # Get student email and password from login form
-        email = request.form.get('email', '').strip()
-        password = request.form.get('password', '')
+        payload = request.get_json(silent=True) or request.form.to_dict() or {}
+        email = payload.get('email', '').strip()
+        password = payload.get('password', '')
+        device_fp = payload.get('device_fingerprint', '').strip()
+        device_model = payload.get('device_model', '').strip()
+        skip_binding_confirmed = str(payload.get('skip_binding_confirmed', '0')).strip()
 
-        # Authenticate student via service
+        print(f"[Student Login] Attempt for: {email} | Device FP: '{device_fp}' | SkipConfirmed: {skip_binding_confirmed}")
+
+        from models import Student, db
+
+        # 1. Check if confirming device conflict modal ("Continue Login")
+        if skip_binding_confirmed == '1':
+            student_id = session.pop("pending_conflict_student_id", None) or payload.get("student_id")
+            student = Student.query.get(student_id) if student_id else None
+            if not student and email:
+                student = Student.query.filter_by(email=email.lower()).first()
+            if not student:
+                if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                    return jsonify({"status": "error", "message": "Session expired. Please log in again."}), 400
+                return redirect(url_for('student_login'))
+
+            # Verified student: DO NOT bind this foreign phone! Keep device_fingerprint as NULL
+            session.clear()
+            session.permanent = True
+            session["student_id"] = student.id
+            session["user_role"] = "student"
+            session["device_conflict_notice"] = "Logged in from shared device. Device not bound."
+            session["last_active"] = datetime.utcnow().timestamp()
+
+            if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return jsonify({"status": "success", "redirect_url": url_for('student_dashboard')})
+            return redirect(url_for('student_dashboard'))
+
+        # 2. Authenticate student credentials
         student, error = authenticate_student(email, password)
-
         if error:
-            # Render login form with error alert
+            if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return jsonify({"status": "error", "message": error}), 401
             return render_template('auth/student-login.html', error=error)
 
-        # Create student session securely
+        # 3. Smart Device Binding & Duplication Prevention Check
+        if device_fp and not device_fp.startswith('HW-') and not device_fp.startswith('DEV-'):
+            # Check if this phone is ALREADY registered to another student
+            other_student = Student.query.filter(
+                Student.id != student.id,
+                Student.device_fingerprint == device_fp
+            ).first()
+
+            if other_student:
+                # Device belongs to someone else (e.g. Sachin Rathod)!
+                session["pending_conflict_student_id"] = student.id
+                conflict_data = {
+                    "student_id": student.id,
+                    "email": email,
+                    "bound_to_roll": other_student.roll_number,
+                    "bound_to_name": other_student.full_name,
+                    "device_fingerprint": device_fp,
+                    "device_model": device_model
+                }
+                if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                    return jsonify({
+                        "status": "conflict",
+                        "conflict": conflict_data,
+                        "message": f"This device is already registered to Roll #{other_student.roll_number} ({other_student.full_name})."
+                    })
+                return render_template('auth/student-login.html', device_conflict=conflict_data)
+            else:
+                # Device is completely unassigned to anyone -> Bind cleanly on first login!
+                if not student.device_fingerprint:
+                    student.device_fingerprint = device_fp
+                    student.device_model = device_model or "Mobile Device"
+                    student.device_bound_at = datetime.utcnow()
+                    db.session.commit()
+
+        # 4. Standard clean login
         session.clear()
         session.permanent = True
         session["student_id"] = student.id
         session["user_role"] = "student"
         session["last_active"] = datetime.utcnow().timestamp()
 
-        # Redirect to Student Dashboard
+        # Check if student already has a registered WebAuthn passkey
+        fp = student.device_fingerprint
+        has_passkey = bool(fp and not fp.startswith('HW-') and not fp.startswith('DEV-') and not fp.startswith('PIN-'))
+        if getattr(student, 'device_reset_allowed', 0):
+            has_passkey = False
+
+        if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({
+                "status": "success",
+                "has_passkey": has_passkey,
+                "student_id": student.id,
+                "email": student.email,
+                "full_name": student.full_name,
+                "roll_number": student.roll_number,
+                "redirect_url": url_for('student_dashboard')
+            })
         return redirect(url_for('student_dashboard'))
 
     success_msg = request.args.get('success')
@@ -269,10 +349,10 @@ def student_results():
                 breakdown = {
                     "type": sub.subject_type,
                     "test1": m.test1, "test2": m.test2, "test3": m.test3,
-                    "internal_exam": m.internal_exam,
+                    "quiz1": m.quiz1, "quiz2": m.quiz2, "quiz3": m.quiz3, "quiz4": m.quiz4,
                     "active_learning": m.active_learning, "class_assignment": m.class_assignment,
                     "home_assignment": m.home_assignment, "attendance": m.attendance,
-                    "practical_eval": m.practical_eval, "viva": m.viva, "journal": m.journal,
+                    "internal_exam": m.internal_exam, "practical_eval": m.practical_eval, "viva": m.viva, "journal": m.journal,
                     "total": m.marks_obtained
                 }
 
@@ -284,7 +364,6 @@ def student_results():
                     t_vals.sort(reverse=True)
                     best2_vals = t_vals[:2]
                     breakdown['best2'] = round(sum(best2_vals) / len(best2_vals), 2)
-
             if marks_obtained is not None and max_marks > 0:
                 percentage = round((marks_obtained / max_marks) * 100, 1)
         else:
@@ -475,26 +554,35 @@ def student_scan():
 
             device_fingerprint = payload.get("device_fingerprint")
             device_model = payload.get("device_model")
+            request_approval = bool(payload.get("request_approval") or payload.get("is_borrowed_device"))
 
             from services.attendance_service import mark_student_qr_attendance
-            success, msg = mark_student_qr_attendance(
+            success, msg_or_data = mark_student_qr_attendance(
                 student_id=student.id,
                 session_id=session_id,
                 token=token,
                 lat=lat,
                 lng=lng,
                 device_fingerprint=device_fingerprint,
-                device_model=device_model
+                device_model=device_model,
+                request_approval=request_approval
             )
 
-            status_code = 200 if success else 400
+            if isinstance(msg_or_data, dict):
+                response_payload = {"success": success, **msg_or_data}
+                user_msg = msg_or_data.get("message", "Attendance request processed.")
+            else:
+                response_payload = {"success": success, "message": str(msg_or_data)}
+                user_msg = str(msg_or_data)
+
+            status_code = 200 if (success or response_payload.get("requires_approval") or response_payload.get("pending_approval")) else 400
             if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
-                return jsonify({"success": success, "message": msg}), status_code
+                return jsonify(response_payload), status_code
 
             if success:
-                flash(msg, "success")
+                flash(user_msg, "success")
             else:
-                flash(msg, "danger")
+                flash(user_msg, "danger")
 
             return redirect(url_for('student_attendance'))
         except Exception as e:
@@ -567,6 +655,91 @@ def student_scan():
         return redirect(url_for('student_dashboard'))
 
 
+@student_bp.route('/student/scan/check-status', methods=['GET'], endpoint='student_scan_check_status')
+def student_scan_check_status():
+    """
+    Lightweight polling endpoint returning the real-time review status of an attendance scan.
+    Enables automatic transitions from pending to verified or rejected.
+    """
+    if "student_id" not in session:
+        return jsonify({"success": False, "status": "unauthorized"}), 401
+
+    try:
+        student_id = session.get("student_id")
+        student = get_student_by_id(student_id)
+        if not student:
+            return jsonify({"success": False, "status": "unknown"}), 404
+
+        session_id = request.args.get("session_id")
+        from models import LectureAttendanceSession, LectureAttendanceStudent, AttendanceSecurityAlert
+
+        sess = None
+        if session_id:
+            try:
+                sess = LectureAttendanceSession.query.get(int(session_id))
+            except (ValueError, TypeError):
+                pass
+
+        if not sess:
+            sess = LectureAttendanceSession.query.filter_by(
+                semester=student.semester,
+                division=student.division,
+                is_qr_active=1
+            ).order_by(LectureAttendanceSession.id.desc()).first()
+
+        if not sess:
+            return jsonify({"success": True, "status": "no_session"})
+
+        security_alert = AttendanceSecurityAlert.query.filter_by(
+            session_id=sess.id,
+            student_id=student.id
+        ).order_by(AttendanceSecurityAlert.id.desc()).first()
+
+        existing_student_rec = LectureAttendanceStudent.query.filter_by(
+            session_id=sess.id,
+            student_id=student.id
+        ).first()
+
+        if security_alert and security_alert.faculty_action == 'APPROVED':
+            marked_time = existing_student_rec.scanned_at.strftime("%I:%M:%S %p") if (existing_student_rec and existing_student_rec.scanned_at) else "Just Now"
+            return jsonify({
+                "success": True,
+                "status": "verified",
+                "marked_at": marked_time,
+                "message": "Your attendance request has been approved by the faculty! You are marked PRESENT."
+            })
+        elif security_alert and security_alert.faculty_action == 'REJECTED':
+            return jsonify({
+                "success": True,
+                "status": "rejected",
+                "message": security_alert.alert_message or "Attendance request was rejected by the faculty. Marked ABSENT."
+            })
+        elif existing_student_rec and existing_student_rec.status == 'Present':
+            marked_time = existing_student_rec.scanned_at.strftime("%I:%M:%S %p") if existing_student_rec.scanned_at else "Just Now"
+            return jsonify({
+                "success": True,
+                "status": "verified",
+                "marked_at": marked_time,
+                "message": "Attendance verified successfully."
+            })
+        elif existing_student_rec and existing_student_rec.marked_method == 'REJECTED_PROXY':
+            return jsonify({
+                "success": True,
+                "status": "rejected",
+                "message": "Attendance scan flagged and rejected by faculty."
+            })
+        elif security_alert and security_alert.faculty_action == 'PENDING':
+            return jsonify({
+                "success": True,
+                "status": "pending",
+                "message": "Attendance request submitted. Awaiting faculty approval."
+            })
+        else:
+            return jsonify({"success": True, "status": "ready"})
+    except Exception as e:
+        return jsonify({"success": False, "status": "error", "message": str(e)}), 500
+
+
 @student_bp.route('/student/notices', endpoint='student_notices')
 def student_notices():
     """
@@ -597,7 +770,10 @@ def student_notices():
     )
 
 
-# WEBAUTHN DEVICE BINDING ENDPOINTS
+
+
+
+# --- Student WebAuthn Endpoints ---
 @student_bp.route('/student/webauthn/status', methods=['GET'], endpoint='student_webauthn_status')
 def student_webauthn_status():
     if "student_id" not in session:

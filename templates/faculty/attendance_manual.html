@@ -569,6 +569,41 @@
                 </div>
                 {% endif %}
 
+                <!-- Global Anti-Proxy / Alternate Device Live Alert Box (Always visible at the top when alert is active) -->
+                <div id="proxyAlertBox" class="alert alert-warning border border-warning shadow-sm mb-3 {% if not pending_alert %}d-none{% endif %}" style="border-radius: 16px; background: #fffbeb; border-left: 6px solid #f59e0b !important;">
+                    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="rounded-circle bg-warning-subtle text-warning d-flex align-items-center justify-content-center p-2" style="width: 48px; height: 48px; flex-shrink: 0;">
+                                <i class="bi bi-shield-exclamation fs-3 text-warning"></i>
+                            </div>
+                            <div>
+                                <strong class="text-danger fs-6 d-block" id="proxyAlertTitle">
+                                    {% if pending_alert %}
+                                    ⚠️ Attendance Approval Request (Roll #{{ pending_alert.attempted_roll or (pending_alert.student.roll_number if pending_alert.student else '') }} — {{ pending_alert.student.full_name if pending_alert.student else 'Student' }}):
+                                    {% else %}
+                                    ⚠️ Attendance Approval Request:
+                                    {% endif %}
+                                </strong>
+                                <span id="proxyAlertMessage" class="text-dark small d-block mt-0.5">
+                                    {% if pending_alert %}
+                                    {{ pending_alert.alert_message }}
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2 align-items-center flex-shrink-0">
+                            <button type="button" class="btn btn-outline-danger btn-sm px-3 rounded-pill fw-semibold"
+                                onclick="resolveProxyConflict('reject')">
+                                <i class="bi bi-x-circle me-1"></i> Reject & Flag
+                            </button>
+                            <button type="button" class="btn btn-success btn-sm px-3 rounded-pill fw-semibold shadow-sm"
+                                onclick="resolveProxyConflict('approve')">
+                                <i class="bi bi-check-circle me-1"></i> Approve Attendance
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- ======================================================== -->
                 <!-- ATTENDANCE METHOD SELECTION SECTION (REMOVES ON SELECT) -->
                 <!-- 1) Manual Attendance Register                             -->
@@ -825,10 +860,22 @@
                                 <div>
                                     <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
                                         <span class="roll-badge fs-7">{{ student_data.subject.subject_code }}</span>
+                                        {% if is_locked %}
                                         <span
                                             class="badge bg-success-subtle text-success border border-success-subtle d-inline-flex align-items-center gap-1">
+                                            <i class="bi bi-lock-fill"></i> Final Submitted (Locked)
+                                        </span>
+                                        {% elif active_qr_session and qr_remaining_seconds > 0 %}
+                                        <span
+                                            class="badge bg-success-subtle text-success border border-success-subtle d-inline-flex align-items-center gap-1" id="qrSessionStatusHeaderBadge">
                                             <span class="live-dot"></span> Live QR Session Active
                                         </span>
+                                        {% else %}
+                                        <span
+                                            class="badge bg-secondary-subtle text-secondary border border-secondary-subtle d-inline-flex align-items-center gap-1" id="qrSessionStatusHeaderBadge">
+                                            <i class="bi bi-clock"></i> Session Inactive
+                                        </span>
+                                        {% endif %}
                                         <span class="badge bg-light text-dark border">
                                             <i class="bi bi-calendar3 me-1"></i>{{ selected_date }} · {{
                                             selected_lecture_no }}
@@ -846,10 +893,10 @@
                                 <!-- Direct Action Controls (No switching, direct submit) -->
                                 <div class="d-flex flex-wrap gap-2">
                                     <button type="button" class="btn btn-outline-primary btn-sm"
-                                        onclick="forceRotateQR()">
+                                        onclick="forceRotateQR()" {% if is_locked %}disabled title="Session is finalized and locked"{% endif %}>
                                         <i class="bi bi-arrow-clockwise me-1"></i> Regenerate QR
                                     </button>
-                                    <button type="button" class="btn btn-primary btn-sm" onclick="openProjectorModal()">
+                                    <button type="button" class="btn btn-primary btn-sm" onclick="openProjectorModal()" {% if is_locked %}disabled{% endif %}>
                                         <i class="bi bi-projector me-1"></i> Projector View
                                     </button>
                                     <button type="button" class="btn btn-secondary btn-sm"
@@ -885,29 +932,6 @@
                         </div>
                     </div>
 
-                    <!-- Anti-Proxy Live Conflict Alert Box (Preview/Demo) -->
-                    <div id="proxyAlertBox" class="alert alert-warning border border-warning shadow-sm mb-3 d-none">
-                        <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
-                            <div class="d-flex align-items-center gap-2">
-                                <i class="bi bi-shield-exclamation text-danger fs-4"></i>
-                                <div>
-                                    <strong class="text-danger" id="proxyAlertTitle">⚠️ Proxy Scan Conflict
-                                        Detected:</strong>
-                                    <span id="proxyAlertMessage" class="text-dark"></span>
-                                </div>
-                            </div>
-                            <div class="d-flex gap-2">
-                                <button type="button" class="btn btn-danger btn-sm"
-                                    onclick="resolveProxyConflict('reject')">
-                                    <i class="bi bi-x-circle me-1"></i> Reject & Flag
-                                </button>
-                                <button type="button" class="btn btn-outline-secondary btn-sm"
-                                    onclick="resolveProxyConflict('approve')">
-                                    <i class="bi bi-check-circle me-1"></i> Approve Exception
-                                </button>
-                            </div>
-                        </div>
-                    </div>
 
                     <!-- Main QR Session Grid (2 Columns: QR Left, Roster Right) -->
                     <div class="row g-3">
@@ -924,13 +948,21 @@
                                             <i class="bi bi-qr-code text-primary"></i> Classroom Attendance QR
                                         </h5>
                                         <span
-                                            class="badge bg-secondary-subtle text-secondary border border-secondary-subtle fs-8"
+                                            class="badge {% if is_locked %}bg-success-subtle text-success border border-success-subtle{% else %}bg-secondary-subtle text-secondary border border-secondary-subtle{% endif %} fs-8"
                                             id="qrHeaderBadge">
+                                            {% if is_locked %}
+                                            <i class="bi bi-lock-fill me-1"></i> Finalized & Locked
+                                            {% else %}
                                             <i class="bi bi-clock me-1"></i> Ready to Start
+                                            {% endif %}
                                         </span>
                                     </div>
                                     <p class="text-secondary small mb-3" id="qrHeaderSubtext">
+                                        {% if is_locked %}
+                                        This lecture attendance has been finalized and locked. Controls are read-only.
+                                        {% else %}
                                         Generate a 10-minute secure QR code for students to scan in this lecture.
+                                        {% endif %}
                                     </p>
                                 </div>
 
@@ -939,14 +971,20 @@
 
                                     <!-- STATE 1: INITIAL STATE (Before Clicking Generate QR) -->
                                     <div id="qrInitialStateBox" class="py-3">
-                                        <div class="rounded-circle bg-primary-subtle text-primary p-3 mb-3 shadow-sm mx-auto d-flex align-items-center justify-content-center"
+                                        <div class="rounded-circle {% if is_locked %}bg-secondary-subtle text-secondary{% else %}bg-primary-subtle text-primary{% endif %} p-3 mb-3 shadow-sm mx-auto d-flex align-items-center justify-content-center"
                                             style="width: 76px; height: 76px;">
-                                            <i class="bi bi-qr-code fs-1"></i>
+                                            <i class="bi {% if is_locked %}bi-lock-fill{% else %}bi-qr-code{% endif %} fs-1"></i>
                                         </div>
-                                        <h5 class="fw-bold text-dark mb-1">10-Minute QR Attendance</h5>
+                                        <h5 class="fw-bold text-dark mb-1">
+                                            {% if is_locked %}Attendance Register Locked{% else %}10-Minute QR Attendance{% endif %}
+                                        </h5>
                                         <p class="text-secondary small mb-3 mx-auto" style="max-width: 290px;">
+                                            {% if is_locked %}
+                                            This lecture register was submitted and locked. Controls and QR generation are disabled.
+                                            {% else %}
                                             When you are ready to project to students, click below to generate the live
                                             QR code.
+                                            {% endif %}
                                         </p>
                                         <div class="p-2 px-3 bg-light rounded-3 border mb-4 text-start small mx-auto"
                                             style="max-width: 320px;">
@@ -970,11 +1008,17 @@
                                                 <span class="fw-bold text-dark">1 Student = 1 Phone</span>
                                             </div>
                                         </div>
+                                        {% if is_locked %}
+                                        <button type="button" class="btn btn-secondary btn-lg px-4 py-2 opacity-75" disabled>
+                                            <i class="bi bi-lock-fill fs-5"></i> Attendance Finalized & Locked
+                                        </button>
+                                        {% else %}
                                         <button type="button"
                                             class="btn-generate-qr btn-lg px-4 py-2"
                                             onclick="startTenMinuteQRSession()" id="btnStartQRMain">
                                             <i class="bi bi-play-circle-fill fs-5"></i> Generate Attendance QR (10 Mins)
                                         </button>
+                                        {% endif %}
                                     </div>
 
                                     <!-- STATE 2: ACTIVE 10-MINUTE QR CODE (Hidden by default with d-none) -->
@@ -1045,7 +1089,7 @@
                                 </div>
 
                                 <!-- Bottom Action Buttons (Visible only during active QR session) -->
-                                <div id="qrBottomControlsBox" class="pt-3 border-top mt-auto {% if not (active_qr_session and qr_remaining_seconds > 0) %}d-none{% endif %}">
+                                <div id="qrBottomControlsBox" class="pt-3 border-top mt-auto {% if is_locked or not (active_qr_session and qr_remaining_seconds > 0) %}d-none{% endif %}">
                                     <button type="button"
                                         class="btn btn-outline-primary btn-sm py-2 fw-semibold w-100 mb-2"
                                         onclick="openProjectorModal()">
@@ -1178,15 +1222,24 @@
                                                         —
                                                     </td>
                                                     <td id="qr_device_{{ st.id }}">
-                                                        <span class="badge bg-light text-muted border fs-8">Awaiting
-                                                            Scan</span>
+                                                        {% if st.att_status == 'Present' %}
+                                                        <span class="badge bg-success-subtle text-success border border-success-subtle fs-8"><i class="bi bi-shield-check me-1"></i>Recorded</span>
+                                                        {% else %}
+                                                        <span class="badge bg-light text-muted border fs-8">Awaiting Scan</span>
+                                                        {% endif %}
                                                     </td>
                                                     <td class="text-center" id="qr_status_{{ st.id }}">
+                                                        {% if st.att_status == 'Present' %}
+                                                        <span class="status-pill present"><i class="bi bi-check-circle-fill"></i> Present</span>
+                                                        {% elif is_locked %}
+                                                        <span class="badge bg-light text-danger border fs-8">Absent</span>
+                                                        {% else %}
                                                         <button type="button"
                                                             class="btn btn-outline-secondary btn-sm py-0 px-2 fs-8 rounded-pill"
                                                             onclick="simulateStudentScan({{ st.id }}, '{{ st.roll_number }}', '{{ st.full_name }}')">
                                                             <i class="bi bi-hand-index me-1"></i> Mark
                                                         </button>
+                                                        {% endif %}
                                                     </td>
                                                 </tr>
                                                 {% endfor %}
@@ -1194,6 +1247,7 @@
                                         </table>
                                     </div>
 
+                                    {% if not is_locked %}
                                     <!-- Simulation & Demo Helpers (Discreet Executive Drawer) -->
                                     <div class="mt-3 pt-2 border-top">
                                         <details class="simulator-accordion">
@@ -1227,6 +1281,7 @@
                                             </div>
                                         </details>
                                     </div>
+                                    {% endif %}
 
                                 </div>
                             </div>
@@ -1434,20 +1489,39 @@
         const totalEnrolledStudents = {{ student_data.students| length if student_data and student_data.students else 0 }};
         let currentSessionId = null;
         let livePollingTimer = null;
-        let currentPendingAlertId = null;
+        let currentPendingAlertId = {{ pending_alert.id if pending_alert else 'null' }};
 
         document.addEventListener("DOMContentLoaded", function () {
-            {% if active_qr_session and qr_remaining_seconds > 0 %}
-            const activeQrData = {{ active_qr_session | tojson
-        }};
-        resumeActiveQRSession(activeQrData);
-        {% else %}
-        checkSavedMode();
-        {% endif %}
-    });
+            {% if is_locked %}
+            sessionStorage.removeItem(getSessionKey());
+            {% endif %}
+
+            // Pre-seed qrScannedStudents from existing present students
+            {% if student_data and student_data.students %}
+            {% for st in student_data.students %}
+            {% if st.att_status == 'Present' %}
+            qrScannedStudents.add({{ st.id }});
+            {% endif %}
+            {% endfor %}
+            {% endif %}
+
+            updateQRStats();
+
+            {% if not is_locked and active_qr_session and qr_remaining_seconds > 0 %}
+            const activeQrData = {{ active_qr_session | tojson }};
+            resumeActiveQRSession(activeQrData);
+            {% else %}
+            checkSavedMode();
+            {% endif %}
+
+            const pollSessId = {{ poll_session_id if poll_session_id else 'null' }};
+            if (pollSessId && !livePollingTimer && !{{ 'true' if is_locked else 'false' }}) {
+                startLivePolling(pollSessId);
+            }
+        });
 
         function resumeActiveQRSession(activeData) {
-            if (!activeData || !activeData.id) return;
+            if (!activeData || !activeData.id || {{ 'true' if is_locked else 'false' }}) return;
 
             selectAttendanceMethod('qr', false);
 
@@ -1564,7 +1638,10 @@
             if (btnReset) btnReset.classList.remove('d-none');
             if (badgeHeader) {
                 badgeHeader.classList.remove('d-none');
-                if (mode === 'manual') {
+                if ({{ 'true' if is_locked else 'false' }}) {
+                    badgeHeader.className = "badge bg-success-subtle text-success fs-7 border border-success-subtle fw-semibold px-2 py-1";
+                    badgeHeader.innerHTML = '<i class="bi bi-lock-fill me-1"></i> Attendance Finalized & Locked';
+                } else if (mode === 'manual') {
                     badgeHeader.className = "badge bg-primary-subtle text-primary fs-7 border border-primary-subtle fw-semibold px-2 py-1";
                     badgeHeader.innerHTML = '<i class="bi bi-ui-checks me-1"></i> Manual Register Mode';
                 } else {
@@ -1726,14 +1803,16 @@
         }
 
         function syncLiveRosterFromBackend(data) {
-            // Sync remaining countdown seconds with server clock
-            if (data.is_qr_active === false && currentSessionId) {
+            // Stop live updates if session is locked or terminated
+            if (data.is_locked || (data.is_qr_active === false && currentSessionId)) {
                 handleTenMinuteTimeout();
                 return;
             } else if (data.remaining_seconds !== undefined && Math.abs(qrRemainingSeconds - data.remaining_seconds) > 4) {
                 qrRemainingSeconds = data.remaining_seconds;
                 updateTimerDisplayElements();
             }
+
+            const pct = (data.percentage !== undefined ? data.percentage : (data.attendance_percentage !== undefined ? data.attendance_percentage : 0));
 
             const elPresent = document.getElementById('qrStatPresent');
             const elRemaining = document.getElementById('qrStatRemaining');
@@ -1744,9 +1823,9 @@
 
             if (elPresent) elPresent.innerText = data.present_count;
             if (elRemaining) elRemaining.innerText = data.remaining_count;
-            if (elPercent) elPercent.innerText = `${data.percentage}%`;
+            if (elPercent) elPercent.innerText = `${pct}%`;
             if (elProgressText) elProgressText.innerText = `${data.present_count} / ${data.total_enrolled} Students`;
-            if (elProgressBar) elProgressBar.style.width = `${data.percentage}%`;
+            if (elProgressBar) elProgressBar.style.width = `${pct}%`;
             if (elProjPresent) elProjPresent.innerText = `${data.present_count} / ${data.total_enrolled}`;
 
             if (data.roster) {
@@ -1773,15 +1852,16 @@
             }
 
             const alertBox = document.getElementById('proxyAlertBox');
-            if (data.alerts && data.alerts.length > 0) {
-                const firstAlert = data.alerts[0];
+            const alertsList = (data.alerts && data.alerts.length) ? data.alerts : ((data.pending_alerts && data.pending_alerts.length) ? data.pending_alerts : []);
+            if (alertsList.length > 0) {
+                const firstAlert = alertsList[0];
                 currentPendingAlertId = firstAlert.alert_id;
                 if (alertBox) {
                     alertBox.classList.remove('d-none');
                     const alertTitleEl = document.getElementById('proxyAlertTitle') || alertBox.querySelector('strong');
                     const alertMsgEl = document.getElementById('proxyAlertMessage') || alertBox.querySelector('span');
                     if (alertTitleEl) {
-                        alertTitleEl.innerHTML = `<i class="bi bi-shield-exclamation text-danger me-1"></i> Proxy Scan Conflict (Roll #${firstAlert.roll_number || firstAlert.roll || ''} - ${firstAlert.student_name}):`;
+                        alertTitleEl.innerHTML = `<i class="bi bi-shield-exclamation text-danger me-1"></i> Attendance Request (Roll #${firstAlert.roll_number || firstAlert.roll || ''} - ${firstAlert.student_name}):`;
                     }
                     if (alertMsgEl) {
                         alertMsgEl.innerText = firstAlert.message;
@@ -2138,6 +2218,11 @@
         }
 
         function saveAttendance(actionType) {
+            if ({{ 'true' if is_locked else 'false' }}) {
+                showToast("This attendance register is already Final Submitted and locked.", false);
+                return;
+            }
+
             const subjectId = document.getElementById('subject_id').value;
             const division = document.getElementById('division').value;
             const semester = document.getElementById('semester').value;
@@ -2151,26 +2236,21 @@
             }
 
             const table = document.getElementById('attendanceTable');
-            if (!table) {
-                showToast("No student roster loaded.", false);
-                return;
-            }
-
             const statuses = {};
 
-            // If in QR attendance mode, directly map from verified QR roster
-            if (currentAttendanceMode === 'qr') {
-                const qrRows = document.querySelectorAll('.qr-student-row');
+            // If in QR attendance mode, reliably map from QR roster & scanned status
+            const qrRows = document.querySelectorAll('.qr-student-row');
+            if (currentAttendanceMode === 'qr' && qrRows.length > 0) {
                 qrRows.forEach(r => {
                     const sid = r.getAttribute('data-student-id');
                     if (sid) {
-                        statuses[sid] = qrScannedStudents.has(parseInt(sid)) ? 'Present' : 'Absent';
+                        const sidInt = parseInt(sid);
+                        const radioP = document.getElementById(`p_${sid}`);
+                        const isPresent = qrScannedStudents.has(sidInt) || (radioP && radioP.checked);
+                        statuses[sid] = isPresent ? 'Present' : 'Absent';
                     }
                 });
-            }
-
-            // Fallback or Manual mode: read checked radio buttons
-            if (Object.keys(statuses).length === 0) {
+            } else if (table) {
                 const radioP = table.querySelectorAll('input[type="radio"][value="P"]:checked');
                 const radioA = table.querySelectorAll('input[type="radio"][value="A"]:checked');
 
@@ -2186,8 +2266,17 @@
             }
 
             if (Object.keys(statuses).length === 0) {
-                showToast("No student attendance options selected.", false);
+                showToast("No student attendance statuses found.", false);
                 return;
+            }
+
+            // Stop live QR timer and notify backend to stop session if active
+            if (currentSessionId) {
+                fetch('/faculty/qr/stop-session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: currentSessionId })
+                }).catch(e => console.warn(e));
             }
 
             const payload = {
@@ -2197,6 +2286,9 @@
                 academic_year: academicYear,
                 lecture_date: lectureDate,
                 lecture_no: lectureNo,
+                session_type: document.getElementById('session_type') ? document.getElementById('session_type').value : 'Lecture',
+                start_time: document.getElementById('start_time') ? document.getElementById('start_time').value : '11:00',
+                end_time: document.getElementById('end_time') ? document.getElementById('end_time').value : '12:00',
                 action_type: actionType,
                 statuses: statuses
             };
@@ -2212,9 +2304,12 @@
                 .then(data => {
                     if (data.success) {
                         showToast(data.message, true);
+                        if (actionType === 'final') {
+                            sessionStorage.removeItem(getSessionKey());
+                        }
                         setTimeout(() => {
                             window.location.reload();
-                        }, 1200);
+                        }, 1000);
                     } else {
                         showToast(data.message || "Failed to save attendance.", false);
                     }
@@ -2247,18 +2342,33 @@
 
             const badgeHdr = document.getElementById('qrHeaderBadge');
             if (badgeHdr) {
-                badgeHdr.className = "badge bg-secondary-subtle text-secondary border border-secondary-subtle fs-8";
-                badgeHdr.innerHTML = '<i class="bi bi-clock me-1"></i> Ready to Start';
+                if ({{ 'true' if is_locked else 'false' }}) {
+                    badgeHdr.className = "badge bg-success-subtle text-success border border-success-subtle fs-8";
+                    badgeHdr.innerHTML = '<i class="bi bi-lock-fill me-1"></i> Finalized & Locked';
+                } else {
+                    badgeHdr.className = "badge bg-secondary-subtle text-secondary border border-secondary-subtle fs-8";
+                    badgeHdr.innerHTML = '<i class="bi bi-clock me-1"></i> Ready to Start';
+                }
             }
 
             const badgeHeader = document.getElementById('activeModeBadgeHeader');
             if (badgeHeader) {
-                badgeHeader.className = "badge bg-secondary-subtle text-secondary fs-7 border border-secondary-subtle fw-semibold px-2 py-1";
-                badgeHeader.innerHTML = '<i class="bi bi-clock me-1"></i> QR Ready (Click Generate)';
+                if ({{ 'true' if is_locked else 'false' }}) {
+                    badgeHeader.className = "badge bg-success-subtle text-success fs-7 border border-success-subtle fw-semibold px-2 py-1";
+                    badgeHeader.innerHTML = '<i class="bi bi-lock-fill me-1"></i> Attendance Finalized & Locked';
+                } else {
+                    badgeHeader.className = "badge bg-secondary-subtle text-secondary fs-7 border border-secondary-subtle fw-semibold px-2 py-1";
+                    badgeHeader.innerHTML = '<i class="bi bi-clock me-1"></i> QR Ready (Click Generate)';
+                }
             }
         }
 
         function startTenMinuteQRSession() {
+            if ({{ 'true' if is_locked else 'false' }}) {
+                showToast("This lecture is finalized and locked. QR sessions cannot be generated.", false);
+                return;
+            }
+
             const subId = document.getElementById('subject_id') ? document.getElementById('subject_id').value : null;
             const div = document.getElementById('division') ? document.getElementById('division').value : null;
             const sem = document.getElementById('semester') ? document.getElementById('semester').value : null;

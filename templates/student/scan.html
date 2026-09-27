@@ -311,6 +311,14 @@
                                     <span id="gpsStatusText">Detecting Campus GPS (Max 800m)...</span>
                                 </div>
 
+                                <!-- Optional Device Registration Suggestion (Non-blocking) -->
+                                <div class="mt-3 pt-2 border-top text-center" id="deviceRegisterSuggestionBox">
+                                    <button type="button" class="btn btn-link text-decoration-none btn-sm text-secondary p-0" onclick="openOptionalDeviceRegistration()">
+                                        <i class="bi bi-phone text-primary me-1"></i>
+                                        <span>📱 Suggestion: <strong>Register this as My Personal Phone</strong> (Set up Biometrics)</span>
+                                    </button>
+                                </div>
+
                             </div>
                         </div>
                     </div>
@@ -456,21 +464,15 @@
 <div class="modal fade" id="scanSuccessModal" tabindex="-1" aria-labelledby="scanSuccessModalTitle" aria-hidden="true" data-bs-backdrop="static">
   <div class="modal-dialog modal-dialog-centered modal-md">
     <div class="modal-content border-0 shadow-lg text-center" style="border-radius: 24px; overflow: hidden; background: #ffffff;">
-      <!-- Top green accent bar -->
       <div style="height: 6px; background: linear-gradient(90deg, #10b981, #34d399);"></div>
-      
       <div class="modal-body p-4 p-md-5">
-        <!-- Glowing Green Check Circle -->
         <div class="d-inline-flex align-items-center justify-content-center mb-3" style="width: 76px; height: 76px; border-radius: 50%; background: #ecfdf5; border: 2px solid #a7f3d0; box-shadow: 0 0 0 8px rgba(209, 250, 229, 0.4);">
           <i class="bi bi-check-circle-fill text-success" style="font-size: 2.5rem;"></i>
         </div>
-
         <h4 class="fw-bold text-dark mb-1" id="scanSuccessModalTitle">Attendance Verified!</h4>
         <div class="d-inline-block badge px-3 py-1 rounded-pill mb-3" style="background: #d1fae5; color: #065f46; font-size: 0.85rem; font-weight: 600;">
           <i class="bi bi-check2-circle me-1"></i> Status: PRESENT
         </div>
-
-        <!-- Details Card -->
         <div class="p-3 mb-3 text-start small" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px;">
           <div class="d-flex justify-content-between py-1 border-bottom border-light-subtle">
             <span class="text-muted">Subject:</span>
@@ -489,19 +491,15 @@
             <span class="fw-bold text-success"><i class="bi bi-shield-check me-1"></i> Device & GPS Verified</span>
           </div>
         </div>
-
-        <!-- Gujarati Confirmation Note -->
-        <div class="p-2.5 px-3 text-start small mb-4" style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 14px; color: #166534;">
-          <i class="bi bi-info-circle-fill me-1"></i> Your attendance has been successfully recorded in the institutional system.
-        </div>
-
-        <!-- Action Buttons -->
+        <p class="text-muted small mb-4">
+          Your attendance has been successfully recorded in the institutional system.
+        </p>
         <div class="d-flex flex-column flex-sm-row justify-content-center gap-2 pt-1">
-          <button type="button" class="btn btn-outline-secondary px-4 py-2.5 rounded-pill fw-medium" data-bs-dismiss="modal">
+          <button type="button" class="btn btn-outline-secondary px-4 py-2 rounded-pill fw-medium" data-bs-dismiss="modal">
             Close
           </button>
-          <a href="{{ url_for('student_dashboard') }}" class="btn btn-success px-4 py-2.5 rounded-pill fw-semibold shadow" style="background: linear-gradient(135deg, #059669, #10b981); border: none;">
-            <i class="bi bi-speedometer2 me-1"></i> View Dashboard
+          <a href="{{ url_for('student_dashboard') }}" class="btn btn-success px-4 py-2 rounded-pill fw-semibold shadow-sm" style="background: linear-gradient(135deg, #059669, #10b981); border: none;">
+            <i class="bi bi-speedometer2 me-1"></i> Dashboard
           </a>
         </div>
       </div>
@@ -510,41 +508,151 @@
 </div>
 
 <!-- ========================================== -->
-<!-- 2. State-of-the-Art Security / Warning / Error Alert Modal Popup -->
+<!-- 2. Suggestion Modal: Personal Phone Registration (Optional) -->
+<!-- ========================================== -->
+<div class="modal fade" id="scanDeviceRegisterModal" tabindex="-1" aria-labelledby="scanDeviceRegisterModalTitle" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered modal-md">
+    <div class="modal-content border-0 shadow-lg text-center" style="border-radius: 24px; overflow: hidden; background: #ffffff;">
+      <div style="height: 6px; background: linear-gradient(90deg, #3b82f6, #6366f1);"></div>
+      <div class="modal-body p-4 p-md-5">
+        <div class="d-inline-flex align-items-center justify-content-center mb-3" style="width: 76px; height: 76px; border-radius: 50%; background: #eff6ff; border: 2px solid #bfdbfe; box-shadow: 0 0 0 8px rgba(219, 234, 254, 0.4);">
+          <i class="bi bi-phone-fill text-primary" style="font-size: 2.4rem;"></i>
+        </div>
+        <h4 class="fw-bold text-dark mb-1" id="scanDeviceRegisterModalTitle">Personal Device Registration</h4>
+        <div class="d-inline-block badge px-3 py-1 rounded-pill mb-3" style="background: #dbeafe; color: #1e40af; font-size: 0.82rem; font-weight: 600;">
+          <i class="bi bi-fingerprint me-1"></i> Biometric / Screen Lock Setup
+        </div>
+        <p class="text-secondary small mb-4" style="line-height: 1.6;">
+          You can optionally link this phone as your verified personal device using your fingerprint or screen lock. This is optional and provides one-tap biometric verification.
+        </p>
+        <div class="d-flex flex-column gap-2 pt-1">
+          <button type="button" class="btn btn-primary px-4 py-2.5 rounded-pill fw-semibold shadow-sm" id="btnRegisterPersonalDevice">
+            <i class="bi bi-fingerprint me-2"></i>Register with Biometric / Screen Lock
+          </button>
+          <button type="button" class="btn btn-outline-secondary px-4 py-2 rounded-pill fw-medium" data-bs-dismiss="modal">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- 3. Warning Modal: Friend's / Registered Device Notice -->
+<!-- ========================================== -->
+<div class="modal fade" id="scanConfirmBorrowedModal" tabindex="-1" aria-labelledby="scanConfirmBorrowedTitle" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered modal-md">
+    <div class="modal-content border-0 shadow-lg text-center" style="border-radius: 24px; overflow: hidden; background: #ffffff;">
+      <div style="height: 6px; background: linear-gradient(90deg, #f59e0b, #fbbf24);"></div>
+      <div class="modal-body p-4 p-md-5">
+        <div class="d-inline-flex align-items-center justify-content-center mb-3" style="width: 76px; height: 76px; border-radius: 50%; background: #fffbeb; border: 2px solid #fde68a; box-shadow: 0 0 0 8px rgba(254, 243, 199, 0.4);">
+          <i class="bi bi-shield-exclamation text-warning" style="font-size: 2.4rem;"></i>
+        </div>
+        <h4 class="fw-bold text-dark mb-1" id="scanConfirmBorrowedTitle">Registered Device Notice</h4>
+        <div class="d-inline-block badge px-3 py-1 rounded-pill mb-3" style="background: #fef3c7; color: #92400e; font-size: 0.82rem; font-weight: 600;">
+          <i class="bi bi-phone-vibrate me-1"></i> Alternate Device
+        </div>
+        <div class="p-3 mb-4 text-start small" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; line-height: 1.6;">
+          <p class="mb-0 text-dark fw-medium" id="confirmBorrowedModalBodyText">
+            This phone is already registered to another student. Do you still wish to submit your attendance from this device?
+          </p>
+        </div>
+        <div class="d-flex justify-content-center gap-2 pt-1">
+          <button type="button" class="btn btn-outline-secondary px-4 py-2 rounded-pill fw-medium" data-bs-dismiss="modal">
+            Cancel
+          </button>
+          <button type="button" class="btn btn-primary px-4 py-2 rounded-pill fw-semibold shadow-sm" id="btnConfirmBorrowedScan">
+            <i class="bi bi-send-check me-1"></i> Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- 4. Pending Approval Status Modal -->
+<!-- ========================================== -->
+<div class="modal fade" id="scanPendingModal" tabindex="-1" aria-labelledby="scanPendingModalTitle" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered modal-md">
+    <div class="modal-content border-0 shadow-lg text-center" style="border-radius: 24px; overflow: hidden; background: #ffffff;">
+      <div style="height: 6px; background: linear-gradient(90deg, #f59e0b, #eab308);"></div>
+      <div class="modal-body p-4 p-md-5">
+        <div class="d-inline-flex align-items-center justify-content-center mb-3" style="width: 76px; height: 76px; border-radius: 50%; background: #fffbeb; border: 2px solid #fde68a; box-shadow: 0 0 0 8px rgba(254, 243, 199, 0.4);">
+          <i class="bi bi-hourglass-split text-warning" style="font-size: 2.4rem;"></i>
+        </div>
+        <h4 class="fw-bold text-dark mb-1" id="scanPendingModalTitle">Attendance Request Submitted</h4>
+        <div class="d-inline-block badge px-3 py-1 rounded-pill mb-3" style="background: #fef3c7; color: #92400e; font-size: 0.82rem; font-weight: 600;">
+          <i class="bi bi-clock-history me-1"></i> Awaiting Faculty Approval
+        </div>
+        <p class="text-secondary small mb-4" style="line-height: 1.6;" id="scanPendingModalMessage">
+          Attendance request submitted. Awaiting faculty approval.
+        </p>
+        <div class="d-flex justify-content-center pt-1">
+          <button type="button" class="btn btn-dark px-5 py-2.5 rounded-pill fw-semibold shadow-sm" data-bs-dismiss="modal">
+            Understood
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- 5. General Security / Error Alert Modal -->
 <!-- ========================================== -->
 <div class="modal fade" id="scanAlertModal" tabindex="-1" aria-labelledby="scanAlertModalTitle" aria-hidden="true" data-bs-backdrop="static">
   <div class="modal-dialog modal-dialog-centered modal-md">
     <div class="modal-content border-0 shadow-lg text-center" style="border-radius: 24px; overflow: hidden; background: #ffffff;">
-      <!-- Dynamic top accent bar -->
       <div id="scanAlertAccentBar" style="height: 6px; background: linear-gradient(90deg, #ef4444, #f87171);"></div>
-      
       <div class="modal-body p-4 p-md-5">
-        <!-- Glowing Dynamic Icon Circle -->
         <div id="scanAlertIconCircle" class="d-inline-flex align-items-center justify-content-center mb-3" style="width: 76px; height: 76px; border-radius: 50%; background: #fef2f2; border: 2px solid #fecaca; box-shadow: 0 0 0 8px rgba(254, 226, 226, 0.4);">
           <i id="scanAlertIcon" class="bi bi-shield-slash-fill text-danger" style="font-size: 2.4rem;"></i>
         </div>
-
         <h4 class="fw-bold text-dark mb-1" id="scanAlertModalTitle">Security Alert</h4>
         <div id="scanAlertBadge" class="d-inline-block badge px-3 py-1 rounded-pill mb-3" style="background: #fee2e2; color: #991b1b; font-size: 0.82rem; font-weight: 600;">
-          ⚠️ Attendance Notice
+          Notice
         </div>
-
-        <!-- Message Box -->
-        <div class="p-3 mb-3 text-start small" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; line-height: 1.6;">
+        <div class="p-3 mb-4 text-start small" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; line-height: 1.6;">
           <div class="fw-semibold text-dark mb-1" id="scanAlertMainText">Notice Details</div>
           <div class="text-secondary" id="scanAlertSubText">Description</div>
         </div>
-
-        <!-- Security Guidance Note -->
-        <div id="scanAlertGuidanceCard" class="p-3 text-start small mb-4" style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 14px; color: #92400e; line-height: 1.55;">
-          <i class="bi bi-exclamation-triangle-fill me-1 text-warning"></i>
-          <span id="scanAlertGuidanceText">Details regarding this alert have been submitted to your faculty for review.</span>
-        </div>
-
-        <!-- Action Button -->
         <div class="d-flex justify-content-center pt-1">
           <button type="button" class="btn btn-dark px-5 py-2.5 rounded-pill fw-semibold shadow-sm" data-bs-dismiss="modal" id="scanAlertCloseBtn">
             Understood
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- 6. Dedicated Location Permission Required Modal -->
+<!-- ========================================== -->
+<div class="modal fade" id="scanLocationPermissionModal" tabindex="-1" aria-labelledby="scanLocationPermissionTitle" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered modal-md">
+    <div class="modal-content border-0 shadow-lg text-center" style="border-radius: 24px; overflow: hidden; background: #ffffff;">
+      <div style="height: 6px; background: linear-gradient(90deg, #3b82f6, #06b6d4);"></div>
+      <div class="modal-body p-4 p-md-5">
+        <div class="d-inline-flex align-items-center justify-content-center mb-3" style="width: 76px; height: 76px; border-radius: 50%; background: #eff6ff; border: 2px solid #bfdbfe; box-shadow: 0 0 0 8px rgba(219, 234, 254, 0.4);">
+          <i class="bi bi-geo-alt-fill text-primary" style="font-size: 2.4rem;"></i>
+        </div>
+        <h4 class="fw-bold text-dark mb-1" id="scanLocationPermissionTitle">Location Permission Required</h4>
+        <div class="d-inline-block badge px-3 py-1 rounded-pill mb-3" style="background: #dbeafe; color: #1e40af; font-size: 0.82rem; font-weight: 600;">
+          <i class="bi bi-crosshair me-1"></i> Device Location Access
+        </div>
+        <div class="p-3 mb-4 text-start small" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; line-height: 1.6;">
+          <div class="fw-semibold text-dark mb-1"><i class="bi bi-info-circle-fill text-primary me-1"></i> Classroom Geofence Verification</div>
+          <div class="text-secondary">GPS location coordinates are required for campus geofence verification. Please enable location permissions on your device to record attendance.</div>
+        </div>
+        <div class="d-flex flex-column gap-2 pt-1">
+          <button type="button" class="btn btn-primary px-4 py-2.5 rounded-pill fw-semibold shadow-sm" id="btnRetryLocationPermission" onclick="retryAcquireLocationAndSubmit()">
+            <i class="bi bi-geo-alt-fill me-2"></i>Enable Location / Try Again
+          </button>
+          <button type="button" class="btn btn-outline-secondary px-4 py-2 rounded-pill fw-medium" data-bs-dismiss="modal">
+            Cancel
           </button>
         </div>
       </div>
@@ -604,33 +712,130 @@
     }
 
     // 2. Initialize Geolocation
-    function initGPS() {
+    // 2. Initialize Geolocation with robust network fallback
+    function initGPS(callback) {
         const gpsEl = document.getElementById('gpsStatusText');
         if (!navigator.geolocation) {
             if (gpsEl) gpsEl.innerText = "GPS Not Supported";
+            if (typeof callback === 'function') callback(false);
             return;
         }
+
+        if (gpsEl) gpsEl.innerHTML = `<span class="text-muted"><span class="spinner-border spinner-border-sm me-1" style="width:0.75rem;height:0.75rem;"></span>Acquiring Campus Location...</span>`;
 
         navigator.geolocation.getCurrentPosition(
             (pos) => {
                 cachedCoords.lat = pos.coords.latitude;
                 cachedCoords.lng = pos.coords.longitude;
                 if (gpsEl) gpsEl.innerHTML = `<span class="text-success fw-semibold"><i class="bi bi-check-circle-fill me-1"></i>Campus GPS Acquired (Allowed: 800m)</span>`;
+                if (typeof callback === 'function') callback(true);
             },
             (err) => {
-                console.warn("GPS error:", err);
-                let gpsErrMsg = "GPS Location Unavailable";
+                console.warn("GPS high-accuracy timeout/error, attempting network fallback:", err);
                 if (err.code === 1) {
-                    gpsErrMsg = "Location permission denied. Enable GPS for geofence verification.";
-                } else if (err.code === 2) {
-                    gpsErrMsg = "GPS signal unavailable. Ensure location is enabled.";
-                } else if (err.code === 3) {
-                    gpsErrMsg = "GPS timeout. Retrying with network location.";
+                    if (gpsEl) gpsEl.innerHTML = `<span class="text-danger"><i class="bi bi-geo-alt-fill me-1"></i>Location permission denied.</span>`;
+                    if (typeof callback === 'function') callback(false);
+                    return;
                 }
-                if (gpsEl) gpsEl.innerHTML = `<span class="text-warning"><i class="bi bi-geo-alt me-1"></i>${gpsErrMsg}</span>`;
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        cachedCoords.lat = pos.coords.latitude;
+                        cachedCoords.lng = pos.coords.longitude;
+                        if (gpsEl) gpsEl.innerHTML = `<span class="text-success fw-semibold"><i class="bi bi-check-circle-fill me-1"></i>Campus GPS Acquired (Allowed: 800m)</span>`;
+                        if (typeof callback === 'function') callback(true);
+                    },
+                    (fallbackErr) => {
+                        console.warn("GPS fallback also failed:", fallbackErr);
+                        let gpsErrMsg = "GPS Location Unavailable";
+                        if (fallbackErr.code === 1) gpsErrMsg = "Location permission denied.";
+                        if (gpsEl) gpsEl.innerHTML = `<span class="text-warning"><i class="bi bi-geo-alt me-1"></i>${gpsErrMsg}</span>`;
+                        if (typeof callback === 'function') callback(false);
+                    },
+                    { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+                );
             },
-            { enableHighAccuracy: true, timeout: 7000 }
+            { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
         );
+    }
+
+    function acquireLocationPromise() {
+        if (cachedCoords.lat !== null && cachedCoords.lng !== null) {
+            return Promise.resolve(true);
+        }
+        return new Promise((resolve) => {
+            initGPS((success) => resolve(success));
+        });
+    }
+
+    // Retries acquiring location directly from the permission modal
+    function retryAcquireLocationAndSubmit() {
+        const permModalEl = document.getElementById('scanLocationPermissionModal');
+        const permModal = bootstrap.Modal.getInstance(permModalEl);
+        const retryBtn = document.getElementById('btnRetryLocationPermission');
+        const origText = retryBtn ? retryBtn.innerHTML : '';
+        if (retryBtn) {
+            retryBtn.disabled = true;
+            retryBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Requesting Permission...';
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                cachedCoords.lat = pos.coords.latitude;
+                cachedCoords.lng = pos.coords.longitude;
+                const gpsEl = document.getElementById('gpsStatusText');
+                if (gpsEl) gpsEl.innerHTML = `<span class="text-success fw-semibold"><i class="bi bi-check-circle-fill me-1"></i>Campus GPS Acquired (Allowed: 800m)</span>`;
+                if (permModal) permModal.hide();
+                if (retryBtn) {
+                    retryBtn.disabled = false;
+                    retryBtn.innerHTML = origText;
+                }
+                showToast("Location permission granted! Recording attendance...", true);
+                submitScanToBackend(activeSubmissionToken || activeSessionToken);
+            },
+            (err) => {
+                console.warn("Location retry failed:", err);
+                if (retryBtn) {
+                    retryBtn.disabled = false;
+                    retryBtn.innerHTML = origText;
+                }
+                let msg = "Could not acquire location. Please enable location permissions in browser site settings.";
+                if (err.code === 1) {
+                    msg = "Location permission was denied. Tap the site settings or lock icon 🔒 near the address bar to allow location.";
+                }
+                showToast(msg, false);
+            },
+            { enableHighAccuracy: false, timeout: 12000, maximumAge: 60000 }
+        );
+    }
+
+    // Optional Device Registration Click Handler (Non-blocking)
+    function openOptionalDeviceRegistration() {
+        const regModalEl = document.getElementById('scanDeviceRegisterModal');
+        const regModal = new bootstrap.Modal(regModalEl);
+        const btnReg = document.getElementById('btnRegisterPersonalDevice');
+
+        btnReg.onclick = async function() {
+            regModal.hide();
+            showToast("Opening biometric / screen lock registration...", true);
+            try {
+                const statusRes = await fetch('/student/webauthn/status');
+                const statusData = await statusRes.json();
+                const regResult = await window.CampusSyncWebAuthn.registerDevice(statusData || {});
+                showToast("Device registered successfully with personal screen lock!", true);
+                const sugBox = document.getElementById('deviceRegisterSuggestionBox');
+                if (sugBox) sugBox.innerHTML = '<span class="text-success small fw-medium"><i class="bi bi-check2-circle me-1"></i>Personal Phone Registered with Screen Lock</span>';
+            } catch (regErr) {
+                console.warn("Optional registration error:", regErr);
+                const errStr = (regErr && regErr.message ? regErr.message : '').toLowerCase();
+                if (errStr.includes('already_registered') || errStr.includes('invalidstateerror') || errStr.includes('another student')) {
+                    showBorrowedDeviceWarning(activeSessionToken);
+                } else if (!errStr.includes('cancelled')) {
+                    showProfessionalAlertModal(regErr.message || "Could not register biometric device on this phone.");
+                }
+            }
+        };
+
+        regModal.show();
     }
 
     // 3. Camera QR Scanner Controls (HTML5-QRCode)
@@ -730,11 +935,13 @@
         submitScanToBackend(tokenToSubmit);
     }
 
+    let activeSubmissionToken = null;
+
     function triggerDirectScanSubmission() {
         submitScanToBackend(activeSessionToken);
     }
 
-    // 5. Submit Scan to Backend with GPS & Hardware WebAuthn Screen Lock Verification
+    // 5. Intelligent Multi-Stage Attendance Submission Engine (Non-blocking)
     async function submitScanToBackend(token) {
         if (!activeSessionId) {
             showToast("No active lecture session found.", false);
@@ -742,48 +949,92 @@
             return;
         }
 
+        activeSubmissionToken = token;
         const btnMark = document.getElementById('btnMarkAttendance');
         const origBtnText = btnMark ? btnMark.innerHTML : '';
         if (btnMark) {
             btnMark.disabled = true;
-            btnMark.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Verifying Screen Lock...';
+            btnMark.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Checking GPS & Device...';
         }
 
-        // Trigger native Phone Screen Lock / Biometrics via WebAuthn
-        let authResult = null;
-        try {
-            if (!window.CampusSyncWebAuthn) {
-                throw new Error("WebAuthn security engine failed to load. Please refresh the page.");
-            }
-            authResult = await window.CampusSyncWebAuthn.verifyOrRegister(function(statusMsg) {
+        // Step 1: Ensure GPS coordinates are present before submission
+        if (cachedCoords.lat === null || cachedCoords.lng === null) {
+            const gpsOk = await acquireLocationPromise();
+            if (!gpsOk || cachedCoords.lat === null) {
                 if (btnMark) {
-                    btnMark.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> ' + statusMsg;
+                    btnMark.disabled = false;
+                    btnMark.innerHTML = origBtnText;
                 }
-            });
-        } catch (authErr) {
-            console.error("WebAuthn verification error:", authErr);
-            if (btnMark) {
-                btnMark.disabled = false;
-                btnMark.innerHTML = origBtnText;
+                const permModal = new bootstrap.Modal(document.getElementById('scanLocationPermissionModal'));
+                permModal.show();
+                return;
             }
-            const errMsg = authErr.message || "Screen lock / Biometric verification failed.";
-            showInCardAlert(errMsg, false);
-            showToast(errMsg, false);
-            showProfessionalAlertModal(errMsg);
-            return;
         }
 
+        // Step 2: Query if student has passkey registered
+        let statusData = null;
+        try {
+            const statusRes = await fetch('/student/webauthn/status');
+            statusData = await statusRes.json();
+        } catch (e) {
+            console.warn("Could not query device status:", e);
+        }
+
+        // Step 3: If student HAS passkey registered, attempt one-tap biometric verification
+        if (statusData && statusData.has_passkey) {
+            if (btnMark) {
+                btnMark.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Verifying Screen Lock...';
+            }
+            try {
+                const authResult = await window.CampusSyncWebAuthn.verifyDevice(statusData.credential_id);
+                if (btnMark) {
+                    btnMark.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Recording Attendance...';
+                }
+                executeBackendAttendance(activeSubmissionToken, authResult.credentialId, authResult.deviceModel, false);
+                return;
+            } catch (vErr) {
+                console.warn("Passkey verify failed on this phone, proceeding with hardware fingerprint check:", vErr);
+            }
+        }
+
+        // Step 4: Non-registered student or friend's device: proceed directly with hardware fingerprint (NO BLOCKING!)
         if (btnMark) {
             btnMark.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Recording Attendance...';
         }
+        executeBackendAttendance(activeSubmissionToken, getDeviceFingerprint(), getDeviceModel(), false);
+    }
+
+    // Displays confirmation modal for friend's / already registered phone
+    function showBorrowedDeviceWarning(token) {
+        const modalEl = document.getElementById('scanConfirmBorrowedModal');
+        const modal = new bootstrap.Modal(modalEl);
+        const btnConfirm = document.getElementById('btnConfirmBorrowedScan');
+
+        btnConfirm.onclick = function() {
+            modal.hide();
+            const btnMark = document.getElementById('btnMarkAttendance');
+            if (btnMark) {
+                btnMark.disabled = true;
+                btnMark.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Submitting Request...';
+            }
+            executeBackendAttendance(token, getDeviceFingerprint(), getDeviceModel(), true);
+        };
+
+        modal.show();
+    }
+
+    // Final API caller to student_scan
+    function executeBackendAttendance(token, devFp, devModel, requestApproval = false) {
+        const btnMark = document.getElementById('btnMarkAttendance');
 
         const payload = {
             session_id: activeSessionId,
-            token: token,
+            token: token || activeSessionToken,
             latitude: cachedCoords.lat,
             longitude: cachedCoords.lng,
-            device_fingerprint: authResult.credentialId,
-            device_model: authResult.deviceModel || getDeviceModel()
+            device_fingerprint: devFp || getDeviceFingerprint(),
+            device_model: devModel || getDeviceModel(),
+            request_approval: requestApproval
         };
 
         fetch("{{ url_for('student_scan') }}", {
@@ -801,33 +1052,71 @@
                 btnMark.innerHTML = '<i class="bi bi-check2-circle me-1"></i> Mark Attendance';
             }
 
-            if (data.success) {
-                const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            // Case A: Backend requires confirmation for friend's device
+            if (data.requires_approval) {
+                showBorrowedDeviceWarning(token);
+                return;
+            }
 
-                // 1. Hide the camera box and 'Align Camera' text completely
+            // Case B: Attendance submitted for faculty approval
+            if (data.pending_approval) {
                 const scannerViewport = document.getElementById('scannerViewport');
                 const scannerBtns = document.getElementById('scannerButtonsContainer');
                 if (scannerViewport) scannerViewport.classList.add('d-none');
                 if (scannerBtns) scannerBtns.classList.add('d-none');
 
-                // 2. Display the verified success box in the top card
+                const cardBadge = document.getElementById('cardHeaderBadge');
+                if (cardBadge) {
+                    cardBadge.className = 'badge bg-warning text-dark d-inline-flex align-items-center gap-1';
+                    cardBadge.innerHTML = '<i class="bi bi-clock-history me-1"></i> Under Review';
+                }
+
+                const pageSub = document.getElementById('pageHeaderSubtext');
+                if (pageSub) {
+                    pageSub.innerHTML = '<span class="text-warning fw-bold"><i class="bi bi-clock-history me-1"></i> Attendance request submitted. Awaiting faculty approval.</span>';
+                }
+
+                showInCardAlert(data.message || "Attendance request submitted. Awaiting faculty approval.", true);
+                showToast(data.message || "Attendance request submitted. Awaiting faculty approval.", true);
+
+                const pendingModalEl = document.getElementById('scanPendingModal');
+                const pendingMsgEl = document.getElementById('scanPendingModalMessage');
+                if (pendingMsgEl) {
+                    pendingMsgEl.innerText = data.message || "Attendance request submitted. Awaiting faculty approval.";
+                }
+                const pendingModal = new bootstrap.Modal(pendingModalEl);
+                pendingModal.show();
+
+                // Start polling for real-time faculty approval
+                startStudentReviewPolling();
+                return;
+            }
+
+            // Case C: Attendance successfully marked Present
+            if (data.success) {
+                const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+                const scannerViewport = document.getElementById('scannerViewport');
+                const scannerBtns = document.getElementById('scannerButtonsContainer');
+                if (scannerViewport) scannerViewport.classList.add('d-none');
+                if (scannerBtns) scannerBtns.classList.add('d-none');
+
                 const verifiedViewport = document.getElementById('verifiedSuccessViewport');
                 const timeTextTop = document.getElementById('scanTimestampTextTop');
                 if (timeTextTop) timeTextTop.innerText = nowTime;
                 if (verifiedViewport) verifiedViewport.classList.remove('d-none');
 
-                // 3. Update header badge & subtext
                 const cardBadge = document.getElementById('cardHeaderBadge');
                 if (cardBadge) {
                     cardBadge.className = 'badge bg-success text-white d-inline-flex align-items-center gap-1';
                     cardBadge.innerHTML = '<i class="bi bi-check2-circle me-1"></i> Verified';
                 }
+
                 const pageSub = document.getElementById('pageHeaderSubtext');
                 if (pageSub) {
                     pageSub.innerHTML = '<span class="text-success fw-bold"><i class="bi bi-check-circle-fill me-1"></i> Your attendance for this lecture has been recorded as PRESENT.</span>';
                 }
 
-                // 4. Update the right-side attendance card
                 const card = document.getElementById('attendanceSuccessCard');
                 const timeText = document.getElementById('scanTimestampText');
                 if (timeText) timeText.innerText = nowTime;
@@ -836,22 +1125,23 @@
                     card.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
 
-                // Clear any prior alert
                 showInCardAlert(data.message || "Attendance recorded successfully!", true);
-                showToast(data.message, true);
+                showToast(data.message || "Attendance recorded successfully!", true);
 
-                // Trigger Professional Success Modal Popup
                 const modalTime = document.getElementById('modalScanTime');
                 if (modalTime) modalTime.innerText = nowTime;
                 const successModal = new bootstrap.Modal(document.getElementById('scanSuccessModal'));
                 successModal.show();
             } else {
+                // Case D: Error / Geofence / Location permission alert
                 showInCardAlert(data.message || "Failed to record attendance.", false);
                 showToast(data.message || "Failed to record attendance.", false);
-
-                // Trigger Professional Security / Error Alert Modal Popup
-                showProfessionalAlertModal(data.message || "Failed to record attendance.");
-                
+                if (data.is_location_permission_error) {
+                    const permModal = new bootstrap.Modal(document.getElementById('scanLocationPermissionModal'));
+                    permModal.show();
+                } else {
+                    showProfessionalAlertModal(data.message || "Failed to record attendance.", data);
+                }
             }
         })
         .catch(err => {
@@ -865,9 +1155,76 @@
         });
     }
 
-    
-    // Dedicated Controller for Professional Alert Modal
-    function showProfessionalAlertModal(msg) {
+    // Polling function for student waiting on faculty review
+    let studentReviewPollingTimer = null;
+    function startStudentReviewPolling() {
+        if (studentReviewPollingTimer || !activeSessionId) return;
+        studentReviewPollingTimer = setInterval(async () => {
+            try {
+                const res = await fetch(`/student/scan/check-status?session_id=${activeSessionId}`);
+                const data = await res.json();
+                if (data.status === 'verified') {
+                    clearInterval(studentReviewPollingTimer);
+                    studentReviewPollingTimer = null;
+
+                    const pendingModalEl = document.getElementById('scanPendingModal');
+                    if (pendingModalEl) {
+                        const m = bootstrap.Modal.getInstance(pendingModalEl);
+                        if (m) m.hide();
+                    }
+
+                    const scannerViewport = document.getElementById('scannerViewport');
+                    const scannerBtns = document.getElementById('scannerButtonsContainer');
+                    if (scannerViewport) scannerViewport.classList.add('d-none');
+                    if (scannerBtns) scannerBtns.classList.add('d-none');
+
+                    const pendingViewport = document.getElementById('pendingSecurityViewport');
+                    if (pendingViewport) pendingViewport.classList.add('d-none');
+
+                    const verifiedViewport = document.getElementById('verifiedSuccessViewport');
+                    if (verifiedViewport) verifiedViewport.classList.remove('d-none');
+
+                    const cardBadge = document.getElementById('cardHeaderBadge');
+                    if (cardBadge) {
+                        cardBadge.className = 'badge bg-success text-white d-inline-flex align-items-center gap-1';
+                        cardBadge.innerHTML = '<i class="bi bi-check2-circle me-1"></i> Verified';
+                    }
+
+                    const pageSub = document.getElementById('pageHeaderSubtext');
+                    if (pageSub) {
+                        pageSub.innerHTML = '<span class="text-success fw-bold"><i class="bi bi-check-circle-fill me-1"></i> Your attendance for this lecture has been recorded as PRESENT (Approved by Faculty).</span>';
+                    }
+
+                    const timeTextTop = document.getElementById('scanTimestampTextTop');
+                    if (timeTextTop) timeTextTop.innerText = data.marked_at || 'Recorded';
+
+                    showToast(data.message || "Attendance approved by faculty!", true);
+                    showInCardAlert(data.message || "Attendance approved by faculty!", true);
+
+                    const modalTime = document.getElementById('modalScanTime');
+                    if (modalTime) modalTime.innerText = data.marked_at || 'Just Now';
+                    const successModal = new bootstrap.Modal(document.getElementById('scanSuccessModal'));
+                    successModal.show();
+                } else if (data.status === 'rejected') {
+                    clearInterval(studentReviewPollingTimer);
+                    studentReviewPollingTimer = null;
+                    window.location.reload();
+                }
+            } catch (e) {
+                console.warn("Poll review status check failed:", e);
+            }
+        }, 3500);
+    }
+
+    // Auto-start polling if student arrived on page with pending status
+    {% if scan_status == 'pending' %}
+    document.addEventListener("DOMContentLoaded", function() {
+        startStudentReviewPolling();
+    });
+    {% endif %}
+
+    // Professional Modal Controller (100% English, Pure Design System)
+    function showProfessionalAlertModal(msg, dataObj) {
         const modalTitle = document.getElementById('scanAlertModalTitle');
         const modalBadge = document.getElementById('scanAlertBadge');
         const iconCircle = document.getElementById('scanAlertIconCircle');
@@ -875,62 +1232,57 @@
         const accentBar = document.getElementById('scanAlertAccentBar');
         const mainText = document.getElementById('scanAlertMainText');
         const subText = document.getElementById('scanAlertSubText');
-        const gujText = document.getElementById('scanAlertGuidanceText');
-        const gujCard = document.getElementById('scanAlertGuidanceCard');
 
         const lowerMsg = (msg || "").toLowerCase();
 
-        if (lowerMsg.includes('screen lock') || lowerMsg.includes('biometric') || lowerMsg.includes('cancelled') || lowerMsg.includes('authenticator')) {
-            // SCREEN LOCK / WEBAUTHN ALERT
-            accentBar.style.background = 'linear-gradient(90deg, #4f46e5, #7c3aed)';
-            iconCircle.style.background = '#eef2ff';
-            iconCircle.style.border = '2px solid #c7d2fe';
-            iconCircle.style.boxShadow = '0 0 0 8px rgba(224, 231, 255, 0.4)';
-            iconEl.className = 'bi bi-shield-lock-fill text-primary';
+        // 1. If location permission error, open dedicated permission modal
+        if ((dataObj && dataObj.is_location_permission_error) || (lowerMsg.includes('permission') && lowerMsg.includes('location'))) {
+            const permModal = new bootstrap.Modal(document.getElementById('scanLocationPermissionModal'));
+            permModal.show();
+            return;
+        }
 
-            modalTitle.innerText = 'Screen Lock Verification Required';
-            modalBadge.className = 'd-inline-block badge px-3 py-1 rounded-pill mb-3 bg-primary-subtle text-primary-emphasis';
-            modalBadge.innerHTML = '<i class="bi bi-fingerprint me-1"></i> Biometric / Screen Lock Security';
-
-            mainText.innerHTML = '<span class="text-primary fw-bold"><i class="bi bi-fingerprint me-1"></i> Device Verification:</span>';
-            subText.innerText = msg;
-
-            if (guidanceCard) guidanceCard.style.display = 'block';
-            if (guidanceText) guidanceText.innerHTML = 'Phone Screen Lock (Fingerprint, PIN, or Pattern) verification is mandatory to record attendance on this device.';
-        } else if (lowerMsg.includes('proxy') || lowerMsg.includes('already used') || lowerMsg.includes('duplicate')) {
-            // PROXY / DUPLICATE DEVICE ALERT
+        // 2. If out-of-boundary geofence error, show exact distance
+        if ((dataObj && dataObj.is_distance_error) || lowerMsg.includes('away from campus') || lowerMsg.includes('perimeter') || lowerMsg.includes('boundary')) {
             accentBar.style.background = 'linear-gradient(90deg, #dc2626, #ef4444)';
             iconCircle.style.background = '#fef2f2';
             iconCircle.style.border = '2px solid #fecaca';
             iconCircle.style.boxShadow = '0 0 0 8px rgba(254, 226, 226, 0.4)';
-            iconEl.className = 'bi bi-shield-slash-fill text-danger';
+            iconEl.className = 'bi bi-geo-alt-fill text-danger';
 
-            modalTitle.innerText = 'Security Alert';
+            modalTitle.innerText = 'Location Perimeter Exceeded';
             modalBadge.className = 'd-inline-block badge px-3 py-1 rounded-pill mb-3 bg-danger-subtle text-danger-emphasis';
-            modalBadge.innerHTML = '<i class="bi bi-shield-exclamation me-1"></i> Proxy / Duplicate Device Detected';
+            modalBadge.innerHTML = '<i class="bi bi-pin-map-fill me-1"></i> Campus Boundary Check';
 
-            mainText.innerHTML = '<span class="text-danger fw-bold"><i class="bi bi-exclamation-octagon-fill me-1"></i> Device Duplication Flagged:</span>';
+            const distStr = (dataObj && dataObj.distance_str) ? dataObj.distance_str : (msg.match(/\d+(\.\d+)?\s*(km|meters)/i) ? msg.match(/\d+(\.\d+)?\s*(km|meters)/i)[0] : 'outside boundary');
+            const maxRadius = (dataObj && dataObj.max_allowed) ? dataObj.max_allowed : 800;
+
+            mainText.innerHTML = `
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <i class="bi bi-geo-fill text-danger fs-5"></i>
+                    <span class="text-danger fw-bold">Outside Permitted Classroom Area</span>
+                </div>
+                <div class="p-2.5 rounded-3 bg-white border border-danger-subtle mb-2 text-center">
+                    <span class="text-secondary small d-block mb-1">Measured Distance from Campus:</span>
+                    <span class="badge bg-danger fs-6 px-3 py-1">${distStr} Away</span>
+                </div>
+                <div class="text-muted small">Permitted classroom boundary: <strong>${maxRadius}m</strong>. Please scan from inside the classroom.</div>
+            `;
+            subText.innerText = '';
+        } else if (lowerMsg.includes('proxy') || lowerMsg.includes('duplicate') || lowerMsg.includes('already registered')) {
+            // PROXY / DUPLICATE DEVICE ALERT
+            accentBar.style.background = 'linear-gradient(90deg, #d97706, #f59e0b)';
+            iconCircle.style.background = '#fffbeb';
+            iconCircle.style.border = '2px solid #fde68a';
+            iconCircle.style.boxShadow = '0 0 0 8px rgba(254, 243, 199, 0.4)';
+            iconEl.className = 'bi bi-shield-exclamation text-warning';
+
+            modalTitle.innerText = 'Device Notice';
+            modalBadge.className = 'd-inline-block badge px-3 py-1 rounded-pill mb-3 bg-warning-subtle text-warning-emphasis';
+            modalBadge.innerHTML = '<i class="bi bi-phone-fill me-1"></i> Device Verification';
+
+            mainText.innerHTML = '<span class="text-warning-emphasis fw-bold"><i class="bi bi-exclamation-octagon-fill me-1"></i> Device Registration Notice:</span>';
             subText.innerText = msg;
-
-            if (guidanceCard) guidanceCard.style.display = 'block';
-            if (guidanceText) guidanceText.innerHTML = 'This mobile phone was previously used to record attendance for another student. This attempt has been logged for <strong>Pending Faculty Review</strong>.';
-        } else if (lowerMsg.includes('location') || lowerMsg.includes('away') || lowerMsg.includes('geofence')) {
-            // GEOFENCE / OUT OF CAMPUS ALERT
-            accentBar.style.background = 'linear-gradient(90deg, #2563eb, #3b82f6)';
-            iconCircle.style.background = '#eff6ff';
-            iconCircle.style.border = '2px solid #bfdbfe';
-            iconCircle.style.boxShadow = '0 0 0 8px rgba(219, 234, 254, 0.4)';
-            iconEl.className = 'bi bi-geo-alt-fill text-primary';
-
-            modalTitle.innerText = 'Location Outside Campus';
-            modalBadge.className = 'd-inline-block badge px-3 py-1 rounded-pill mb-3 bg-primary-subtle text-primary-emphasis';
-            modalBadge.innerHTML = '<i class="bi bi-pin-map-fill me-1"></i> Geofence Perimeter Exceeded (800m Limit)';
-
-            mainText.innerHTML = '<span class="text-primary fw-bold"><i class="bi bi-geo-fill me-1"></i> GPS Perimeter Check Failed:</span>';
-            subText.innerText = msg;
-
-            if (guidanceCard) guidanceCard.style.display = 'block';
-            if (guidanceText) guidanceText.innerHTML = 'Your detected GPS location is outside the approved classroom / campus perimeter (800m limit). Please mark your attendance while physically present in class.';
         } else if (lowerMsg.includes('expired') || lowerMsg.includes('10-minute') || lowerMsg.includes('window')) {
             // EXPIRED SESSION ALERT
             accentBar.style.background = 'linear-gradient(90deg, #f59e0b, #fbbf24)';
@@ -941,29 +1293,24 @@
 
             modalTitle.innerText = 'QR Code Expired';
             modalBadge.className = 'd-inline-block badge px-3 py-1 rounded-pill mb-3 bg-warning-subtle text-warning-emphasis';
-            modalBadge.innerHTML = '<i class="bi bi-clock-history me-1"></i> 10-Minute Attendance Window Ended';
+            modalBadge.innerHTML = '<i class="bi bi-clock-history me-1"></i> Attendance Window Closed';
 
-            mainText.innerHTML = '<span class="text-warning-emphasis fw-bold"><i class="bi bi-clock-fill me-1"></i> Attendance Window Closed:</span>';
+            mainText.innerHTML = '<span class="text-warning-emphasis fw-bold"><i class="bi bi-clock-fill me-1"></i> Session Ended:</span>';
             subText.innerText = msg;
-
-            if (guidanceCard) guidanceCard.style.display = 'block';
-            if (guidanceText) guidanceText.innerHTML = 'The 10-minute active attendance window for this lecture has expired. Please ask your faculty member to start a new QR session if needed.';
         } else {
             // GENERAL NOTICE
-            accentBar.style.background = 'linear-gradient(90deg, #64748b, #94a3b8)';
-            iconCircle.style.background = '#f1f5f9';
-            iconCircle.style.border = '2px solid #cbd5e1';
-            iconCircle.style.boxShadow = '0 0 0 8px rgba(241, 245, 249, 0.4)';
-            iconEl.className = 'bi bi-info-circle-fill text-secondary';
+            accentBar.style.background = 'linear-gradient(90deg, #4f46e5, #6366f1)';
+            iconCircle.style.background = '#eef2ff';
+            iconCircle.style.border = '2px solid #c7d2fe';
+            iconCircle.style.boxShadow = '0 0 0 8px rgba(224, 231, 255, 0.4)';
+            iconEl.className = 'bi bi-info-circle-fill text-primary';
 
             modalTitle.innerText = 'Attendance Notice';
-            modalBadge.className = 'd-inline-block badge px-3 py-1 rounded-pill mb-3 bg-secondary-subtle text-secondary-emphasis';
-            modalBadge.innerHTML = '<i class="bi bi-info-circle me-1"></i> Attendance Status Notice';
+            modalBadge.className = 'd-inline-block badge px-3 py-1 rounded-pill mb-3 bg-primary-subtle text-primary-emphasis';
+            modalBadge.innerHTML = '<i class="bi bi-info-circle me-1"></i> System Information';
 
-            mainText.innerHTML = '<span class="text-secondary fw-bold">Notice Details:</span>';
+            mainText.innerHTML = '<span class="text-primary fw-bold">Notice Details:</span>';
             subText.innerText = msg;
-
-            if (guidanceCard) guidanceCard.style.display = 'none';
         }
 
         const alertModal = new bootstrap.Modal(document.getElementById('scanAlertModal'));
@@ -1002,6 +1349,5 @@
         bsToast.show();
     }
 </script>
-<script src="{{ url_for('static', filename='js/common.js') }}"></script>
 </body>
 </html>

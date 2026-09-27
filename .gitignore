@@ -25,5 +25,3 @@ Desktop.ini
 # Logs and scratch files
 *.log
 scratch/
-*.backup*
-*_temp.py

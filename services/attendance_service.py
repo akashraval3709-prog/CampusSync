@@ -368,16 +368,23 @@ def save_lecture_session_attendance(faculty_id, subject_id, division, semester, 
                 academic_year=ay,
                 lecture_date=l_date,
                 lecture_no=lec_no,
-                status='Submitted' if is_final else 'Draft'
+                status='Submitted' if is_final else 'Draft',
+                is_qr_active=0
             )
+            if is_final:
+                session_rec.qr_session_expires_at = datetime.utcnow()
             db.session.add(session_rec)
             db.session.flush()
         else:
-            if session_rec.status == 'Submitted' and not is_final:
-                return False, "This attendance register has already been Final Submitted & Locked. It cannot be edited."
+            if session_rec.status == 'Submitted':
+                return False, "This attendance register has already been Final Submitted & Locked. It is strictly read-only and cannot be modified."
             session_rec.faculty_id = fac_id
             session_rec.status = 'Submitted' if is_final else 'Draft'
-
+            if is_final:
+                session_rec.is_qr_active = 0
+                session_rec.qr_session_expires_at = datetime.utcnow()
+            elif str(action_type).strip().lower() == 'draft':
+                session_rec.is_qr_active = 0
 
         # Update or create student entries
         for st_id_str, status_val in student_statuses.items():
@@ -402,6 +409,17 @@ def save_lecture_session_attendance(faculty_id, subject_id, division, semester, 
                 db.session.add(st_entry)
             else:
                 st_entry.status = status_norm
+
+        if is_final:
+            # Strictly deactivate any active QR sessions for this lecture
+            LectureAttendanceSession.query.filter_by(
+                subject_id=sub_id,
+                semester=sem,
+                division=div,
+                academic_year=ay,
+                lecture_date=l_date,
+                lecture_no=lec_no
+            ).update({'is_qr_active': 0, 'qr_session_expires_at': datetime.utcnow()})
 
         db.session.commit()
 
@@ -759,8 +777,12 @@ def generate_student_attendance_pdf_bytes(student_id):
     return buffer
 
 
-def mark_student_qr_attendance(student_id, session_id=None, token=None, lat=None, lng=None, device_fingerprint=None, device_model=None):
-    return mark_student_qr_attendance_secure(student_id, session_id=session_id, token=token, lat=lat, lng=lng, device_fingerprint=device_fingerprint, device_model=device_model)
+def mark_student_qr_attendance(student_id, session_id=None, token=None, lat=None, lng=None, device_fingerprint=None, device_model=None, request_approval=False):
+    return mark_student_qr_attendance_secure(
+        student_id, session_id=session_id, token=token, lat=lat, lng=lng,
+        device_fingerprint=device_fingerprint, device_model=device_model,
+        request_approval=request_approval
+    )
 
 def _legacy_mark_student_qr_attendance(student_id, session_id=None):
     """
@@ -1308,6 +1330,27 @@ def start_faculty_qr_session(faculty_id, subject_id, division, semester, academi
             lecture_no=lecture_no
         ).first()
 
+        if sess and sess.status == 'Submitted':
+            return {
+                "success": False,
+                "message": "This lecture attendance has already been Final Submitted and Locked. QR sessions cannot be generated for finalized lectures."
+            }
+
+        submitted_check = LectureAttendanceSession.query.filter_by(
+            subject_id=subject_id,
+            semester=semester,
+            division=division,
+            academic_year=academic_year,
+            lecture_date=parsed_date,
+            lecture_no=lecture_no,
+            status='Submitted'
+        ).first()
+        if submitted_check:
+            return {
+                "success": False,
+                "message": "This lecture attendance has already been Final Submitted and Locked. QR sessions cannot be generated for finalized lectures."
+            }
+
         if not sess:
             sess = LectureAttendanceSession(
                 faculty_id=faculty_id,
@@ -1434,16 +1477,21 @@ def get_faculty_qr_live_roster(session_id):
 
         total_enrolled = len(enrolled_students)
         pct = round((present_count / total_enrolled * 100), 1) if total_enrolled > 0 else 0.0
+        is_qr_live = bool(sess.is_qr_active) and (sess.status != 'Submitted')
 
         return {
             "success": True,
             "session_id": sess.id,
-            "is_qr_active": bool(sess.is_qr_active),
+            "is_qr_active": is_qr_live,
+            "is_locked": (sess.status == 'Submitted'),
+            "status": sess.status,
             "present_count": present_count,
             "total_enrolled": total_enrolled,
             "remaining_count": max(0, total_enrolled - present_count),
+            "percentage": pct,
             "attendance_percentage": pct,
             "roster": roster_data,
+            "alerts": alerts_data,
             "pending_alerts": alerts_data,
             "pending_alerts_count": len(alerts_data)
         }
@@ -1546,13 +1594,13 @@ def stop_faculty_qr_session(session_id):
         return False, f"Database error stopping session: {str(e)}"
 
 
-def mark_student_qr_attendance_secure(student_id, session_id=None, token=None, lat=None, lng=None, device_fingerprint=None, device_model=None):
+def mark_student_qr_attendance_secure(student_id, session_id=None, token=None, lat=None, lng=None, device_fingerprint=None, device_model=None, request_approval=False):
     """
     Enterprise-grade QR Attendance Validator:
     1. Validates active session (is_qr_active == 1) for student's Semester & Division.
     2. Validates session token integrity.
     3. Validates Campus GPS Geofence (Haversine distance <= campus_radius_meters).
-    4. Enforces 1 Phone = 1 Student Device Binding.
+    4. Enforces 1 Phone = 1 Student Device Binding with Faculty Approval fallback for borrowed devices.
     5. Flags Anti-Proxy conflict if device is used for multiple students in same session.
     6. Records attendance Present and recalculates summary statistics.
     All errors returned in clear, professional English.
@@ -1578,8 +1626,8 @@ def mark_student_qr_attendance_secure(student_id, session_id=None, token=None, l
                 is_qr_active=1
             ).order_by(LectureAttendanceSession.id.desc()).first()
 
-        if not sess or not sess.is_qr_active:
-            return False, "No active QR attendance session is currently open for your class."
+        if not sess or not sess.is_qr_active or sess.status == 'Submitted':
+            return False, "This attendance session has been finalized and closed. No scans are accepted."
 
         # Verify class match
         if sess.semester != sem or sess.division != div:
@@ -1593,7 +1641,7 @@ def mark_student_qr_attendance_secure(student_id, session_id=None, token=None, l
 
         if prior_alert and prior_alert.faculty_action == 'REJECTED':
             return False, "Proxy Violation: Your attendance for this lecture was rejected by faculty. You are marked Absent. Re-scanning is prohibited."
-        if prior_alert and prior_alert.faculty_action == 'PENDING':
+        if prior_alert and prior_alert.faculty_action == 'PENDING' and prior_alert.alert_type in ['DUPLICATE_DEVICE', 'UNBOUND_DEVICE']:
             return False, "Your scan has already been submitted and is currently pending faculty security review."
 
         prior_entry = LectureAttendanceStudent.query.filter_by(
@@ -1628,7 +1676,10 @@ def mark_student_qr_attendance_secure(student_id, session_id=None, token=None, l
 
         if college and college.campus_latitude and college.campus_longitude:
             if lat is None or lng is None:
-                return False, "GPS location coordinates are required for campus geofence verification. Please enable location permissions on your device."
+                return False, {
+                    "is_location_permission_error": True,
+                    "message": "GPS location coordinates are required for campus geofence verification. Please enable location permissions on your device."
+                }
 
             try:
                 distance_meters = calculate_haversine_distance(
@@ -1636,11 +1687,19 @@ def mark_student_qr_attendance_secure(student_id, session_id=None, token=None, l
                     float(college.campus_latitude), float(college.campus_longitude)
                 )
             except (ValueError, TypeError):
-                return False, "Invalid GPS coordinates received. Please try scanning again."
+                return False, {
+                    "is_location_permission_error": True,
+                    "message": "Invalid GPS coordinates received. Please enable location permissions and try scanning again."
+                }
 
             max_allowed_radius = float(college.campus_radius_meters or 800)
 
             if distance_meters > max_allowed_radius:
+                if distance_meters >= 1000:
+                    dist_str = f"{distance_meters / 1000.0:.2f} km"
+                else:
+                    dist_str = f"{round(distance_meters)} meters"
+
                 try:
                     alert = AttendanceSecurityAlert(
                         session_id=sess.id,
@@ -1648,17 +1707,22 @@ def mark_student_qr_attendance_secure(student_id, session_id=None, token=None, l
                         attempted_roll=student.roll_number,
                         device_fingerprint=device_fingerprint,
                         alert_type='OUT_OF_GEOFENCE',
-                        alert_message=f"Student scanned from {round(distance_meters)}m away (Maximum allowed: {int(max_allowed_radius)}m).",
+                        alert_message=f"Student scanned from {dist_str} away (Maximum allowed: {int(max_allowed_radius)}m).",
                         scan_latitude=lat,
                         scan_longitude=lng,
                         distance_meters=distance_meters,
-                        faculty_action='PENDING'
+                        faculty_action='FLAGGED'
                     )
                     db.session.add(alert)
                     db.session.commit()
                 except Exception:
                     db.session.rollback()
-                return False, f"Location verification failed: You are {round(distance_meters)}m away from campus (Permitted classroom boundary: {int(max_allowed_radius)}m)."
+                return False, {
+                    "is_distance_error": True,
+                    "distance_str": dist_str,
+                    "max_allowed": int(max_allowed_radius),
+                    "message": f"Location verification failed: You are {dist_str} away from campus (Permitted classroom boundary: {int(max_allowed_radius)}m)."
+                }
 
         # 5. Device Binding & Anti-Proxy Enforcement (1 Phone = 1 Student)
         if device_fingerprint:
@@ -1671,50 +1735,77 @@ def mark_student_qr_attendance_secure(student_id, session_id=None, token=None, l
             ).first()
 
             if device_owner:
-                try:
-                    alert = AttendanceSecurityAlert(
-                        session_id=sess.id,
-                        student_id=student.id,
-                        attempted_roll=student.roll_number,
-                        device_fingerprint=clean_dev,
-                        conflicting_student_id=device_owner.id,
-                        alert_type='DUPLICATE_DEVICE',
-                        alert_message=f"Device hash belongs to Roll {device_owner.roll_number} ({device_owner.full_name}). Potential proxy scan attempt.",
-                        scan_latitude=lat,
-                        scan_longitude=lng,
-                        faculty_action='PENDING'
-                    )
-                    db.session.add(alert)
-                    db.session.commit()
-                except Exception:
-                    db.session.rollback()
-                return False, f"Proxy Security Alert: This phone is registered to Roll {device_owner.roll_number} ({device_owner.full_name}). A device cannot be shared between multiple students."
+                if not request_approval:
+                    return False, {
+                        "requires_approval": True,
+                        "device_conflict": True,
+                        "owner_roll": device_owner.roll_number,
+                        "owner_name": device_owner.full_name,
+                        "message": "This phone is already registered to another student. Do you still wish to submit your attendance from this device?"
+                    }
+                else:
+                    try:
+                        alert = AttendanceSecurityAlert(
+                            session_id=sess.id,
+                            student_id=student.id,
+                            attempted_roll=student.roll_number,
+                            device_fingerprint=clean_dev,
+                            conflicting_student_id=device_owner.id,
+                            alert_type='DUPLICATE_DEVICE',
+                            alert_message=f"Attendance submitted from friend's/alternate phone (Registered to Roll #{device_owner.roll_number} - {device_owner.full_name}). Student requested faculty approval.",
+                            scan_latitude=lat,
+                            scan_longitude=lng,
+                            distance_meters=distance_meters,
+                            faculty_action='PENDING'
+                        )
+                        db.session.add(alert)
+                        db.session.commit()
+                    except Exception:
+                        db.session.rollback()
+                    return True, {
+                        "pending_approval": True,
+                        "message": "Attendance request submitted. Awaiting faculty approval."
+                    }
 
-            # Device Binding
+            # Device Binding for student's own new device
             if not student.device_fingerprint:
-                try:
-                    student.device_fingerprint = clean_dev
-                    student.device_model = device_model or "Mobile Device"
-                    student.device_bound_at = datetime.utcnow()
-                    db.session.commit()
-                except Exception:
-                    db.session.rollback()
+                if not request_approval:
+                    try:
+                        student.device_fingerprint = clean_dev
+                        student.device_model = device_model or "Mobile Device"
+                        student.device_bound_at = datetime.utcnow()
+                        db.session.commit()
+                    except Exception:
+                        db.session.rollback()
             elif student.device_fingerprint != clean_dev and not getattr(student, 'device_reset_allowed', 0):
-                try:
-                    alert = AttendanceSecurityAlert(
-                        session_id=sess.id,
-                        student_id=student.id,
-                        attempted_roll=student.roll_number,
-                        device_fingerprint=clean_dev,
-                        alert_type='UNBOUND_DEVICE',
-                        alert_message=f"Attempted scan from unrecognized device #{clean_dev[:8]} (Registered device: #{student.device_fingerprint[:8]}).",
-                        faculty_action='PENDING'
-                    )
-                    db.session.add(alert)
-                    db.session.commit()
-                except Exception:
-                    db.session.rollback()
-                return False, "Device Mismatch: Your student account is bound to another phone. Please contact your faculty or administrator to request a device reset."
+                if not request_approval:
+                    return False, {
+                        "requires_approval": True,
+                        "device_mismatch": True,
+                        "message": "This phone is already registered to another student. Do you still wish to submit your attendance from this device?"
+                    }
+                else:
+                    try:
+                        alert = AttendanceSecurityAlert(
+                            session_id=sess.id,
+                            student_id=student.id,
+                            attempted_roll=student.roll_number,
+                            device_fingerprint=clean_dev,
+                            alert_type='UNBOUND_DEVICE',
+                            alert_message=f"Attendance submitted from unrecognized/borrowed device #{clean_dev[:8]}. Student requested faculty approval.",
+                            scan_latitude=lat,
+                            scan_longitude=lng,
+                            distance_meters=distance_meters,
+                            faculty_action='PENDING'
+                        )
+                        db.session.add(alert)
+                        db.session.commit()
+                    except Exception:
+                        db.session.rollback()
+                    return True, {
+                        "pending_approval": True,
+                        "message": "Attendance request submitted. Awaiting faculty approval."
+                    }
 
             # Anti-Proxy Check: Has this same device already scanned for another student in this session?
             conflict_entry = LectureAttendanceStudent.query.filter(
@@ -1729,22 +1820,37 @@ def mark_student_qr_attendance_secure(student_id, session_id=None, token=None, l
                 c_name = conflict_student.full_name if conflict_student else "another student"
                 c_roll = conflict_student.roll_number if conflict_student else ""
 
-                try:
-                    alert = AttendanceSecurityAlert(
-                        session_id=sess.id,
-                        student_id=student.id,
-                        attempted_roll=student.roll_number,
-                        device_fingerprint=clean_dev,
-                        conflicting_student_id=conflict_entry.student_id,
-                        alert_type='DUPLICATE_DEVICE',
-                        alert_message=f"Device hash was already used by Roll {c_roll} ({c_name}). Potential proxy scan attempt.",
-                        faculty_action='PENDING'
-                    )
-                    db.session.add(alert)
-                    db.session.commit()
-                except Exception:
-                    db.session.rollback()
-                return False, f"Duplicate Device Conflict: This phone was already used to mark attendance for Roll {c_roll} ({c_name}) in this lecture session."
+                if not request_approval:
+                    return False, {
+                        "requires_approval": True,
+                        "device_conflict": True,
+                        "owner_roll": c_roll,
+                        "owner_name": c_name,
+                        "message": "This phone is already registered to another student. Do you still wish to submit your attendance from this device?"
+                    }
+                else:
+                    try:
+                        alert = AttendanceSecurityAlert(
+                            session_id=sess.id,
+                            student_id=student.id,
+                            attempted_roll=student.roll_number,
+                            device_fingerprint=clean_dev,
+                            conflicting_student_id=conflict_entry.student_id,
+                            alert_type='DUPLICATE_DEVICE',
+                            alert_message=f"Attendance submitted from friend's device (Used by Roll #{c_roll} - {c_name} in this session). Student requested faculty approval.",
+                            scan_latitude=lat,
+                            scan_longitude=lng,
+                            distance_meters=distance_meters,
+                            faculty_action='PENDING'
+                        )
+                        db.session.add(alert)
+                        db.session.commit()
+                    except Exception:
+                        db.session.rollback()
+                    return True, {
+                        "pending_approval": True,
+                        "message": "Attendance request submitted. Awaiting faculty approval."
+                    }
 
         # 6. Record Attendance as Present
         st_entry = LectureAttendanceStudent.query.filter_by(
@@ -1813,6 +1919,8 @@ def extend_faculty_qr_session(session_id, minutes=2):
         sess = LectureAttendanceSession.query.get(session_id)
         if not sess:
             return False, "Attendance session record not found."
+        if sess.status == 'Submitted':
+            return False, "This attendance session has already been finalized and locked. It cannot be extended."
 
         base_time = max(datetime.utcnow(), sess.qr_session_expires_at or datetime.utcnow())
         sess.qr_session_expires_at = base_time + timedelta(minutes=minutes)

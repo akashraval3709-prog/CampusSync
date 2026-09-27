@@ -1076,11 +1076,34 @@ INSERT INTO `student_subjects` (`id`, `student_id`, `subject_id`, `semester`, `a
 -- Table structure for table `student_test_answers`
 --
 
+DROP TABLE IF EXISTS `student_test_answers`;
+CREATE TABLE IF NOT EXISTS `student_test_answers` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `attempt_id` int NOT NULL,
+  `question_id` int NOT NULL,
+  `selected_option` varchar(5) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `is_correct` tinyint(1) NOT NULL DEFAULT '0',
+  `marks_obtained` float NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `idx_attempt_question` (`attempt_id`,`question_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `student_test_answers`
 --
 
+INSERT INTO `student_test_answers` (`id`, `attempt_id`, `question_id`, `selected_option`, `is_correct`, `marks_obtained`) VALUES
+(1, 1, 1, 'B', 1, 1),
+(2, 1, 2, 'B', 1, 1),
+(3, 1, 3, 'D', 1, 1),
+(4, 1, 4, 'A', 1, 1),
+(5, 1, 5, 'B', 1, 1),
+(6, 2, 1, 'C', 0, 0),
+(7, 2, 2, 'B', 1, 1),
+(8, 2, 3, 'D', 1, 1),
+(9, 2, 4, 'A', 1, 1),
+(10, 2, 5, 'B', 1, 1),
+(11, 3, 6, 'A', 1, 1);
 
 -- --------------------------------------------------------
 
@@ -1088,11 +1111,31 @@ INSERT INTO `student_subjects` (`id`, `student_id`, `subject_id`, `semester`, `a
 -- Table structure for table `student_test_attempts`
 --
 
+DROP TABLE IF EXISTS `student_test_attempts`;
+CREATE TABLE IF NOT EXISTS `student_test_attempts` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `test_id` int NOT NULL,
+  `student_id` int NOT NULL,
+  `start_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `submit_time` datetime DEFAULT NULL,
+  `time_taken_seconds` int NOT NULL DEFAULT '0',
+  `score` float NOT NULL DEFAULT '0',
+  `percentage` float NOT NULL DEFAULT '0',
+  `tab_switch_count` int NOT NULL DEFAULT '0',
+  `status` enum('in_progress','submitted','auto_submitted_cheating','timed_out') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'in_progress',
+  `ip_address` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_test_attempt` (`test_id`,`student_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `student_test_attempts`
 --
 
+INSERT INTO `student_test_attempts` (`id`, `test_id`, `student_id`, `start_time`, `submit_time`, `time_taken_seconds`, `score`, `percentage`, `tab_switch_count`, `status`, `ip_address`) VALUES
+(1, 1, 127, '2026-09-27 05:54:15', '2026-09-27 06:04:15', 600, 5, 100, 1, 'submitted', '127.0.0.1'),
+(2, 1, 128, '2026-09-27 05:48:15', '2026-09-27 06:00:15', 720, 4, 80, 1, 'submitted', '127.0.0.1'),
+(3, 2, 127, '2026-09-27 06:16:35', '2026-09-27 06:17:17', 41, 1, 100, 0, 'submitted', '127.0.0.1');
 
 -- --------------------------------------------------------
 
@@ -1172,11 +1215,34 @@ INSERT INTO `subjects` (`id`, `subject_code`, `subject_name`, `course`, `semeste
 -- Table structure for table `tests`
 --
 
+DROP TABLE IF EXISTS `tests`;
+CREATE TABLE IF NOT EXISTS `tests` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `faculty_id` int DEFAULT NULL,
+  `subject_id` int DEFAULT NULL,
+  `semester` smallint NOT NULL,
+  `division` varchar(10) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'All',
+  `title` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `description` text COLLATE utf8mb4_unicode_ci,
+  `duration_minutes` int NOT NULL DEFAULT '20',
+  `total_marks` float NOT NULL DEFAULT '0',
+  `passing_marks` float NOT NULL DEFAULT '0',
+  `status` enum('draft','published','completed') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'draft',
+  `pdf_filename` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_faculty` (`faculty_id`),
+  KEY `idx_subject_sem` (`subject_id`,`semester`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `tests`
 --
 
+INSERT INTO `tests` (`id`, `faculty_id`, `subject_id`, `semester`, `division`, `title`, `description`, `duration_minutes`, `total_marks`, `passing_marks`, `status`, `pdf_filename`, `created_at`, `updated_at`) VALUES
+(1, 6, 3, 2, 'All', 'Python Unit 1: Core Concepts & Functions', 'Official mid-term online quiz covering Python syntax, data types, functions, exception handling, and memory architecture.', 15, 5, 2, 'published', NULL, '2026-09-27 06:08:15', '2026-09-27 06:08:15'),
+(2, 6, NULL, 2, 'A', 'Unit Test Automated Quiz', '', 10, 1, 1, 'published', NULL, '2026-09-27 06:08:33', '2026-09-27 06:08:33');
 
 -- --------------------------------------------------------
 
@@ -1184,11 +1250,31 @@ INSERT INTO `subjects` (`id`, `subject_code`, `subject_name`, `course`, `semeste
 -- Table structure for table `test_questions`
 --
 
+DROP TABLE IF EXISTS `test_questions`;
+CREATE TABLE IF NOT EXISTS `test_questions` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `test_id` int NOT NULL,
+  `question_text` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `options_json` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `correct_option` varchar(5) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `marks` float NOT NULL DEFAULT '1',
+  `explanation` text COLLATE utf8mb4_unicode_ci,
+  `order_index` int NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `idx_test_id` (`test_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `test_questions`
 --
 
+INSERT INTO `test_questions` (`id`, `test_id`, `question_text`, `options_json`, `correct_option`, `marks`, `explanation`, `order_index`) VALUES
+(1, 1, 'Which of the following data structures in Python is ordered, mutable, and allows duplicate elements?', '{\"A\": \"Set\", \"B\": \"List\", \"C\": \"Tuple\", \"D\": \"Dictionary Keys\"}', 'B', 1, 'Lists are ordered, mutable sequences that allow duplicate items, defined using square brackets [].', 0),
+(2, 1, 'What is the primary difference between a Shallow Copy and a Deep Copy in Python?', '{\"A\": \"Shallow copy duplicates nested objects recursively; deep copy does not.\", \"B\": \"Deep copy constructs a new compound object and recursively inserts copies of child objects.\", \"C\": \"Shallow copy is immutable, whereas deep copy is always mutable.\", \"D\": \"There is no difference in Python 3.\"}', 'B', 1, 'A deep copy constructs a new compound object and then recursively inserts copies of objects found in the original.', 1),
+(3, 1, 'Which block in Python exception handling is guaranteed to execute regardless of whether an exception was raised or handled?', '{\"A\": \"try\", \"B\": \"except\", \"C\": \"else\", \"D\": \"finally\"}', 'D', 1, 'The \'finally\' clause is always executed before leaving the try statement, whether an exception has occurred or not.', 2),
+(4, 1, 'What is the average time complexity of key lookup in a Python dictionary?', '{\"A\": \"O(1)\", \"B\": \"O(n)\", \"C\": \"O(log n)\", \"D\": \"O(n^2)\"}', 'A', 1, 'Python dictionaries are hash tables providing average O(1) time complexity for search, insert, and delete operations.', 3),
+(5, 1, 'Which built-in Python function returns both the index and value when iterating over a sequence?', '{\"A\": \"range()\", \"B\": \"enumerate()\", \"C\": \"zip()\", \"D\": \"map()\"}', 'B', 1, 'The enumerate() function adds a counter to an iterable and returns it as an enumerate object of (index, item) pairs.', 4),
+(6, 2, 'What is Python?', '{\"A\": \"Programming Language\", \"B\": \"Snake\", \"C\": \"Car\", \"D\": \"Food\"}', 'A', 1, 'Python is a high-level interpreted programming language.', 0);
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

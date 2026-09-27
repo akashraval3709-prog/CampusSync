@@ -642,7 +642,7 @@ def faculty_attendance():
 
         if active_qr:
             now_utc = dt.utcnow()
-            if active_qr.qr_session_expires_at and now_utc > active_qr.qr_session_expires_at:
+            if active_qr.status == 'Submitted' or (active_qr.qr_session_expires_at and now_utc > active_qr.qr_session_expires_at):
                 active_qr.is_qr_active = 0
                 db.session.commit()
             else:
@@ -673,6 +673,15 @@ def faculty_attendance():
                 lecture_no=selected_lecture_no
             )
 
+            # If lecture is already Final Submitted & Locked, strictly clear and deactivate any QR session
+            if existing_session and existing_session.get("status") == 'Submitted':
+                active_qr_session = None
+                qr_remaining_seconds = 0
+                if active_qr and active_qr.is_qr_active:
+                    active_qr.is_qr_active = 0
+                    active_qr.qr_session_expires_at = dt.utcnow()
+                    db.session.commit()
+
             # Pre-fill status for each student if session exists
             if existing_session and existing_session.get("statuses"):
                 session_statuses = existing_session["statuses"]
@@ -681,6 +690,35 @@ def faculty_attendance():
             else:
                 for st in student_data["students"]:
                     st["att_status"] = "Present"
+
+    pending_alert = None
+    session_id_to_check = None
+    if active_qr_session:
+        session_id_to_check = active_qr_session.get("id") if isinstance(active_qr_session, dict) else getattr(active_qr_session, "id", None)
+    elif existing_session and isinstance(existing_session, dict):
+        session_id_to_check = existing_session.get("session_id") or existing_session.get("id")
+
+    from models import AttendanceSecurityAlert, LectureAttendanceSession
+    if session_id_to_check:
+        pending_alert = AttendanceSecurityAlert.query.filter_by(
+            session_id=session_id_to_check,
+            faculty_action='PENDING'
+        ).order_by(AttendanceSecurityAlert.id.desc()).first()
+
+    if not pending_alert and selected_subject_id and selected_semester and selected_division:
+        sess_ids = [s.id for s in LectureAttendanceSession.query.filter_by(
+            subject_id=selected_subject_id,
+            semester=selected_semester,
+            division=selected_division,
+            academic_year=selected_year
+        ).order_by(LectureAttendanceSession.id.desc()).limit(5).all()]
+        if sess_ids:
+            pending_alert = AttendanceSecurityAlert.query.filter(
+                AttendanceSecurityAlert.session_id.in_(sess_ids),
+                AttendanceSecurityAlert.faculty_action == 'PENDING'
+            ).order_by(AttendanceSecurityAlert.id.desc()).first()
+            if not session_id_to_check and pending_alert:
+                session_id_to_check = pending_alert.session_id
 
     return render_template(
         'faculty/attendance_manual.html',
@@ -701,6 +739,8 @@ def faculty_attendance():
         existing_session=existing_session,
         active_qr_session=active_qr_session,
         qr_remaining_seconds=qr_remaining_seconds,
+        pending_alert=pending_alert,
+        poll_session_id=session_id_to_check,
         error=error_msg,
         active_page='attendance'
     )
@@ -768,10 +808,10 @@ def faculty_attendance_summary_pdf():
     """
     Downloads the Attendance Module Technical Summary PDF Report.
     """
-    pdf_path = r"d:\Project_sem_5\A-project\CampusSync\documentation\CampusSync_Attendance_Module_Summary_Report.pdf"
+    pdf_path = os.path.join(current_app.root_path, "documentation", "CampusSync_Attendance_Module_Summary_Report.pdf")
     if not os.path.exists(pdf_path):
-        from scratch.generate_attendance_pdf import build_pdf
-        build_pdf()
+        flash("Documentation PDF not found.", "warning")
+        return redirect(url_for('faculty.faculty_attendance'))
     return send_file(
         pdf_path,
         mimetype="application/pdf",
@@ -1018,6 +1058,163 @@ def faculty_students():
     )
 
 
+
+
+
+# ==============================================================================
+# ==============================================================================
+# FACULTY QR ATTENDANCE API ENDPOINTS (Fully Exception Handled)
+# ==============================================================================
+@faculty_bp.route('/faculty/qr/start-session', methods=['POST'], endpoint='faculty_qr_start_session')
+@faculty_required
+def faculty_qr_start_session():
+    """
+    Initializes or activates a live QR Attendance session for a specific lecture.
+    All exceptions handled cleanly with professional English feedback.
+    """
+    try:
+        faculty_id = session.get("faculty_id")
+        data = request.get_json() or {}
+        subject_id = data.get("subject_id")
+        division = data.get("division")
+        semester = data.get("semester")
+        academic_year = data.get("academic_year", "2026-27")
+        lecture_date = data.get("lecture_date") or datetime.now().strftime("%Y-%m-%d")
+        lecture_no = data.get("lecture_no") or "Lecture 1"
+
+        if not subject_id or not division or not semester:
+            return jsonify({"success": False, "message": "Missing required lecture details (subject, division, or semester)."}), 400
+
+        try:
+            subject_id = int(subject_id)
+            semester = int(semester)
+        except (ValueError, TypeError):
+            return jsonify({"success": False, "message": "Invalid subject ID or semester parameter. Numbers required."}), 400
+
+        session_type = data.get("session_type", "Lecture").strip()
+        start_time = data.get("start_time")
+        end_time = data.get("end_time")
+        if start_time and end_time:
+            lecture_no = f"{session_type} ({start_time} - {end_time})"
+
+        from services.attendance_service import start_faculty_qr_session
+        res = start_faculty_qr_session(
+            faculty_id=faculty_id,
+            subject_id=subject_id,
+            division=division,
+            semester=semester,
+            academic_year=academic_year,
+            lecture_date=lecture_date,
+            lecture_no=lecture_no,
+            session_type=session_type,
+            start_time=start_time,
+            end_time=end_time
+        )
+        status_code = 200 if res.get("success") else 400
+        return jsonify(res), status_code
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Server error starting QR session: {str(e)}"}), 500
+
+
+@faculty_bp.route('/faculty/qr/live-status/<int:session_id>', methods=['GET'], endpoint='faculty_qr_live_status')
+@faculty_required
+def faculty_qr_live_status(session_id):
+    """
+    Returns real-time scan attendance roster and pending security alerts for faculty dashboard.
+    Protected with full exception handling.
+    """
+    try:
+        from services.attendance_service import get_faculty_qr_live_roster
+        res = get_faculty_qr_live_roster(session_id)
+        status_code = 200 if res.get("success") else 400
+        return jsonify(res), status_code
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Server error retrieving live roster: {str(e)}", "roster": [], "pending_alerts": []}), 500
+
+
+@faculty_bp.route('/faculty/qr/stop-session', methods=['POST'], endpoint='faculty_qr_stop_session')
+@faculty_required
+def faculty_qr_stop_session():
+    """
+    Stops/Closes the active QR attendance session.
+    """
+    try:
+        data = request.get_json() or {}
+        session_id = data.get("session_id")
+        if not session_id:
+            return jsonify({"success": False, "message": "Missing required session ID parameter."}), 400
+
+        try:
+            session_id = int(session_id)
+        except (ValueError, TypeError):
+            return jsonify({"success": False, "message": "Invalid session ID format."}), 400
+
+        from services.attendance_service import stop_faculty_qr_session
+        success, msg = stop_faculty_qr_session(session_id)
+        status_code = 200 if success else 400
+        return jsonify({"success": success, "message": msg}), status_code
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Server error stopping QR session: {str(e)}"}), 500
+
+
+@faculty_bp.route('/faculty/qr/resolve-alert', methods=['POST'], endpoint='faculty_qr_resolve_alert')
+@faculty_required
+def faculty_qr_resolve_alert():
+    """
+    Faculty approves or rejects an anti-proxy security conflict.
+    """
+    try:
+        faculty_id = session.get("faculty_id")
+        data = request.get_json() or {}
+        alert_id = data.get("alert_id")
+        action = data.get("action", "REJECT")
+        if not alert_id:
+            return jsonify({"success": False, "message": "Missing required security alert ID."}), 400
+
+        try:
+            alert_id = int(alert_id)
+        except (ValueError, TypeError):
+            return jsonify({"success": False, "message": "Invalid alert ID format."}), 400
+
+        from services.attendance_service import resolve_faculty_security_alert
+        success, msg = resolve_faculty_security_alert(alert_id, faculty_id, action)
+        status_code = 200 if success else 400
+        return jsonify({"success": success, "message": msg}), status_code
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Server error resolving security alert: {str(e)}"}), 500
+
+
+@faculty_bp.route('/faculty/qr/extend-session', methods=['POST'], endpoint='faculty_qr_extend_session')
+@faculty_required
+def faculty_qr_extend_session():
+    """
+    Extends active/expired QR session by requested minutes (default 2 minutes).
+    """
+    try:
+        data = request.get_json() or {}
+        session_id = data.get("session_id")
+        if not session_id:
+            return jsonify({"success": False, "message": "Missing required session ID parameter."}), 400
+
+        try:
+            session_id = int(session_id)
+        except (ValueError, TypeError):
+            return jsonify({"success": False, "message": "Invalid session ID format."}), 400
+
+        try:
+            minutes = int(data.get("minutes", 2))
+        except (ValueError, TypeError):
+            minutes = 2
+
+        from services.attendance_service import extend_faculty_qr_session
+        success, res = extend_faculty_qr_session(session_id, minutes)
+        if success:
+            return jsonify({"success": True, **res}), 200
+        return jsonify({"success": False, "message": res}), 400
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Server error extending QR session: {str(e)}"}), 500
+
+
 # ==============================================================================
 # Faculty Notice & Assignment Management Routes
 # ==============================================================================
@@ -1196,155 +1393,3 @@ def faculty_save_assignment_submissions():
         flash(message, "danger")
 
     return redirect(url_for('faculty_assignments', assignment_id=notification_id))
-
-
-# FACULTY QR ATTENDANCE API ENDPOINTS (Fully Exception Handled)
-# ==============================================================================
-@faculty_bp.route('/faculty/qr/start-session', methods=['POST'], endpoint='faculty_qr_start_session')
-@faculty_required
-def faculty_qr_start_session():
-    """
-    Initializes or activates a live QR Attendance session for a specific lecture.
-    All exceptions handled cleanly with professional English feedback.
-    """
-    try:
-        faculty_id = session.get("faculty_id")
-        data = request.get_json() or {}
-        subject_id = data.get("subject_id")
-        division = data.get("division")
-        semester = data.get("semester")
-        academic_year = data.get("academic_year", "2026-27")
-        lecture_date = data.get("lecture_date") or datetime.now().strftime("%Y-%m-%d")
-        lecture_no = data.get("lecture_no") or "Lecture 1"
-
-        if not subject_id or not division or not semester:
-            return jsonify({"success": False, "message": "Missing required lecture details (subject, division, or semester)."}), 400
-
-        try:
-            subject_id = int(subject_id)
-            semester = int(semester)
-        except (ValueError, TypeError):
-            return jsonify({"success": False, "message": "Invalid subject ID or semester parameter. Numbers required."}), 400
-
-        session_type = data.get("session_type", "Lecture").strip()
-        start_time = data.get("start_time")
-        end_time = data.get("end_time")
-        if start_time and end_time:
-            lecture_no = f"{session_type} ({start_time} - {end_time})"
-
-        from services.attendance_service import start_faculty_qr_session
-        res = start_faculty_qr_session(
-            faculty_id=faculty_id,
-            subject_id=subject_id,
-            division=division,
-            semester=semester,
-            academic_year=academic_year,
-            lecture_date=lecture_date,
-            lecture_no=lecture_no,
-            session_type=session_type,
-            start_time=start_time,
-            end_time=end_time
-        )
-        status_code = 200 if res.get("success") else 400
-        return jsonify(res), status_code
-    except Exception as e:
-        return jsonify({"success": False, "message": f"Server error starting QR session: {str(e)}"}), 500
-
-
-@faculty_bp.route('/faculty/qr/live-status/<int:session_id>', methods=['GET'], endpoint='faculty_qr_live_status')
-@faculty_required
-def faculty_qr_live_status(session_id):
-    """
-    Returns real-time scan attendance roster and pending security alerts for faculty dashboard.
-    Protected with full exception handling.
-    """
-    try:
-        from services.attendance_service import get_faculty_qr_live_roster
-        res = get_faculty_qr_live_roster(session_id)
-        status_code = 200 if res.get("success") else 400
-        return jsonify(res), status_code
-    except Exception as e:
-        return jsonify({"success": False, "message": f"Server error retrieving live roster: {str(e)}", "roster": [], "pending_alerts": []}), 500
-
-
-@faculty_bp.route('/faculty/qr/stop-session', methods=['POST'], endpoint='faculty_qr_stop_session')
-@faculty_required
-def faculty_qr_stop_session():
-    """
-    Stops/Closes the active QR attendance session.
-    """
-    try:
-        data = request.get_json() or {}
-        session_id = data.get("session_id")
-        if not session_id:
-            return jsonify({"success": False, "message": "Missing required session ID parameter."}), 400
-
-        try:
-            session_id = int(session_id)
-        except (ValueError, TypeError):
-            return jsonify({"success": False, "message": "Invalid session ID format."}), 400
-
-        from services.attendance_service import stop_faculty_qr_session
-        success, msg = stop_faculty_qr_session(session_id)
-        status_code = 200 if success else 400
-        return jsonify({"success": success, "message": msg}), status_code
-    except Exception as e:
-        return jsonify({"success": False, "message": f"Server error stopping QR session: {str(e)}"}), 500
-
-
-@faculty_bp.route('/faculty/qr/resolve-alert', methods=['POST'], endpoint='faculty_qr_resolve_alert')
-@faculty_required
-def faculty_qr_resolve_alert():
-    """
-    Faculty approves or rejects an anti-proxy security conflict.
-    """
-    try:
-        faculty_id = session.get("faculty_id")
-        data = request.get_json() or {}
-        alert_id = data.get("alert_id")
-        action = data.get("action", "REJECT")
-        if not alert_id:
-            return jsonify({"success": False, "message": "Missing required security alert ID."}), 400
-
-        try:
-            alert_id = int(alert_id)
-        except (ValueError, TypeError):
-            return jsonify({"success": False, "message": "Invalid alert ID format."}), 400
-
-        from services.attendance_service import resolve_faculty_security_alert
-        success, msg = resolve_faculty_security_alert(alert_id, faculty_id, action)
-        status_code = 200 if success else 400
-        return jsonify({"success": success, "message": msg}), status_code
-    except Exception as e:
-        return jsonify({"success": False, "message": f"Server error resolving security alert: {str(e)}"}), 500
-
-
-@faculty_bp.route('/faculty/qr/extend-session', methods=['POST'], endpoint='faculty_qr_extend_session')
-@faculty_required
-def faculty_qr_extend_session():
-    """
-    Extends active/expired QR session by requested minutes (default 2 minutes).
-    """
-    try:
-        data = request.get_json() or {}
-        session_id = data.get("session_id")
-        if not session_id:
-            return jsonify({"success": False, "message": "Missing required session ID parameter."}), 400
-
-        try:
-            session_id = int(session_id)
-        except (ValueError, TypeError):
-            return jsonify({"success": False, "message": "Invalid session ID format."}), 400
-
-        try:
-            minutes = int(data.get("minutes", 2))
-        except (ValueError, TypeError):
-            minutes = 2
-
-        from services.attendance_service import extend_faculty_qr_session
-        success, res = extend_faculty_qr_session(session_id, minutes)
-        if success:
-            return jsonify({"success": True, **res}), 200
-        return jsonify({"success": False, "message": res}), 400
-    except Exception as e:
-        return jsonify({"success": False, "message": f"Server error extending QR session: {str(e)}"}), 500

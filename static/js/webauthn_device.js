@@ -122,12 +122,16 @@
         const challenge = generateChallenge();
         const userId = new TextEncoder().encode(String(studentInfo.student_id || studentInfo.id || 'student'));
 
+        // RFC 5890: rp.id MUST be a valid domain string, NOT an IP address.
+        const rpConfig = { name: 'CampusSync Attendance Security' };
+        const isIp = /^(\d{1,3}\.){3}\d{1,3}$/.test(window.location.hostname);
+        if (!isIp && window.location.hostname) {
+            rpConfig.id = window.location.hostname;
+        }
+
         const createOptions = {
             publicKey: {
-                rp: {
-                    name: 'CampusSync Attendance Security',
-                    id: window.location.hostname
-                },
+                rp: rpConfig,
                 user: {
                     id: userId,
                     name: studentInfo.email || 'student@campussync.local',
@@ -140,7 +144,7 @@
                 ],
                 authenticatorSelection: {
                     authenticatorAttachment: 'platform', // Native Phone Biometrics / Screen Lock
-                    userVerification: 'required',        // Enforce Fingerprint OR Phone Screen Lock PIN/Pattern!
+                    userVerification: 'preferred',       // 'preferred' prevents Google Play Services Credential Manager crashes!
                     requireResidentKey: false
                 },
                 excludeCredentials: excludeList,         // PREVENTS MULTI-ACCOUNT REGISTRATION ON SAME PHONE!
@@ -157,11 +161,15 @@
         try {
             credential = await navigator.credentials.create(createOptions);
         } catch (err) {
+            console.error('[WebAuthn] navigator.credentials.create error:', err);
             if (err.name === 'InvalidStateError') {
-                throw new Error('DEVICE_ALREADY_REGISTERED: This physical phone is already registered to another student. Institutional policy strictly permits only 1 student per physical device.');
+                throw new Error('DEVICE_ALREADY_REGISTERED: This physical phone is already registered to another student.');
             }
             if (err.name === 'NotAllowedError') {
-                throw new Error('Screen lock / Biometric verification was cancelled. Screen lock verification is required to bind your device.');
+                throw new Error('Device verification was cancelled.');
+            }
+            if (errStr.includes('talking to the credential manager') || errStr.includes('credential manager')) {
+                throw new Error('DEVICE_VERIFICATION_FAILED: Screen lock verification could not be completed on this device.');
             }
             throw err;
         }
@@ -206,27 +214,35 @@
         const challenge = generateChallenge();
         const allowCredBuffer = base64URLToBuffer(credentialId);
 
+        const isIp = /^(\d{1,3}\.){3}\d{1,3}$/.test(window.location.hostname);
         const getOptions = {
             publicKey: {
                 challenge: challenge,
-                rpId: window.location.hostname,
                 allowCredentials: [{
                     type: 'public-key',
                     id: allowCredBuffer,
                     transports: ['internal']
                 }],
-                userVerification: 'required', // Enforces Fingerprint OR Screen Lock PIN!
+                userVerification: 'preferred', // Enforces screen lock with fallback to prevent Google Play Services crash
                 timeout: 60000
             }
         };
+        if (!isIp && window.location.hostname) {
+            getOptions.publicKey.rpId = window.location.hostname;
+        }
 
         console.log('[WebAuthn] Requesting assertion for credential:', credentialId);
         let assertion;
         try {
             assertion = await navigator.credentials.get(getOptions);
         } catch (err) {
+            console.error('[WebAuthn] navigator.credentials.get error:', err);
+            const errStr = (err.message || '').toLowerCase();
             if (err.name === 'NotAllowedError') {
-                throw new Error('Screen lock / Biometric verification was cancelled. Screen lock authentication is required to mark attendance.');
+                throw new Error('Device verification was cancelled.');
+            }
+            if (errStr.includes('talking to the credential manager') || errStr.includes('credential manager')) {
+                throw new Error('DEVICE_VERIFICATION_FAILED: Screen lock verification could not be completed on this device.');
             }
             throw err;
         }
