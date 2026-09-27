@@ -22,9 +22,35 @@ def get_homepage_upload_folder():
     return folder
 
 
-def get_homepage_settings():
-    """Fetches the singleton HomePageSetting object or creates it with defaults."""
-    return HomePageSetting.get_settings()
+import time
+
+_cached_homepage_snapshot = None
+_cached_homepage_time = 0
+HOMEPAGE_CACHE_TTL = 120
+
+class HomePageSettingSnapshot:
+    """Thread-safe snapshot of HomePageSetting for sub-millisecond rendering."""
+    def __init__(self, record):
+        for col in record.__table__.columns:
+            setattr(self, col.name, getattr(record, col.name))
+
+def invalidate_homepage_cache():
+    """Invalidates the in-memory homepage settings cache."""
+    global _cached_homepage_snapshot, _cached_homepage_time
+    _cached_homepage_snapshot = None
+    _cached_homepage_time = 0
+
+def get_homepage_settings(force_refresh=False):
+    """Fetches the singleton HomePageSetting object with in-memory snapshot caching."""
+    global _cached_homepage_snapshot, _cached_homepage_time
+    now = time.time()
+    if not force_refresh and _cached_homepage_snapshot is not None and (now - _cached_homepage_time < HOMEPAGE_CACHE_TTL):
+        return _cached_homepage_snapshot
+
+    record = HomePageSetting.get_settings()
+    _cached_homepage_snapshot = HomePageSettingSnapshot(record)
+    _cached_homepage_time = now
+    return _cached_homepage_snapshot
 
 
 def update_homepage_settings(form_data, file_obj=None):
@@ -33,7 +59,7 @@ def update_homepage_settings(form_data, file_obj=None):
     Handles optional hero banner image upload.
     Returns (success: bool, message: str)
     """
-    settings = get_homepage_settings()
+    settings = HomePageSetting.get_settings()
 
     try:
         # 1. Hero Section
@@ -130,6 +156,7 @@ def update_homepage_settings(form_data, file_obj=None):
 
         settings.updated_at = datetime.utcnow()
         db.session.commit()
+        invalidate_homepage_cache()
         return True, "Home page content updated successfully!"
 
     except Exception as e:

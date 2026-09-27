@@ -8,12 +8,34 @@ Provides functions to fetch and update college profile and information.
 
 from models import CollegeSetting
 from extensions import db
+import time
 
-def get_college_settings():
+_cached_college_snapshot = None
+_cached_college_time = 0
+COLLEGE_CACHE_TTL = 120  # 2 minutes in-memory cache
+
+class CollegeSettingSnapshot:
+    """Thread-safe detached snapshot of CollegeSetting attributes for 0ms template rendering."""
+    def __init__(self, record):
+        for col in record.__table__.columns:
+            setattr(self, col.name, getattr(record, col.name))
+
+def invalidate_college_cache():
+    """Invalidates the in-memory college settings snapshot cache."""
+    global _cached_college_snapshot, _cached_college_time
+    _cached_college_snapshot = None
+    _cached_college_time = 0
+
+def get_college_settings(force_refresh=False):
     """
     Get the single college settings record.
-    If no record exists, create a default one and return it.
+    Uses an in-memory snapshot cache to eliminate database round-trips on template rendering.
     """
+    global _cached_college_snapshot, _cached_college_time
+    now = time.time()
+    if not force_refresh and _cached_college_snapshot is not None and (now - _cached_college_time < COLLEGE_CACHE_TTL):
+        return _cached_college_snapshot
+
     college = CollegeSetting.query.first()
     
     # Create default record if database table is empty
@@ -37,16 +59,22 @@ def get_college_settings():
         db.session.add(college)
         db.session.commit()
         
-    return college
+    _cached_college_snapshot = CollegeSettingSnapshot(college)
+    _cached_college_time = now
+    return _cached_college_snapshot
 
 def update_college_settings(form_data, logo_filename=None, stamp_filename=None, signature_filename=None):
     """
     Update college settings details.
-    Creates record if it does not exist, updates fields, and saves to database.
+    Creates record if it does not exist, updates fields, saves to database,
+    and invalidates the in-memory cache.
     """
     try:
         # Get existing record or create new one
-        college = get_college_settings()
+        college = CollegeSetting.query.first()
+        if not college:
+            get_college_settings(force_refresh=True)
+            college = CollegeSetting.query.first()
 
         # Update basic information
         college.college_name = form_data.get('college_name', '').strip() or college.college_name
@@ -117,6 +145,7 @@ def update_college_settings(form_data, logo_filename=None, stamp_filename=None, 
 
         # Commit changes to database
         db.session.commit()
+        invalidate_college_cache()
         return college, None
     except Exception as e:
         db.session.rollback()

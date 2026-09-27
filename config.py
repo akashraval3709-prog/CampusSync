@@ -66,3 +66,11 @@ class Config:
     MAIL_PASSWORD = os.getenv('MAIL_PASSWORD', 'kjdu cius cygw nhyl')
     MAIL_DEFAULT_SENDER = os.getenv('MAIL_DEFAULT_SENDER', 'devidparmar8954@gmail.com')
 
+    # Flask-Compress Optimization
+    COMPRESS_MIMETYPES = [
+        'text/html', 'text/css', 'text/xml', 'application/json',
+        'application/javascript', 'image/svg+xml'
+    ]
+    COMPRESS_LEVEL = 6
+    COMPRESS_MIN_SIZE = 500
+

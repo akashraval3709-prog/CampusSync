@@ -35,6 +35,10 @@ app.config.from_object(Config)
 db.init_app(app)
 mail.init_app(app)
 
+# High-Performance Compression: automatically compress HTML, CSS, JS, and JSON via Gzip/Brotli
+from flask_compress import Compress
+Compress(app)
+
 # ------------------------------------------------------------------------------
 # Security: Enforce HTTPS in Production Deployments
 # ------------------------------------------------------------------------------
