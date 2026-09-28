@@ -512,19 +512,19 @@ def api_faculty_create_notice():
         return jsonify({"success": False, "message": "Title and message are required"}), 400
 
     try:
-        notice = Notification(
+        notice = create_notification(
             title=title,
             message=message,
-            target_role='students',
-            created_by_role='faculty',
-            created_by_id=faculty_id,
-            created_at=datetime.utcnow()
+            category='General',
+            posted_by_role='Faculty',
+            faculty_id=faculty_id,
+            target_audience='Student',
+            priority='Normal'
         )
-        db.session.add(notice)
-        db.session.commit()
+        if not notice:
+            return jsonify({"success": False, "message": "Failed to create notice."}), 500
         return jsonify({"success": True, "message": "Notice published successfully!"}), 200
     except Exception as e:
-        db.session.rollback()
         return jsonify({"success": False, "message": str(e)}), 500
 
 
@@ -653,19 +653,20 @@ def api_admin_create_notice():
         return jsonify({"success": False, "message": "Title and message are required"}), 400
 
     try:
-        notice = Notification(
+        target_aud = target_role if target_role in ('All', 'Guest', 'Faculty', 'Student') else 'All'
+        notice = create_notification(
             title=title,
             message=message,
-            target_role=target_role,
-            created_by_role='admin',
-            created_by_id=admin_id,
-            created_at=datetime.utcnow()
+            category='General',
+            posted_by_role='Admin',
+            admin_id=admin_id,
+            target_audience=target_aud,
+            priority='Normal'
         )
-        db.session.add(notice)
-        db.session.commit()
+        if not notice:
+            return jsonify({"success": False, "message": "Failed to create notice."}), 500
         return jsonify({"success": True, "message": "Notice published to entire campus!"}), 200
     except Exception as e:
-        db.session.rollback()
         return jsonify({"success": False, "message": str(e)}), 500
 
 

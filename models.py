@@ -132,6 +132,10 @@ class CollegeSetting(db.Model):
     created_at = db.Column(db.TIMESTAMP, default=datetime.utcnow)
     updated_at = db.Column(db.TIMESTAMP, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
     def to_dict(self):
         return {
             "id": self.id,
@@ -172,6 +176,10 @@ class ResultDeclaration(db.Model):
     __table_args__ = (
         db.UniqueConstraint('academic_year', 'semester', 'division', name='uq_result_decl_ay_sem_div'),
     )
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
 
 
 class AcademicSetting(db.Model):
@@ -188,6 +196,10 @@ class AcademicSetting(db.Model):
     students_per_division = db.Column(db.Integer, nullable=False, default=70)
     created_at = db.Column(db.TIMESTAMP, default=datetime.utcnow)
     updated_at = db.Column(db.TIMESTAMP, default=datetime.utcnow, onupdate=datetime.utcnow)
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
 
 
 class Subject(db.Model):
@@ -210,6 +222,10 @@ class Subject(db.Model):
     component_config = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.TIMESTAMP, default=datetime.utcnow)
     updated_at = db.Column(db.TIMESTAMP, default=datetime.utcnow, onupdate=datetime.utcnow)
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
 
 
 class EmailLog(db.Model):
@@ -231,6 +247,10 @@ class EmailLog(db.Model):
     updated_at = db.Column(db.TIMESTAMP, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     student = db.relationship('Student', backref=db.backref('email_logs', cascade='all, delete-orphan', lazy=True))
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
 
 
 class Faculty(db.Model):
@@ -324,6 +344,10 @@ class FacultySubjectAssignment(db.Model):
     __table_args__ = (
         db.UniqueConstraint('faculty_id', 'subject_id', 'division', name='uq_faculty_subject_division'),
     )
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
 
 
 class InternalMark(db.Model):
@@ -365,6 +389,10 @@ class InternalMark(db.Model):
     __table_args__ = (
         db.UniqueConstraint('student_id', 'subject_id', 'semester', 'academic_year', name='uq_student_internal_mark_sem_year'),
     )
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
 
 
 class AttendanceRecord(db.Model):
@@ -391,6 +419,10 @@ class AttendanceRecord(db.Model):
     __table_args__ = (
         db.UniqueConstraint('student_id', 'subject_id', 'semester', 'academic_year', name='uq_student_attendance_sem_year'),
     )
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
 
 
 class ArchivedStudent(db.Model):
@@ -414,6 +446,10 @@ class ArchivedStudent(db.Model):
     profile_photo = db.Column(db.String(255), default='default-avatar.png')
     status = db.Column(db.String(20), default='Archived')
     archived_at = db.Column(db.TIMESTAMP, default=datetime.utcnow)
+
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
 
     def to_dict(self):
         return {
@@ -451,6 +487,10 @@ class ArchivedInternalMark(db.Model):
     max_marks = db.Column(db.Integer, nullable=False)
     component_data = db.Column(db.Text, nullable=True)
     archived_at = db.Column(db.TIMESTAMP, default=datetime.utcnow)
+
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
 
     def to_dict(self):
         return {
@@ -501,6 +541,10 @@ class LectureAttendanceSession(db.Model):
     __table_args__ = (
         db.UniqueConstraint('subject_id', 'semester', 'division', 'academic_year', 'lecture_date', 'lecture_no', name='uq_lecture_session'),
     )
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
 
 
 class LectureAttendanceStudent(db.Model):
@@ -529,6 +573,10 @@ class LectureAttendanceStudent(db.Model):
     __table_args__ = (
         db.UniqueConstraint('session_id', 'student_id', name='uq_session_student_attendance'),
     )
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
 
 
 class ArchivedStudentOTP(db.Model):
@@ -546,6 +594,10 @@ class ArchivedStudentOTP(db.Model):
     attempts = db.Column(db.Integer, default=0, nullable=False)
     blocked_until = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.TIMESTAMP, default=datetime.utcnow)
+
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
 
     def to_dict(self):
         return {
@@ -584,6 +636,10 @@ class AttendanceSecurityAlert(db.Model):
 
     session = db.relationship('LectureAttendanceSession', backref=db.backref('security_alerts', cascade='all, delete-orphan', lazy=True))
     student = db.relationship('Student', backref=db.backref('attendance_alerts', cascade='all, delete-orphan', lazy=True))
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
 
 
 
@@ -640,6 +696,10 @@ class Notification(db.Model):
     faculty = db.relationship('Faculty', backref=db.backref('posted_notifications', lazy=True), foreign_keys=[faculty_id])
     subject = db.relationship('Subject', backref=db.backref('subject_notifications', lazy=True))
     target_student = db.relationship('Student', foreign_keys=[target_student_id], backref=db.backref('targeted_notifications', lazy=True))
+
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
 
     @property
     def author_name(self):
@@ -707,6 +767,10 @@ class NotificationRead(db.Model):
         db.Index('idx_user_role_id', 'user_role', 'user_id'),
     )
 
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
     def to_dict(self):
         return {
             "id": self.id,
@@ -747,6 +811,10 @@ class AssignmentSubmission(db.Model):
         db.UniqueConstraint('notification_id', 'student_id', name='uq_notification_student_submission'),
     )
 
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
     def to_dict(self):
         return {
             "id": self.id,
@@ -784,6 +852,10 @@ class GalleryItem(db.Model):
 
     # Relationships
     uploaded_by = db.relationship('Admin', backref=db.backref('gallery_uploads', lazy=True))
+
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
 
     def to_dict(self):
         return {
@@ -854,6 +926,10 @@ class HomePageSetting(db.Model):
     feat4_desc = db.Column(db.Text, nullable=False, default='Visual yearly analytics on attendance and pass rates.')
 
     updated_at = db.Column(db.TIMESTAMP, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
 
     @classmethod
     def get_settings(cls):

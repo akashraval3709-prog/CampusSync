@@ -625,6 +625,7 @@ def global_serve_uploads(filename):
             alt = os.path.join(uploads_dir, 'student', filename[len('students/'):])
             if os.path.exists(alt):
                 return send_from_directory(os.path.join(uploads_dir, 'student'), filename[len('students/'):])
+    return send_from_directory(uploads_dir, filename)
 # ------------------------------------------------------------------------------
 # Test Email Route (Brevo API Production Verification)
 # ------------------------------------------------------------------------------

@@ -246,15 +246,20 @@ def student_dashboard():
         return redirect(url_for('student_login'))
 
     # Render Student Dashboard with student details, academic settings, and urgent assignment deadline alerts
-    from services.academic_service import get_academic_settings
-    academic = get_academic_settings()
-    
+    try:
+        from services.academic_service import get_academic_settings
+        academic = get_academic_settings()
+    except Exception as acad_err:
+        from flask import current_app
+        current_app.logger.warning(f"[Student Dashboard Academic Settings Error] {acad_err}")
+        academic = None
+
     urgent_notices = []
     latest_notices = []
     try:
         from services.notification_service import get_student_urgent_notices, get_student_notices, calculate_deadline_info
-        urgent_notices = get_student_urgent_notices(student)
-        latest_notices = get_student_notices(student)[:4]
+        urgent_notices = get_student_urgent_notices(student) or []
+        latest_notices = (get_student_notices(student) or [])[:4]
         for n in latest_notices:
             n.deadline_info = calculate_deadline_info(n)
     except Exception as notif_err:
@@ -263,14 +268,36 @@ def student_dashboard():
         urgent_notices = []
         latest_notices = []
 
-    return render_template(
-        'student/dashboard.html',
-        student=student,
-        academic=academic,
-        urgent_notices=urgent_notices,
-        latest_notices=latest_notices,
-        active_page='dashboard'
-    )
+    # Safeguard all notice properties against None so Jinja template expressions never fail
+    for n in (urgent_notices + latest_notices):
+        if not getattr(n, 'title', None):
+            n.title = 'Campus Notice'
+        if not getattr(n, 'message', None):
+            n.message = ''
+        if not getattr(n, 'category', None):
+            n.category = 'General'
+
+    try:
+        return render_template(
+            'student/dashboard.html',
+            student=student,
+            academic=academic,
+            urgent_notices=urgent_notices,
+            latest_notices=latest_notices,
+            active_page='dashboard'
+        )
+    except Exception as render_err:
+        from flask import current_app
+        current_app.logger.error(f"[Student Dashboard Render Error] {render_err}", exc_info=True)
+        # Fail-safe fallback rendering with empty notices
+        return render_template(
+            'student/dashboard.html',
+            student=student,
+            academic=academic,
+            urgent_notices=[],
+            latest_notices=[],
+            active_page='dashboard'
+        )
 
 
 # --- Student Logout Route ---
