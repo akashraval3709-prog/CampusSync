@@ -119,6 +119,9 @@
                         <button type="button" class="btn btn-outline-secondary btn-sm" onclick="loadDeviceData()">
                             <i class="bi bi-arrow-clockwise me-1"></i> Refresh Data
                         </button>
+                        <button type="button" class="btn btn-outline-warning text-dark btn-sm shadow-sm" onclick="resetAllDevices()">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i> Reset All Devices
+                        </button>
                         <button type="button" class="btn btn-danger btn-sm px-3 shadow-sm" onclick="openBulkNotifyModal()">
                             <i class="bi bi-megaphone-fill me-1"></i> Notify All Pending Students
                             <span id="notifyPendingCountBadge" class="badge bg-white text-danger ms-1">0</span>
@@ -761,6 +764,27 @@
             } finally {
                 btn.innerHTML = '<i class="bi bi-send-fill me-1"></i> Broadcast to All Pending';
                 btn.disabled = false;
+            }
+        }
+
+        async function resetAllDevices() {
+            if (!confirm("Are you sure you want to reset ALL student devices? All students will be able to register their phone again.")) {
+                return;
+            }
+            try {
+                const response = await fetch('/admin/api/device-management/reset-all', {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    showFlash('success', 'Reset Complete', data.message);
+                    loadDeviceData();
+                } else {
+                    showFlash('danger', 'Reset Failed', data.message || 'Error resetting devices');
+                }
+            } catch (err) {
+                showFlash('danger', 'Request Error', err.message);
             }
         }
 

@@ -566,10 +566,18 @@ def run_all_database_migrations():
             ]
             db.session.add_all(seed_notices)
             db.session.commit()
-            report["migrated"].append("default_notices_seeded")
     except Exception as e:
         db.session.rollback()
         report["errors"].append(f"default_notices_seed: {e}")
+
+    # 14. Reset student device fingerprints as requested by admin
+    try:
+        with db.engine.connect() as conn:
+            conn.execute(db.text("UPDATE students SET device_fingerprint = NULL, device_model = NULL, device_bound_at = NULL, device_reset_allowed = 1 WHERE device_fingerprint IS NOT NULL"))
+            conn.commit()
+            report["migrated"].append("all_student_devices_reset")
+    except Exception as e:
+        report["errors"].append(f"reset_student_devices: {e}")
 
     return report
 

@@ -2053,6 +2053,32 @@ def admin_api_reset_device(student_id):
         return jsonify({"success": False, "message": f"Failed to reset device: {str(e)}"}), 500
 
 
+@admin_bp.route('/admin/api/device-management/reset-all', methods=['GET', 'POST'], endpoint='admin_api_reset_all_devices')
+@admin_bp.route('/admin/api/device_management/reset-all', methods=['GET', 'POST'], endpoint='admin_api_reset_all_devices_alias')
+@admin_required
+def admin_api_reset_all_devices():
+    """
+    1-Click reset of all student device registrations.
+    Clears device_fingerprint for all students so everyone can re-verify fresh.
+    """
+    from models import Student
+    try:
+        updated = Student.query.filter(Student.device_fingerprint.isnot(None)).update({
+            'device_fingerprint': None,
+            'device_model': None,
+            'device_bound_at': None,
+            'device_reset_allowed': 1
+        }, synchronize_session=False)
+        db.session.commit()
+        if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"success": True, "message": f"Successfully cleared device verification for {updated} students. All students can now re-verify."})
+        flash(f"Successfully cleared device verification for {updated} students. All students can now re-verify.", "success")
+        return redirect(url_for('admin_device_management'))
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "message": f"Failed to reset devices: {str(e)}"}), 500
+
+
 @admin_bp.route('/admin/api/device-management/notify-pending', methods=['POST'], endpoint='admin_api_notify_pending')
 @admin_bp.route('/admin/api/device_management/notify-pending', methods=['POST'], endpoint='admin_api_notify_pending_alias')
 @admin_required
