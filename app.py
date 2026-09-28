@@ -526,6 +526,56 @@ with app.app_context():
             except Exception as e:
                 print(f"Notice: Could not ensure notification_reads table: {e}")
 
+        # Ensure default official public notices exist for Homepage bulletin board & student portal
+        try:
+            from models import Notification
+            pub_count = Notification.query.filter(
+                Notification.target_audience.in_(['Guest', 'All']),
+                Notification.is_active == True
+            ).count()
+            if pub_count < 2:
+                seed_notices = [
+                    Notification(
+                        title="Admissions Open for Academic Year 2026-27",
+                        message="Applications are now open for BCA, B.Sc. IT, and Diploma programs for the academic year 2026-27. Prospective students can submit their online registration via the admissions portal.",
+                        category="Academic",
+                        target_audience="All",
+                        target_semester=None,
+                        target_division="All",
+                        posted_by_role="Admin",
+                        priority="Important",
+                        is_active=True
+                    ),
+                    Notification(
+                        title="Official Examination Guidelines & Schedule Published",
+                        message="All semester students are hereby informed that the upcoming internal assessment and semester exam schedule has been released. Please check your respective course timetable.",
+                        category="Exam",
+                        target_audience="All",
+                        target_semester=None,
+                        target_division="All",
+                        posted_by_role="Admin",
+                        priority="Normal",
+                        is_active=True
+                    ),
+                    Notification(
+                        title="Smart Multimedia Classrooms & Campus Wi-Fi Operational",
+                        message="CampusSync digital classrooms and campus-wide high-speed Wi-Fi infrastructure are now fully operational. Students and faculty may connect using their portal credentials.",
+                        category="General",
+                        target_audience="All",
+                        target_semester=None,
+                        target_division="All",
+                        posted_by_role="Admin",
+                        priority="Normal",
+                        is_active=True
+                    )
+                ]
+                db.session.add_all(seed_notices)
+                db.session.commit()
+                print("SUCCESS: Seeded default official campus announcements for Homepage & Student Portal.")
+        except Exception as seed_err:
+            db.session.rollback()
+            print(f"Notice: Could not seed default public notices: {seed_err}")
+
     except Exception as e:
         print("--------------------------------------------------")
         print("SQLAlchemy Table Creation ERROR (FULL TRACEBACK):")

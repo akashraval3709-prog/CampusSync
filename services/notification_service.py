@@ -335,23 +335,26 @@ def get_all_admin_notices(filter_by_cycle=True):
 
 def get_student_notices(student, category=None):
     """
-    Fetches all active notices visible to a specific student based on:
-    1. Target Audience: 'Student' or 'All'
-    2. Specific Student ID: If target_student_id is set, it MUST match this student's ID.
-    3. Semester & Division: Matches student.semester and student.division.
-    4. Device Binding Reminders: If category is 'Device Binding' or notice is a device registration reminder,
-       only show if student has NOT yet registered/bound their phone! Once bound, reminder automatically clears.
-    5. Filtered strictly by active semester cycle.
+    Fetches all active notices visible to a specific student:
+    1. Direct Individual Notice: If target_student_id matches this student, ALWAYS included.
+    2. Student or All audience: Matches student's enrolled semester (or All) and division (or All).
+    3. Resilient category filtering (All, Assignments, Tests & Exams, Subject Related, General).
+    4. Bulk device binding reminder only cleared if student actually has an active registered passkey.
+    5. Never drops notices for the student's enrolled semester.
     """
-    try:
-        from services.academic_service import get_active_semesters
-        active_sems = get_active_semesters()
-    except Exception:
-        active_sems = [1, 3, 5]
+    if not student:
+        return []
 
     sem = student.semester
-    div = student.division
-    is_device_bound = bool(student.device_fingerprint and not student.device_fingerprint.startswith('PIN-'))
+    div = str(student.division or 'All').strip().upper()
+    fp = student.device_fingerprint or ''
+    is_really_bound = bool(
+        fp and 
+        not fp.startswith('HW-') and 
+        not fp.startswith('DEV-') and 
+        not fp.startswith('PIN-') and 
+        not getattr(student, 'device_reset_allowed', 0)
+    )
 
     try:
         # Base query: Active notices targeted to Student or All
@@ -363,8 +366,20 @@ def get_student_notices(student, category=None):
             )
         )
 
-        if category and category != 'All':
-            query = query.filter(Notification.category == category)
+        cat_clean = (category or 'All').strip()
+        if cat_clean and cat_clean.lower() != 'all':
+            if cat_clean.lower() in ('assignment submit date', 'assignments', 'assignment'):
+                query = query.filter(Notification.category.in_(['Assignment Submit Date', 'Assignment']))
+            elif cat_clean.lower() in ('test', 'tests & exams', 'exam', 'exams'):
+                query = query.filter(Notification.category.in_(['Test', 'Exam', 'Tests & Exams']))
+            elif cat_clean.lower() in ('subject related', 'subject'):
+                query = query.filter(Notification.category == 'Subject Related')
+            elif cat_clean.lower() in ('general', 'administrative', 'circulars', 'circular'):
+                query = query.filter(Notification.category.in_([
+                    'General', 'Academic', 'Events', 'Administrative', 'Holiday', 'Device Binding', 'Other'
+                ]))
+            else:
+                query = query.filter(Notification.category == cat_clean)
 
         notices = query.order_by(Notification.created_at.desc()).all()
     except Exception as e:
@@ -375,42 +390,36 @@ def get_student_notices(student, category=None):
     filtered = []
     for n in notices:
         try:
-            # 1. If targeted to a specific individual student, MUST match this student ID
+            # 1. Direct Individual Notice: Targeted directly to this student - ALWAYS INCLUDE!
             if getattr(n, 'target_student_id', None) is not None:
-                if n.target_student_id != student.id:
+                if n.target_student_id == student.id:
+                    filtered.append(n)
+                continue
+
+            # 2. Audience filter: If targeted to Student or All, match enrolled Semester & Division
+            if n.target_audience in ('Student', 'All'):
+                if n.target_semester is not None and n.target_semester != sem:
                     continue
-            else:
-                # 2. Audience filter: If targeted to Student, must match Semester & Division
-                if n.target_audience == 'Student':
-                    if n.target_semester is not None and n.target_semester != sem:
-                        continue
-                    if n.target_division and n.target_division not in ('All', div):
-                        continue
+                n_div = str(n.target_division or 'All').strip().upper()
+                if n_div not in ('ALL', '', div):
+                    continue
 
             # 3. Subject filter if specified
             if n.subject_id is not None:
                 if n.subject and n.subject.semester is not None and n.subject.semester != sem:
                     continue
 
-            # 4. Device Binding Alert Filter:
+            # 4. Device Binding Bulk Alert Filter:
             is_device_notice = (
                 n.category == 'Device Binding' or 
                 'Device Registration' in (n.title or '') or 
-                'ડિવાઇસ' in (n.title or '') or
+                'ડિવાઇસ' in (n.title or '') or 
                 'Passkey' in (n.title or '')
             )
-            if is_device_notice and is_device_bound:
+            if is_device_notice and is_really_bound:
                 continue
 
-            # 5. Active cycle validation
-            if n.target_semester is not None:
-                if n.target_semester in active_sems:
-                    filtered.append(n)
-            elif n.subject and n.subject.semester is not None:
-                if n.subject.semester in active_sems:
-                    filtered.append(n)
-            else:
-                filtered.append(n)
+            filtered.append(n)
         except Exception:
             filtered.append(n)
 
@@ -426,13 +435,13 @@ def calculate_deadline_info(notice):
         return {
             'has_deadline': False,
             'is_expired': False,
-            'is_urgent': False,
+            'is_urgent': (getattr(notice, 'priority', 'Normal') == 'Urgent'),
             'total_seconds': 0,
             'days': 0,
             'hours': 0,
             'minutes': 0,
             'seconds': 0,
-            'countdown_str': '',
+            'countdown_str': 'No Deadline',
             'end_date_iso': None
         }
 
@@ -459,8 +468,7 @@ def calculate_deadline_info(notice):
     minutes = (total_seconds % 3600) // 60
     seconds = total_seconds % 60
 
-    # Urgent alert if 2 days (<= 172800 seconds) or less left
-    is_urgent = total_seconds <= (2 * 86400)
+    is_urgent = (total_seconds <= (2 * 86400)) or (getattr(notice, 'priority', 'Normal') == 'Urgent')
 
     countdown_str = f"{days:02d}d : {hours:02d}h : {minutes:02d}m : {seconds:02d}s Left"
 
@@ -480,16 +488,23 @@ def calculate_deadline_info(notice):
 
 def get_student_urgent_notices(student):
     """
-    Returns active notices for this student that have an active deadline
-    with 2 days (48 hours) or less remaining.
+    Returns urgent notices for this student:
+    - Notices with active deadlines <= 2 days
+    - Direct or Priority='Urgent' notices (such as Device Registration Alerts)
     """
     all_notices = get_student_notices(student)
     urgent_items = []
     for notice in all_notices:
-        info = calculate_deadline_info(notice)
-        if info['has_deadline'] and not info['is_expired'] and info['is_urgent']:
+        try:
+            info = calculate_deadline_info(notice)
             notice.deadline_info = info
-            urgent_items.append(notice)
+            if info.get('has_deadline') and not info.get('is_expired') and info.get('is_urgent'):
+                urgent_items.append(notice)
+            elif getattr(notice, 'priority', 'Normal') == 'Urgent':
+                urgent_items.append(notice)
+        except Exception:
+            if getattr(notice, 'priority', 'Normal') == 'Urgent':
+                urgent_items.append(notice)
     return urgent_items
 
 

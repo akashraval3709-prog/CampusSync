@@ -82,7 +82,7 @@
             </div>
             {% endif %}
 
-            <!-- Urgent Assignment Alert Banner (2 Days or Less Remaining) -->
+            <!-- Urgent Assignment & Alert Banner -->
             {% if urgent_notices %}
                 {% for un in urgent_notices %}
                 <div class="card border-0 mb-4 rounded-4 shadow-sm urgent-dashboard-banner" style="background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%); border-left: 5px solid #ef4444 !important;">
@@ -93,19 +93,35 @@
                                 <h5 class="fw-bold m-0 text-white">{{ un.title }}</h5>
                             </div>
                             <span class="badge" style="background: rgba(239, 68, 68, 0.25); color: #fca5a5; border: 1px solid #ef4444; font-size: 0.8rem; padding: 0.4rem 0.8rem;">
-                                <i class="bi bi-clock-history me-1"></i>DEADLINE APPROACHING (&le; 2 DAYS)
+                                {% if un.deadline_info and un.deadline_info.has_deadline %}
+                                    <i class="bi bi-clock-history me-1"></i>DEADLINE APPROACHING (&le; 2 DAYS)
+                                {% else %}
+                                    <i class="bi bi-exclamation-triangle-fill me-1"></i>URGENT ACTION REQUIRED
+                                {% endif %}
                             </span>
                         </div>
+                        {% if un.deadline_info and un.deadline_info.has_deadline %}
                         <div class="p-3 my-2 rounded-3 text-center" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);">
                             <span class="text-danger fw-bold fs-5 live-countdown-timer" data-seconds="{{ un.deadline_info.total_seconds }}">
                                 ⏳ {{ un.deadline_info.countdown_str }}
                             </span>
-                            <div class="small text-white-50 mt-1">Due: {{ un.end_date.strftime('%d %b %Y, %I:%M %p') }} &bull; Subject: {{ un.subject.subject_name if un.subject else 'General' }} &bull; By: <strong class="text-white">{{ un.author_name }}</strong></div>
+                            <div class="small text-white-50 mt-1">Due: {{ un.end_date.strftime('%d %b %Y, %I:%M %p') if un.end_date else 'Soon' }} &bull; Subject: {{ un.subject.subject_name if un.subject else 'General' }} &bull; By: <strong class="text-white">{{ un.author_name }}</strong></div>
                         </div>
-                        <div class="d-flex justify-content-between align-items-center pt-2">
-                            <span class="small text-white-50">{{ un.message[:120] }}...</span>
-                            <a href="{{ url_for('student_notices') }}" class="btn btn-sm btn-danger px-3 fw-semibold">
-                                View Notice &amp; Details <i class="bi bi-arrow-right"></i>
+                        {% else %}
+                        <div class="p-3 my-2 rounded-3" style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.1);">
+                            <p class="mb-0 text-white-50 small">{{ un.message }}</p>
+                        </div>
+                        {% endif %}
+                        <div class="d-flex flex-wrap justify-content-between align-items-center pt-2 gap-2">
+                            {% if 'Device' in un.category or 'Device' in un.title or 'QR' in un.message %}
+                                <a href="{{ url_for('student_scan_qr') }}" class="btn btn-sm btn-warning fw-bold px-3">
+                                    <i class="bi bi-qr-code-scan me-1"></i> Scan QR &amp; Register Phone Now
+                                </a>
+                            {% else %}
+                                <span class="small text-white-50">{{ un.message[:110] }}{% if un.message|length > 110 %}...{% endif %}</span>
+                            {% endif %}
+                            <a href="{{ url_for('student_notices') }}" class="btn btn-sm btn-outline-light px-3 fw-semibold ms-auto">
+                                View Full Notice <i class="bi bi-arrow-right"></i>
                             </a>
                         </div>
                     </div>
@@ -222,6 +238,42 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Recent Campus Announcements & Notices Card -->
+                    {% if latest_notices %}
+                    <div class="card shadow-sm border-0 mb-4 rounded-4 overflow-hidden">
+                        <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                            <h5 class="card-title fw-bold m-0 text-dark fs-6">
+                                <i class="bi bi-megaphone-fill text-primary me-2"></i>Recent Campus Notices &amp; Announcements
+                            </h5>
+                            <a href="{{ url_for('student_notices') }}" class="btn btn-outline-primary btn-sm py-1 px-3 fw-semibold">
+                                View All Notices <i class="bi bi-arrow-right"></i>
+                            </a>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="list-group list-group-flush">
+                                {% for ln in latest_notices %}
+                                <a href="{{ url_for('student_notices') }}" class="list-group-item list-group-item-action p-3 d-flex justify-content-between align-items-start gap-3">
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                            <span class="badge {% if ln.category == 'Assignment Submit Date' %}bg-primary-subtle text-primary border border-primary-subtle{% elif ln.category in ('Test', 'Exam') %}bg-warning-subtle text-warning border border-warning-subtle{% elif ln.category == 'Device Binding' or ln.priority == 'Urgent' %}bg-danger-subtle text-danger border border-danger-subtle{% else %}bg-secondary-subtle text-secondary border border-secondary-subtle{% endif %} fs-9">
+                                                {{ ln.category }}
+                                            </span>
+                                            {% if ln.priority == 'Urgent' %}
+                                            <span class="badge bg-danger text-white fs-9"><i class="bi bi-exclamation-circle-fill me-1"></i>Urgent</span>
+                                            {% endif %}
+                                            <small class="text-muted ms-auto fs-9">{{ ln.created_at.strftime('%d %b %Y') if ln.created_at else '' }}</small>
+                                        </div>
+                                        <div class="fw-bold text-dark fs-7 mb-1">{{ ln.title }}</div>
+                                        <div class="text-secondary small text-truncate" style="max-width: 500px;">{{ ln.message }}</div>
+                                    </div>
+                                    <i class="bi bi-chevron-right text-muted align-self-center"></i>
+                                </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
 
             </div>

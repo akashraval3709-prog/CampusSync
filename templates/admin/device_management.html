@@ -677,7 +677,9 @@
 
                 const data = await response.json();
                 if (data.success) {
-                    bootstrap.Modal.getInstance(document.getElementById('singleAlertModal')).hide();
+                    const modalEl = document.getElementById('singleAlertModal');
+                    const modalInst = bootstrap.Modal.getInstance(modalEl) || bootstrap.Modal.getOrCreateInstance(modalEl);
+                    if (modalInst) modalInst.hide();
                     showFlash('success', 'Reminder Sent', data.message);
                 } else {
                     showFlash('danger', 'Failed to Send Alert', data.message || 'Error occurred');
@@ -747,7 +749,9 @@
 
                 const data = await response.json();
                 if (data.success) {
-                    bootstrap.Modal.getInstance(document.getElementById('bulkNotifyModal')).hide();
+                    const modalEl = document.getElementById('bulkNotifyModal');
+                    const modalInst = bootstrap.Modal.getInstance(modalEl) || bootstrap.Modal.getOrCreateInstance(modalEl);
+                    if (modalInst) modalInst.hide();
                     showFlash('success', 'Notification Broadcast Complete', data.message);
                 } else {
                     showFlash('danger', 'Broadcast Failed', data.message || 'Error occurred');
