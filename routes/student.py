@@ -554,6 +554,7 @@ def student_attendance_pdf():
 
 
 @student_bp.route('/student/scan', methods=['GET', 'POST'], endpoint='student_scan')
+@student_bp.route('/student/scan-qr', methods=['GET', 'POST'], endpoint='student_scan_qr')
 def student_scan():
     """
     Student QR Code Scan Route:
