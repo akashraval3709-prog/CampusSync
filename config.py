@@ -17,8 +17,11 @@ class Config:
         os.getenv('JAWSDB_URL')
     )
     if raw_db_url:
-        if raw_db_url.startswith('mysql://'):
-            SQLALCHEMY_DATABASE_URI = raw_db_url.replace('mysql://', 'mysql+pymysql://', 1)
+        if raw_db_url.startswith('mysql://') or raw_db_url.startswith('mysql+pymysql://'):
+            uri = raw_db_url.replace('mysql://', 'mysql+pymysql://', 1)
+            if 'charset=' not in uri:
+                uri += ('&' if '?' in uri else '?') + 'charset=utf8mb4'
+            SQLALCHEMY_DATABASE_URI = uri
         elif raw_db_url.startswith('postgres://'):
             SQLALCHEMY_DATABASE_URI = raw_db_url.replace('postgres://', 'postgresql://', 1)
         else:
@@ -32,7 +35,7 @@ class Config:
         DB_NAME = os.getenv('DB_NAME', 'campussync')
         DB_USER = os.getenv('DB_USER', 'root')
         DB_PASSWORD = os.getenv('DB_PASSWORD', '')
-        SQLALCHEMY_DATABASE_URI = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+        SQLALCHEMY_DATABASE_URI = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?charset=utf8mb4"
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 

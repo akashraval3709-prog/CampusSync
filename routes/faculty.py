@@ -1310,27 +1310,37 @@ def faculty_create_notice():
         return redirect(url_for('faculty_notices'))
 
     # Handle optional photo or question paper / PDF upload
-    file = request.files.get('attachment')
-    photo_file, file_type = save_notification_file(file)
+    try:
+        file = request.files.get('attachment')
+        photo_file, file_type = save_notification_file(file)
 
-    create_notification(
-        title=title,
-        message=message,
-        category=category,
-        posted_by_role='Faculty',
-        faculty_id=faculty_id,
-        target_audience='Student',
-        target_semester=semester,
-        target_division=division,
-        subject_id=subject_id,
-        start_date=start_date,
-        end_date=end_date,
-        priority=priority,
-        photo_file=photo_file,
-        file_type=file_type
-    )
+        notif = create_notification(
+            title=title,
+            message=message,
+            category=category,
+            posted_by_role='Faculty',
+            faculty_id=faculty_id,
+            target_audience='Student',
+            target_semester=semester,
+            target_division=division,
+            subject_id=subject_id,
+            start_date=start_date,
+            end_date=end_date,
+            priority=priority,
+            photo_file=photo_file,
+            file_type=file_type
+        )
 
-    flash(f"Notice/Assignment '{title}' posted successfully for students!", 'success')
+        if notif:
+            flash(f"Notice/Assignment '{title}' posted successfully for students!", 'success')
+        else:
+            flash("Failed to publish notification due to a server error. Please try again.", 'danger')
+    except Exception as e:
+        from extensions import db
+        db.session.rollback()
+        current_app.logger.error(f"[faculty_create_notice Error] {e}", exc_info=True)
+        flash(f"Error publishing notice: {str(e)}", 'danger')
+
     return redirect(url_for('faculty_notices'))
 
 

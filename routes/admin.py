@@ -1647,21 +1647,60 @@ def admin_create_notice():
         return redirect(url_for('admin_notices'))
 
     # Handle optional photo / circular attachment upload
-    file = request.files.get('attachment')
-    photo_file, file_type = save_notification_file(file)
+    try:
+        file = request.files.get('attachment')
+        photo_file, file_type = save_notification_file(file)
 
-    # If target audience is Student, handle selected semesters
-    if target_audience == 'Student':
-        selected_sems = request.form.getlist('target_semesters')
-        # If 'All' is in selected or no specific sem selected, broadcast to all semesters
-        if not selected_sems or 'All' in selected_sems:
+        # If target audience is Student, handle selected semesters
+        if target_audience == 'Student':
+            selected_sems = request.form.getlist('target_semesters')
+            # If 'All' is in selected or no specific sem selected, broadcast to all semesters
+            if not selected_sems or 'All' in selected_sems:
+                create_notification(
+                    title=title,
+                    message=message,
+                    category=category,
+                    posted_by_role='Admin',
+                    admin_id=session.get('admin_id'),
+                    target_audience='Student',
+                    target_semester=None,
+                    target_division='All',
+                    start_date=start_date,
+                    end_date=end_date,
+                    priority=priority,
+                    photo_file=photo_file,
+                    file_type=file_type
+                )
+            else:
+                for sem_str in selected_sems:
+                    try:
+                        sem_num = int(sem_str)
+                        create_notification(
+                            title=title,
+                            message=message,
+                            category=category,
+                            posted_by_role='Admin',
+                            admin_id=session.get('admin_id'),
+                            target_audience='Student',
+                            target_semester=sem_num,
+                            target_division='All',
+                            start_date=start_date,
+                            end_date=end_date,
+                            priority=priority,
+                            photo_file=photo_file,
+                            file_type=file_type
+                        )
+                    except ValueError:
+                        continue
+        else:
+            # For 'All', 'Guest', 'Faculty'
             create_notification(
                 title=title,
                 message=message,
                 category=category,
                 posted_by_role='Admin',
                 admin_id=session.get('admin_id'),
-                target_audience='Student',
+                target_audience=target_audience,
                 target_semester=None,
                 target_division='All',
                 start_date=start_date,
@@ -1670,46 +1709,14 @@ def admin_create_notice():
                 photo_file=photo_file,
                 file_type=file_type
             )
-        else:
-            for sem_str in selected_sems:
-                try:
-                    sem_num = int(sem_str)
-                    create_notification(
-                        title=title,
-                        message=message,
-                        category=category,
-                        posted_by_role='Admin',
-                        admin_id=session.get('admin_id'),
-                        target_audience='Student',
-                        target_semester=sem_num,
-                        target_division='All',
-                        start_date=start_date,
-                        end_date=end_date,
-                        priority=priority,
-                        photo_file=photo_file,
-                        file_type=file_type
-                    )
-                except ValueError:
-                    continue
-    else:
-        # For 'All', 'Guest', 'Faculty'
-        create_notification(
-            title=title,
-            message=message,
-            category=category,
-            posted_by_role='Admin',
-            admin_id=session.get('admin_id'),
-            target_audience=target_audience,
-            target_semester=None,
-            target_division='All',
-            start_date=start_date,
-            end_date=end_date,
-            priority=priority,
-            photo_file=photo_file,
-            file_type=file_type
-        )
 
-    flash(f"Notification broadcast successfully to {target_audience}!", 'success')
+        flash(f"Notification broadcast successfully to {target_audience}!", 'success')
+    except Exception as e:
+        from extensions import db
+        db.session.rollback()
+        current_app.logger.error(f"[admin_create_notice Error] {e}", exc_info=True)
+        flash(f"Failed to publish notification: {str(e)}", 'danger')
+
     return redirect(url_for('admin_notices'))
 
 
@@ -2057,99 +2064,111 @@ def admin_api_notify_pending():
     from models import Student
     from services.notification_service import create_notification
 
-    data = request.get_json(silent=True) or request.form.to_dict() or {}
-    student_id = data.get('student_id')
-    is_bulk = data.get('bulk', False)
+    try:
+        data = request.get_json(silent=True) or request.form.to_dict() or {}
+        student_id = data.get('student_id')
+        is_bulk = data.get('bulk', False)
 
-    admin_id = session.get('admin_id')
+        admin_id = session.get('admin_id')
 
-    if student_id and not is_bulk:
-        student = Student.query.get(student_id)
-        if not student:
-            return jsonify({"success": False, "message": "Student not found."}), 404
+        if student_id and not is_bulk:
+            student = Student.query.get(student_id)
+            if not student:
+                return jsonify({"success": False, "message": "Student not found."}), 404
 
-        title = "⚠️ Urgent: Device Registration Required for Attendance"
+            title = "[Urgent Alert] Device Registration Required for Attendance"
+            msg = (
+                f"Dear {student.full_name} (Roll #{student.roll_number}),\n\n"
+                f"Your mobile phone has not yet been registered for QR lecture attendance. "
+                f"Please log in to your Student Portal, navigate to the 'Scan QR' page, and complete your device verification before today's lectures.\n\n"
+                f"Note: In accordance with college policy, attendance cannot be marked via QR code without device registration."
+            )
+
+            notif = create_notification(
+                title=title,
+                message=msg,
+                category='Device Binding',
+                posted_by_role='Admin',
+                admin_id=admin_id,
+                target_audience='Student',
+                target_semester=student.semester,
+                target_division=student.division,
+                target_student_id=student.id,
+                priority='Urgent'
+            )
+
+            if not notif:
+                return jsonify({"success": False, "message": "Failed to record reminder in database."}), 500
+
+            return jsonify({
+                "success": True,
+                "message": f"Reminder alert successfully sent to {student.full_name}!"
+            })
+
+        # Bulk Notification
+        semester = data.get('semester')
+        division = data.get('division')
+
+        query = Student.query.filter_by(status='Active')
+        if semester and str(semester).lower() != 'all':
+            try:
+                query = query.filter_by(semester=int(semester))
+            except ValueError:
+                pass
+
+        if division and str(division).lower() != 'all':
+            query = query.filter_by(division=str(division))
+
+        all_students = query.all()
+        unbound_students = [
+            s for s in all_students
+            if not s.device_fingerprint or s.device_fingerprint.startswith('PIN-')
+        ]
+
+        count = len(unbound_students)
+        if count == 0:
+            return jsonify({
+                "success": True,
+                "notified_count": 0,
+                "message": "All students in the selected filter already have their devices registered! No pending students found."
+            })
+
+        target_sem = int(semester) if semester and str(semester).lower() != 'all' else None
+        target_div = str(division) if division and str(division).lower() != 'all' else 'All'
+
+        title = "[Urgent Broadcast] Device Registration Required for Attendance"
         msg = (
-            f"Dear {student.full_name} (Roll #{student.roll_number}),\n\n"
-            f"Your mobile phone has not yet been registered for QR lecture attendance. "
-            f"Please log in to your Student Portal, navigate to the 'Scan QR' page, and complete your device verification before today's lectures.\n\n"
-            f"Note: In accordance with college policy, attendance cannot be marked via QR code without device registration."
+            "Dear Student,\n\n"
+            "Your mobile phone has not yet been registered for QR lecture attendance. "
+            "Please log in to your Student Portal, navigate to the 'Scan QR' section, and complete your device verification before attending lectures.\n\n"
+            "Note: In accordance with college policy, attendance cannot be marked via QR code without device registration."
         )
 
-        create_notification(
+        notif = create_notification(
             title=title,
             message=msg,
             category='Device Binding',
             posted_by_role='Admin',
             admin_id=admin_id,
             target_audience='Student',
-            target_semester=student.semester,
-            target_division=student.division,
-            target_student_id=student.id,
+            target_semester=target_sem,
+            target_division=target_div,
             priority='Urgent'
         )
 
+        if not notif:
+            return jsonify({"success": False, "message": "Failed to broadcast notification due to a database error."}), 500
+
         return jsonify({
             "success": True,
-            "message": f"Reminder alert successfully sent to {student.full_name}!"
+            "notified_count": count,
+            "message": f"Successfully published urgent device registration alert to {count} pending student(s)!"
         })
-
-    # Bulk Notification
-    semester = data.get('semester')
-    division = data.get('division')
-
-    query = Student.query.filter_by(status='Active')
-    if semester and str(semester).lower() != 'all':
-        try:
-            query = query.filter_by(semester=int(semester))
-        except ValueError:
-            pass
-
-    if division and str(division).lower() != 'all':
-        query = query.filter_by(division=str(division))
-
-    all_students = query.all()
-    unbound_students = [
-        s for s in all_students
-        if not s.device_fingerprint or s.device_fingerprint.startswith('PIN-')
-    ]
-
-    count = len(unbound_students)
-    if count == 0:
-        return jsonify({
-            "success": True,
-            "notified_count": 0,
-            "message": "All students in the selected filter already have their devices registered! No pending students found."
-        })
-
-    target_sem = int(semester) if semester and str(semester).lower() != 'all' else None
-    target_div = str(division) if division and str(division).lower() != 'all' else 'All'
-
-    title = "📢 Urgent: Device Registration Required for Attendance"
-    msg = (
-        "Dear Student,\n\n"
-        "Your mobile phone has not yet been registered for QR lecture attendance. "
-        "Please log in to your Student Portal, navigate to the 'Scan QR' section, and complete your device verification before attending lectures.\n\n"
-        "Note: In accordance with college policy, attendance cannot be marked via QR code without device registration."
-    )
-
-    create_notification(
-        title=title,
-        message=msg,
-        category='Device Binding',
-        posted_by_role='Admin',
-        admin_id=admin_id,
-        target_audience='Student',
-        target_semester=target_sem,
-        target_division=target_div,
-        priority='Urgent'
-    )
-
-    return jsonify({
-        "success": True,
-        "notified_count": count,
-        "message": f"Successfully published urgent device registration alert to {count} pending student(s)!"
-    })
+    except Exception as e:
+        from extensions import db
+        db.session.rollback()
+        current_app.logger.error(f"[admin_api_notify_pending Error] {e}", exc_info=True)
+        return jsonify({"success": False, "message": f"Server error: {str(e)}"}), 500
 
 
 

@@ -761,6 +761,8 @@ def api_unread_notifications_feed():
             "authenticated": True
         }), 200
     except Exception as e:
+        from extensions import db
+        db.session.rollback()
         return jsonify({"success": False, "message": str(e)}), 500
 
 
@@ -841,5 +843,7 @@ def api_mark_notification_read():
             "unread_count": feed["unread_count"]
         }), 200
     except Exception as e:
+        from extensions import db
+        db.session.rollback()
         return jsonify({"success": False, "message": str(e)}), 500
 

@@ -82,7 +82,7 @@ def create_notification(title, message, category, posted_by_role,
                         target_semester=None, target_division='All', subject_id=None,
                         start_date=None, end_date=None, priority='Normal',
                         photo_file=None, file_type=None, target_student_id=None):
-    """Creates a new Notification entry in database."""
+    """Creates a new Notification entry in database with foreign-key resilience and transaction safety."""
     # Convert dates if given as strings
     if isinstance(start_date, str):
         start_date = parse_datetime(start_date)
@@ -100,12 +100,15 @@ def create_notification(title, message, category, posted_by_role,
     if target_division in ('', 'None', None):
         target_division = 'All'
 
+    # Validate foreign keys before inserting to prevent IntegrityError crashes
     if subject_id in ('', 'None', None):
         subject_id = None
     else:
         try:
             subject_id = int(subject_id)
-        except (ValueError, TypeError):
+            if not Subject.query.get(subject_id):
+                subject_id = None
+        except (ValueError, TypeError, Exception):
             subject_id = None
 
     if target_student_id in ('', 'None', None):
@@ -113,40 +116,72 @@ def create_notification(title, message, category, posted_by_role,
     else:
         try:
             target_student_id = int(target_student_id)
-        except (ValueError, TypeError):
+            if not Student.query.get(target_student_id):
+                target_student_id = None
+        except (ValueError, TypeError, Exception):
             target_student_id = None
 
-    notification = Notification(
-        title=title.strip(),
-        message=message.strip(),
-        category=category.strip() if category else 'General',
-        photo_file=photo_file,
-        file_type=file_type,
-        start_date=start_date,
-        end_date=end_date,
-        posted_by_role=posted_by_role,
-        admin_id=admin_id,
-        faculty_id=faculty_id,
-        target_audience=target_audience,
-        target_semester=target_semester,
-        target_division=target_division,
-        subject_id=subject_id,
-        target_student_id=target_student_id,
-        priority=priority if priority in ('Normal', 'Important', 'Urgent') else 'Normal',
-        is_active=True
-    )
+    if admin_id in ('', 'None', None):
+        admin_id = None
+    else:
+        try:
+            admin_id = int(admin_id)
+            if not Admin.query.get(admin_id):
+                admin_id = None
+        except (ValueError, TypeError, Exception):
+            admin_id = None
 
-    db.session.add(notification)
-    db.session.commit()
-    return notification
+    if faculty_id in ('', 'None', None):
+        faculty_id = None
+    else:
+        try:
+            faculty_id = int(faculty_id)
+            if not Faculty.query.get(faculty_id):
+                faculty_id = None
+        except (ValueError, TypeError, Exception):
+            faculty_id = None
+
+    try:
+        notification = Notification(
+            title=(title or '').strip(),
+            message=(message or '').strip(),
+            category=(category or 'General').strip(),
+            photo_file=photo_file,
+            file_type=file_type,
+            start_date=start_date,
+            end_date=end_date,
+            posted_by_role=posted_by_role if posted_by_role in ('Admin', 'Faculty') else 'Admin',
+            admin_id=admin_id,
+            faculty_id=faculty_id,
+            target_audience=target_audience if target_audience in ('All', 'Guest', 'Faculty', 'Student') else 'All',
+            target_semester=target_semester,
+            target_division=target_division,
+            subject_id=subject_id,
+            target_student_id=target_student_id,
+            priority=priority if priority in ('Normal', 'Important', 'Urgent') else 'Normal',
+            is_active=True
+        )
+
+        db.session.add(notification)
+        db.session.commit()
+        return notification
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"[create_notification Error] {e}", exc_info=True)
+        return None
 
 
 def get_public_notices(limit=10):
     """Fetches active notifications targeted to Guest or All for the college homepage."""
-    return Notification.query.filter(
-        Notification.target_audience.in_(['Guest', 'All']),
-        Notification.is_active == True
-    ).order_by(Notification.created_at.desc()).limit(limit).all()
+    try:
+        return Notification.query.filter(
+            Notification.target_audience.in_(['Guest', 'All']),
+            Notification.is_active == True
+        ).order_by(Notification.created_at.desc()).limit(limit).all()
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.warning(f"[get_public_notices Error] {e}")
+        return []
 
 
 def get_faculty_notices(filter_by_cycle=True):
@@ -480,9 +515,14 @@ def delete_notification(notification_id, requester_role, requester_id):
         except Exception as e:
             current_app.logger.warning(f"Could not remove notification file: {e}")
 
-    db.session.delete(notice)
-    db.session.commit()
-    return True, "Notification deleted successfully"
+    try:
+        db.session.delete(notice)
+        db.session.commit()
+        return True, "Notification deleted successfully"
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"[delete_notification Error] {e}")
+        return False, f"Could not delete notification: {str(e)}"
 
 
 def toggle_notification_status(notification_id):
@@ -491,9 +531,14 @@ def toggle_notification_status(notification_id):
     if not notice:
         return False, "Notification not found"
 
-    notice.is_active = not notice.is_active
-    db.session.commit()
-    return True, f"Notification marked as {'Active' if notice.is_active else 'Inactive'}"
+    try:
+        notice.is_active = not notice.is_active
+        db.session.commit()
+        return True, f"Notification marked as {'Active' if notice.is_active else 'Inactive'}"
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"[toggle_notification_status Error] {e}")
+        return False, f"Could not update notification status: {str(e)}"
 
 
 def format_time_ago(dt):

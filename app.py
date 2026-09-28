@@ -411,6 +411,12 @@ with app.app_context():
                         except Exception as e:
                             print(f"Notice: Could not add {col_name} to notifications: {e}")
 
+                try:
+                    conn.execute(db.text("ALTER TABLE notifications CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"))
+                    conn.commit()
+                except Exception:
+                    pass
+
         # Migrate college_settings Campus Geofencing & College Timing Columns
         if 'college_settings' in actual_tables:
             cs_cols = [c['name'] for c in inspector_after.get_columns('college_settings')]
