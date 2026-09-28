@@ -248,11 +248,20 @@ def student_dashboard():
     # Render Student Dashboard with student details, academic settings, and urgent assignment deadline alerts
     from services.academic_service import get_academic_settings
     academic = get_academic_settings()
-    from services.notification_service import get_student_urgent_notices, get_student_notices, calculate_deadline_info
-    urgent_notices = get_student_urgent_notices(student)
-    latest_notices = get_student_notices(student)[:4]
-    for n in latest_notices:
-        n.deadline_info = calculate_deadline_info(n)
+    
+    urgent_notices = []
+    latest_notices = []
+    try:
+        from services.notification_service import get_student_urgent_notices, get_student_notices, calculate_deadline_info
+        urgent_notices = get_student_urgent_notices(student)
+        latest_notices = get_student_notices(student)[:4]
+        for n in latest_notices:
+            n.deadline_info = calculate_deadline_info(n)
+    except Exception as notif_err:
+        from flask import current_app
+        current_app.logger.error(f"[Student Dashboard Notice Error] {notif_err}")
+        urgent_notices = []
+        latest_notices = []
 
     return render_template(
         'student/dashboard.html',

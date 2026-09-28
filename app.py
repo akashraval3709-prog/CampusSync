@@ -225,6 +225,23 @@ with app.app_context():
                     conn.commit()
                 print("SUCCESS: Added 'academic_year' column to 'students'.")
 
+            # Missing device fingerprint columns
+            student_new_cols = [
+                ('device_fingerprint', 'VARCHAR(500) NULL'),
+                ('device_model', 'VARCHAR(100) NULL'),
+                ('device_bound_at', 'DATETIME NULL'),
+                ('device_reset_allowed', 'SMALLINT DEFAULT 0')
+            ]
+            with db.engine.connect() as conn:
+                for col_name, col_def in student_new_cols:
+                    if col_name not in stud_cols:
+                        try:
+                            conn.execute(db.text(f"ALTER TABLE students ADD COLUMN {col_name} {col_def}"))
+                            conn.commit()
+                            print(f"SUCCESS: Added '{col_name}' column to 'students'.")
+                        except Exception as e:
+                            print(f"Notice: Could not add {col_name} to students: {e}")
+
             # Check existing indexes on 'students' table to migrate unique constraints safely
             stud_indexes = inspector_after.get_indexes('students')
             index_names = [idx['name'] for idx in stud_indexes]
@@ -386,6 +403,104 @@ with app.app_context():
                         print("SUCCESS: Added 'final_saved_by' column to 'notifications'.")
                     except Exception as e:
                         print(f"Notice: Could not add final_saved_by to notifications: {e}")
+                if 'target_student_id' not in notif_cols:
+                    try:
+                        conn.execute(db.text("ALTER TABLE notifications ADD COLUMN target_student_id INT NULL"))
+                        conn.commit()
+                        print("SUCCESS: Added 'target_student_id' column to 'notifications'.")
+                    except Exception as e:
+                        print(f"Notice: Could not add target_student_id to notifications: {e}")
+
+        # Migrate college_settings Campus Geofencing & College Timing Columns
+        if 'college_settings' in actual_tables:
+            cs_cols = [c['name'] for c in inspector_after.get_columns('college_settings')]
+            cs_new_cols = [
+                ('campus_latitude', 'DECIMAL(10,8) DEFAULT 24.15953750'),
+                ('campus_longitude', 'DECIMAL(11,8) DEFAULT 72.40295313'),
+                ('campus_radius_meters', 'INT DEFAULT 800'),
+                ('campus_plus_code', "VARCHAR(100) DEFAULT '5C53+R58 Palanpur, Gujarat'"),
+                ('college_start_time', "VARCHAR(10) DEFAULT '10:00'"),
+                ('college_end_time', "VARCHAR(10) DEFAULT '17:00'")
+            ]
+            with db.engine.connect() as conn:
+                for col_name, col_def in cs_new_cols:
+                    if col_name not in cs_cols:
+                        try:
+                            conn.execute(db.text(f"ALTER TABLE college_settings ADD COLUMN {col_name} {col_def}"))
+                            conn.commit()
+                            print(f"SUCCESS: Added '{col_name}' to 'college_settings'.")
+                        except Exception as e:
+                            print(f"Notice: Could not add {col_name} to college_settings: {e}")
+
+        # Migrate lecture_attendance_sessions QR Attendance Columns
+        if 'lecture_attendance_sessions' in actual_tables:
+            las_cols = [c['name'] for c in inspector_after.get_columns('lecture_attendance_sessions')]
+            las_new_cols = [
+                ('attendance_mode', "VARCHAR(20) DEFAULT 'Manual'"),
+                ('qr_session_token', 'VARCHAR(255) NULL'),
+                ('qr_session_expires_at', 'DATETIME NULL'),
+                ('is_qr_active', 'TINYINT(1) DEFAULT 0'),
+                ('session_type', "VARCHAR(20) DEFAULT 'Lecture'"),
+                ('start_time', 'VARCHAR(10) NULL'),
+                ('end_time', 'VARCHAR(10) NULL')
+            ]
+            with db.engine.connect() as conn:
+                for col_name, col_def in las_new_cols:
+                    if col_name not in las_cols:
+                        try:
+                            conn.execute(db.text(f"ALTER TABLE lecture_attendance_sessions ADD COLUMN {col_name} {col_def}"))
+                            conn.commit()
+                            print(f"SUCCESS: Added '{col_name}' to 'lecture_attendance_sessions'.")
+                        except Exception as e:
+                            print(f"Notice: Could not add {col_name} to lecture_attendance_sessions: {e}")
+
+        # Migrate lecture_attendance_students QR Scanned & Geolocation Columns
+        if 'lecture_attendance_students' in actual_tables:
+            lat_cols = [c['name'] for c in inspector_after.get_columns('lecture_attendance_students')]
+            lat_new_cols = [
+                ('marked_method', "VARCHAR(30) DEFAULT 'MANUAL'"),
+                ('scanned_at', 'DATETIME NULL'),
+                ('device_fingerprint', 'VARCHAR(500) NULL'),
+                ('scan_latitude', 'DECIMAL(10,8) NULL'),
+                ('scan_longitude', 'DECIMAL(11,8) NULL'),
+                ('distance_meters', 'FLOAT NULL'),
+                ('is_verified', 'TINYINT(1) DEFAULT 1')
+            ]
+            with db.engine.connect() as conn:
+                for col_name, col_def in lat_new_cols:
+                    if col_name not in lat_cols:
+                        try:
+                            conn.execute(db.text(f"ALTER TABLE lecture_attendance_students ADD COLUMN {col_name} {col_def}"))
+                            conn.commit()
+                            print(f"SUCCESS: Added '{col_name}' to 'lecture_attendance_students'.")
+                        except Exception as e:
+                            print(f"Notice: Could not add {col_name} to lecture_attendance_students: {e}")
+
+        # Ensure attendance_security_alerts table exists
+        with db.engine.connect() as conn:
+            try:
+                conn.execute(db.text("""
+                    CREATE TABLE IF NOT EXISTS attendance_security_alerts (
+                        id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                        session_id INT NOT NULL,
+                        student_id INT NOT NULL,
+                        attempted_roll VARCHAR(20) NULL,
+                        device_fingerprint VARCHAR(500) NULL,
+                        conflicting_student_id INT NULL,
+                        alert_type ENUM('DUPLICATE_DEVICE','OUT_OF_GEOFENCE','EXPIRED_TOKEN','UNBOUND_DEVICE') NOT NULL,
+                        alert_message TEXT NULL,
+                        scan_latitude DECIMAL(10,8) NULL,
+                        scan_longitude DECIMAL(11,8) NULL,
+                        distance_meters FLOAT NULL,
+                        faculty_action ENUM('PENDING','APPROVED','REJECTED') DEFAULT 'PENDING',
+                        resolved_by_faculty_id INT NULL,
+                        created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                    )
+                """))
+                conn.commit()
+            except Exception as e:
+                print(f"Notice: Could not ensure attendance_security_alerts table: {e}")
 
     except Exception as e:
         print("--------------------------------------------------")
