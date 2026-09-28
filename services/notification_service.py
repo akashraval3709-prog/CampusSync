@@ -560,36 +560,42 @@ def mark_notification_as_read(notification_id, user_role, user_id):
 
 def mark_all_notifications_as_read(user_role, user_id):
     """Marks all currently applicable active notifications as read for the user."""
-    notices = get_user_applicable_notices(user_role, user_id)
-    if not notices:
-        return 0
+    try:
+        notices = get_user_applicable_notices(user_role, user_id)
+        if not notices:
+            return 0
 
-    notice_ids = [n.id for n in notices]
-    existing_reads = {
-        r.notification_id for r in NotificationRead.query.filter(
-            NotificationRead.user_role == user_role,
-            NotificationRead.user_id == user_id,
-            NotificationRead.notification_id.in_(notice_ids)
-        ).all()
-    }
-
-    added_count = 0
-    now = datetime.utcnow()
-    for nid in notice_ids:
-        if nid not in existing_reads:
-            db.session.add(NotificationRead(
-                notification_id=nid,
-                user_role=user_role,
-                user_id=user_id,
-                read_at=now
-            ))
-            added_count += 1
-
-    if added_count > 0:
+        notice_ids = [n.id for n in notices]
+        existing_reads = set()
         try:
-            db.session.commit()
-        except Exception:
+            read_rows = NotificationRead.query.filter(
+                NotificationRead.user_role == user_role,
+                NotificationRead.user_id == user_id,
+                NotificationRead.notification_id.in_(notice_ids)
+            ).all()
+            existing_reads = {r.notification_id for r in read_rows}
+        except Exception as read_err:
             db.session.rollback()
+            current_app.logger.warning(f"[NotificationRead Error] {read_err}")
+            return 0
 
-    return added_count
+        added_count = 0
+        now = datetime.utcnow()
+        for nid in notice_ids:
+            if nid not in existing_reads:
+                db.session.add(NotificationRead(
+                    notification_id=nid,
+                    user_role=user_role,
+                    user_id=user_id,
+                    read_at=now
+                ))
+                added_count += 1
+
+        if added_count > 0:
+            db.session.commit()
+        return added_count
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.warning(f"[mark_all_notifications_as_read Error] {e}")
+        return 0
 

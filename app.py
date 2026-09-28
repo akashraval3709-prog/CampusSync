@@ -502,6 +502,24 @@ with app.app_context():
             except Exception as e:
                 print(f"Notice: Could not ensure attendance_security_alerts table: {e}")
 
+            # Ensure notification_reads table exists
+            try:
+                conn.execute(db.text("""
+                    CREATE TABLE IF NOT EXISTS notification_reads (
+                        id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                        notification_id INT NOT NULL,
+                        user_role ENUM('Admin', 'Faculty', 'Student') NOT NULL,
+                        user_id INT NOT NULL,
+                        read_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE KEY uq_notification_user_read (notification_id, user_role, user_id),
+                        KEY idx_user_role_id (user_role, user_id)
+                    )
+                """))
+                conn.commit()
+                print("SUCCESS: Ensured 'notification_reads' table in MySQL.")
+            except Exception as e:
+                print(f"Notice: Could not ensure notification_reads table: {e}")
+
     except Exception as e:
         print("--------------------------------------------------")
         print("SQLAlchemy Table Creation ERROR (FULL TRACEBACK):")

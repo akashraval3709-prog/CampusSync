@@ -774,12 +774,24 @@ def student_notices():
 
     try:
         mark_all_notifications_as_read('Student', student.id)
-    except Exception:
-        pass
+    except Exception as mark_err:
+        from extensions import db
+        db.session.rollback()
 
-    notices = get_student_notices(student, category=selected_category)
-    for n in notices:
-        n.deadline_info = calculate_deadline_info(n)
+    notices = []
+    try:
+        notices = get_student_notices(student, category=selected_category)
+        for n in notices:
+            try:
+                n.deadline_info = calculate_deadline_info(n)
+            except Exception:
+                n.deadline_info = {'has_deadline': False, 'is_expired': False, 'is_urgent': False}
+    except Exception as notif_err:
+        from extensions import db
+        from flask import current_app
+        db.session.rollback()
+        current_app.logger.error(f"[Student Notices Error] {notif_err}")
+        notices = []
 
     return render_template(
         'student/notices.html',
