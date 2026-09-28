@@ -644,16 +644,19 @@ class Notification(db.Model):
     @property
     def author_name(self):
         """Returns the specific name of the faculty or admin who posted the notification."""
-        if self.faculty and self.faculty.full_name:
-            return self.faculty.full_name
-        elif self.admin and self.admin.full_name:
-            return self.admin.full_name
-        elif self.posted_by_role == 'Faculty' and self.subject_id:
-            assign = FacultySubjectAssignment.query.filter_by(
-                subject_id=self.subject_id, status='Active'
-            ).first()
-            if assign and assign.faculty and assign.faculty.full_name:
-                return assign.faculty.full_name
+        try:
+            if self.faculty and self.faculty.full_name:
+                return self.faculty.full_name
+            elif self.admin and self.admin.full_name:
+                return self.admin.full_name
+            elif self.posted_by_role == 'Faculty' and self.subject_id:
+                assign = FacultySubjectAssignment.query.filter_by(
+                    subject_id=self.subject_id, status='Active'
+                ).first()
+                if assign and assign.faculty and assign.faculty.full_name:
+                    return assign.faculty.full_name
+        except Exception:
+            pass
         return self.posted_by_role or 'Faculty'
 
     def to_dict(self):

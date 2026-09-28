@@ -1596,12 +1596,28 @@ def admin_notices():
         try:
             mark_all_notifications_as_read('Admin', session['admin_id'])
         except Exception:
-            pass
+            from extensions import db
+            db.session.rollback()
 
-    academic = get_academic_settings()
-    cycle = academic.semester_cycle if academic else 'Odd'
-    active_semesters = get_active_semesters(cycle)
-    notices = get_all_admin_notices(filter_by_cycle=True)
+    cycle = 'Odd'
+    active_semesters = [1, 3, 5]
+    try:
+        academic = get_academic_settings()
+        cycle = academic.semester_cycle if academic else 'Odd'
+        active_semesters = get_active_semesters(cycle)
+    except Exception as acad_err:
+        from extensions import db
+        db.session.rollback()
+        current_app.logger.warning(f"[Admin Notices Academic Error] {acad_err}")
+
+    notices = []
+    try:
+        notices = get_all_admin_notices(filter_by_cycle=True)
+    except Exception as notif_err:
+        from extensions import db
+        db.session.rollback()
+        current_app.logger.error(f"[Admin Notices Query Error] {notif_err}")
+        notices = []
 
     return render_template(
         'admin/notices.html',

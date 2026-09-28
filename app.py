@@ -378,38 +378,38 @@ with app.app_context():
                         except Exception as e:
                             print(f"Notice: Could not add otp_blocked_until to {tbl_name}: {e}")
 
-        # Migrate is_final_saved, final_saved_at, final_saved_by for Notification Assignment Lock
+        # Migrate all columns for notifications table
         if 'notifications' in actual_tables:
             notif_cols = [c['name'] for c in inspector_after.get_columns('notifications')]
+            notif_new_cols = [
+                ('category', "VARCHAR(50) NOT NULL DEFAULT 'General'"),
+                ('photo_file', "VARCHAR(255) NULL"),
+                ('file_type', "VARCHAR(20) NULL"),
+                ('start_date', "DATETIME NULL"),
+                ('end_date', "DATETIME NULL"),
+                ('posted_by_role', "ENUM('Admin','Faculty') NOT NULL DEFAULT 'Admin'"),
+                ('admin_id', "INT NULL"),
+                ('faculty_id', "INT NULL"),
+                ('target_audience', "ENUM('All','Guest','Faculty','Student') NOT NULL DEFAULT 'All'"),
+                ('target_semester', "SMALLINT NULL"),
+                ('target_division', "VARCHAR(10) NULL DEFAULT 'All'"),
+                ('subject_id', "INT NULL"),
+                ('target_student_id', "INT NULL"),
+                ('priority', "ENUM('Normal','Important','Urgent') NOT NULL DEFAULT 'Normal'"),
+                ('is_active', "TINYINT(1) NOT NULL DEFAULT 1"),
+                ('is_final_saved', "TINYINT(1) NOT NULL DEFAULT 0"),
+                ('final_saved_at', "DATETIME NULL"),
+                ('final_saved_by', "INT NULL")
+            ]
             with db.engine.connect() as conn:
-                if 'is_final_saved' not in notif_cols:
-                    try:
-                        conn.execute(db.text("ALTER TABLE notifications ADD COLUMN is_final_saved BOOLEAN NOT NULL DEFAULT FALSE"))
-                        conn.commit()
-                        print("SUCCESS: Added 'is_final_saved' column to 'notifications'.")
-                    except Exception as e:
-                        print(f"Notice: Could not add is_final_saved to notifications: {e}")
-                if 'final_saved_at' not in notif_cols:
-                    try:
-                        conn.execute(db.text("ALTER TABLE notifications ADD COLUMN final_saved_at DATETIME NULL"))
-                        conn.commit()
-                        print("SUCCESS: Added 'final_saved_at' column to 'notifications'.")
-                    except Exception as e:
-                        print(f"Notice: Could not add final_saved_at to notifications: {e}")
-                if 'final_saved_by' not in notif_cols:
-                    try:
-                        conn.execute(db.text("ALTER TABLE notifications ADD COLUMN final_saved_by INT NULL"))
-                        conn.commit()
-                        print("SUCCESS: Added 'final_saved_by' column to 'notifications'.")
-                    except Exception as e:
-                        print(f"Notice: Could not add final_saved_by to notifications: {e}")
-                if 'target_student_id' not in notif_cols:
-                    try:
-                        conn.execute(db.text("ALTER TABLE notifications ADD COLUMN target_student_id INT NULL"))
-                        conn.commit()
-                        print("SUCCESS: Added 'target_student_id' column to 'notifications'.")
-                    except Exception as e:
-                        print(f"Notice: Could not add target_student_id to notifications: {e}")
+                for col_name, col_def in notif_new_cols:
+                    if col_name not in notif_cols:
+                        try:
+                            conn.execute(db.text(f"ALTER TABLE notifications ADD COLUMN {col_name} {col_def}"))
+                            conn.commit()
+                            print(f"SUCCESS: Added '{col_name}' column to 'notifications'.")
+                        except Exception as e:
+                            print(f"Notice: Could not add {col_name} to notifications: {e}")
 
         # Migrate college_settings Campus Geofencing & College Timing Columns
         if 'college_settings' in actual_tables:
@@ -636,6 +636,8 @@ def handle_500_error(e):
         db.session.rollback()
     except Exception:
         pass
+    from flask import request
+    app.logger.error(f"500 Internal Server Error at {request.path}: {e}", exc_info=True)
     return render_template('public/500.html'), 500
 
 @app.errorhandler(403)

@@ -151,52 +151,74 @@ def get_public_notices(limit=10):
 
 def get_faculty_notices(filter_by_cycle=True):
     """Fetches active campus notices intended for Faculty or All, filtered by active semester cycle."""
-    notices = Notification.query.filter(
-        Notification.target_audience.in_(['Faculty', 'All']),
-        Notification.is_active == True
-    ).order_by(Notification.created_at.desc()).all()
+    try:
+        notices = Notification.query.filter(
+            Notification.target_audience.in_(['Faculty', 'All']),
+            Notification.is_active == True
+        ).order_by(Notification.created_at.desc()).all()
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.warning(f"[get_faculty_notices Error] {e}")
+        return []
 
     if not filter_by_cycle:
         return notices
 
-    from services.academic_service import get_active_semesters
-    active_sems = get_active_semesters()
+    try:
+        from services.academic_service import get_active_semesters
+        active_sems = get_active_semesters()
+    except Exception:
+        active_sems = [1, 3, 5]
 
     filtered = []
     for n in notices:
-        if n.target_semester is not None:
-            if n.target_semester in active_sems:
+        try:
+            if n.target_semester is not None:
+                if n.target_semester in active_sems:
+                    filtered.append(n)
+            elif n.subject and n.subject.semester is not None:
+                if n.subject.semester in active_sems:
+                    filtered.append(n)
+            else:
                 filtered.append(n)
-        elif n.subject and n.subject.semester is not None:
-            if n.subject.semester in active_sems:
-                filtered.append(n)
-        else:
+        except Exception:
             filtered.append(n)
     return filtered
 
 
 def get_faculty_created_notices(faculty_id, filter_by_cycle=True):
     """Fetches notices posted by this specific faculty member, filtered by active semester cycle."""
-    notices = Notification.query.filter_by(
-        faculty_id=faculty_id,
-        posted_by_role='Faculty'
-    ).order_by(Notification.created_at.desc()).all()
+    try:
+        notices = Notification.query.filter_by(
+            faculty_id=faculty_id,
+            posted_by_role='Faculty'
+        ).order_by(Notification.created_at.desc()).all()
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.warning(f"[get_faculty_created_notices Error] {e}")
+        return []
 
     if not filter_by_cycle:
         return notices
 
-    from services.academic_service import get_active_semesters
-    active_sems = get_active_semesters()
+    try:
+        from services.academic_service import get_active_semesters
+        active_sems = get_active_semesters()
+    except Exception:
+        active_sems = [1, 3, 5]
 
     filtered = []
     for n in notices:
-        if n.target_semester is not None:
-            if n.target_semester in active_sems:
+        try:
+            if n.target_semester is not None:
+                if n.target_semester in active_sems:
+                    filtered.append(n)
+            elif n.subject and n.subject.semester is not None:
+                if n.subject.semester in active_sems:
+                    filtered.append(n)
+            else:
                 filtered.append(n)
-        elif n.subject and n.subject.semester is not None:
-            if n.subject.semester in active_sems:
-                filtered.append(n)
-        else:
+        except Exception:
             filtered.append(n)
     return filtered
 
@@ -207,49 +229,71 @@ def get_admin_feed_notices(filter_by_cycle=True):
     Strictly includes only notices with target_audience in ('Admin', 'All').
     STRICTLY EXCLUDES student-specific notices (assignments, device reminders, etc.) and faculty-only notices.
     """
-    notices = Notification.query.filter(
-        Notification.target_audience.in_(['Admin', 'All']),
-        Notification.is_active == True
-    ).order_by(Notification.created_at.desc()).all()
+    try:
+        notices = Notification.query.filter(
+            Notification.target_audience.in_(['Admin', 'All']),
+            Notification.is_active == True
+        ).order_by(Notification.created_at.desc()).all()
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.warning(f"[get_admin_feed_notices Error] {e}")
+        return []
 
     if not filter_by_cycle:
         return notices
 
-    from services.academic_service import get_active_semesters
-    active_sems = get_active_semesters()
+    try:
+        from services.academic_service import get_active_semesters
+        active_sems = get_active_semesters()
+    except Exception:
+        active_sems = [1, 3, 5]
 
     filtered = []
     for n in notices:
-        if n.target_semester is not None:
-            if n.target_semester in active_sems:
+        try:
+            if n.target_semester is not None:
+                if n.target_semester in active_sems:
+                    filtered.append(n)
+            elif n.subject and n.subject.semester is not None:
+                if n.subject.semester in active_sems:
+                    filtered.append(n)
+            else:
                 filtered.append(n)
-        elif n.subject and n.subject.semester is not None:
-            if n.subject.semester in active_sems:
-                filtered.append(n)
-        else:
+        except Exception:
             filtered.append(n)
     return filtered
 
 
 def get_all_admin_notices(filter_by_cycle=True):
     """Fetches all notices (for Admin management table), filtered by active semester cycle."""
-    notices = Notification.query.order_by(Notification.created_at.desc()).all()
+    try:
+        notices = Notification.query.order_by(Notification.created_at.desc()).all()
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.warning(f"[get_all_admin_notices Error] {e}")
+        return []
 
     if not filter_by_cycle:
         return notices
 
-    from services.academic_service import get_active_semesters
-    active_sems = get_active_semesters()
+    try:
+        from services.academic_service import get_active_semesters
+        active_sems = get_active_semesters()
+    except Exception:
+        active_sems = [1, 3, 5]
 
     filtered = []
     for n in notices:
-        if n.target_semester is not None:
-            if n.target_semester in active_sems:
+        try:
+            if n.target_semester is not None:
+                if n.target_semester in active_sems:
+                    filtered.append(n)
+            elif n.subject and n.subject.semester is not None:
+                if n.subject.semester in active_sems:
+                    filtered.append(n)
+            else:
                 filtered.append(n)
-        elif n.subject and n.subject.semester is not None:
-            if n.subject.semester in active_sems:
-                filtered.append(n)
-        else:
+        except Exception:
             filtered.append(n)
     return filtered
 
@@ -264,65 +308,75 @@ def get_student_notices(student, category=None):
        only show if student has NOT yet registered/bound their phone! Once bound, reminder automatically clears.
     5. Filtered strictly by active semester cycle.
     """
-    from services.academic_service import get_active_semesters
-    active_sems = get_active_semesters()
+    try:
+        from services.academic_service import get_active_semesters
+        active_sems = get_active_semesters()
+    except Exception:
+        active_sems = [1, 3, 5]
 
     sem = student.semester
     div = student.division
     is_device_bound = bool(student.device_fingerprint and not student.device_fingerprint.startswith('PIN-'))
 
-    # Base query: Active notices targeted to Student or All
-    query = Notification.query.filter(
-        Notification.is_active == True,
-        db.or_(
-            Notification.target_audience == 'All',
-            Notification.target_audience == 'Student'
+    try:
+        # Base query: Active notices targeted to Student or All
+        query = Notification.query.filter(
+            Notification.is_active == True,
+            db.or_(
+                Notification.target_audience == 'All',
+                Notification.target_audience == 'Student'
+            )
         )
-    )
 
-    if category and category != 'All':
-        query = query.filter(Notification.category == category)
+        if category and category != 'All':
+            query = query.filter(Notification.category == category)
 
-    notices = query.order_by(Notification.created_at.desc()).all()
+        notices = query.order_by(Notification.created_at.desc()).all()
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.warning(f"[get_student_notices Error] {e}")
+        return []
 
     filtered = []
     for n in notices:
-        # 1. If targeted to a specific individual student, MUST match this student ID
-        if n.target_student_id is not None:
-            if n.target_student_id != student.id:
-                continue
-        else:
-            # 2. Audience filter: If targeted to Student, must match Semester & Division
-            if n.target_audience == 'Student':
-                if n.target_semester is not None and n.target_semester != sem:
+        try:
+            # 1. If targeted to a specific individual student, MUST match this student ID
+            if getattr(n, 'target_student_id', None) is not None:
+                if n.target_student_id != student.id:
                     continue
-                if n.target_division and n.target_division not in ('All', div):
+            else:
+                # 2. Audience filter: If targeted to Student, must match Semester & Division
+                if n.target_audience == 'Student':
+                    if n.target_semester is not None and n.target_semester != sem:
+                        continue
+                    if n.target_division and n.target_division not in ('All', div):
+                        continue
+
+            # 3. Subject filter if specified
+            if n.subject_id is not None:
+                if n.subject and n.subject.semester is not None and n.subject.semester != sem:
                     continue
 
-        # 3. Subject filter if specified
-        if n.subject_id is not None:
-            if n.subject and n.subject.semester is not None and n.subject.semester != sem:
+            # 4. Device Binding Alert Filter:
+            is_device_notice = (
+                n.category == 'Device Binding' or 
+                'Device Registration' in (n.title or '') or 
+                'ડિવાઇસ' in (n.title or '') or
+                'Passkey' in (n.title or '')
+            )
+            if is_device_notice and is_device_bound:
                 continue
 
-        # 4. Device Binding Alert Filter:
-        # If this notice is a device registration reminder and student is ALREADY bound, do not show
-        is_device_notice = (
-            n.category == 'Device Binding' or 
-            'Device Registration' in (n.title or '') or 
-            'ડિવાઇસ' in (n.title or '') or
-            'Passkey' in (n.title or '')
-        )
-        if is_device_notice and is_device_bound:
-            continue
-
-        # 5. Active cycle validation
-        if n.target_semester is not None:
-            if n.target_semester in active_sems:
+            # 5. Active cycle validation
+            if n.target_semester is not None:
+                if n.target_semester in active_sems:
+                    filtered.append(n)
+            elif n.subject and n.subject.semester is not None:
+                if n.subject.semester in active_sems:
+                    filtered.append(n)
+            else:
                 filtered.append(n)
-        elif n.subject and n.subject.semester is not None:
-            if n.subject.semester in active_sems:
-                filtered.append(n)
-        else:
+        except Exception:
             filtered.append(n)
 
     return filtered

@@ -1234,13 +1234,43 @@ def faculty_notices():
         try:
             mark_all_notifications_as_read('Faculty', faculty_id)
         except Exception:
-            pass
-    academic = get_academic_settings()
-    active_semesters = get_active_semesters(academic.semester_cycle if academic else 'Odd')
+            from extensions import db
+            db.session.rollback()
 
-    assigned_subjects = get_faculty_assigned_subjects(faculty_id, filter_by_cycle=True)
-    created_notices = get_faculty_created_notices(faculty_id, filter_by_cycle=True)
-    campus_notices = get_faculty_notices(filter_by_cycle=True)
+    cycle = 'Odd'
+    active_semesters = [1, 3, 5]
+    try:
+        academic = get_academic_settings()
+        cycle = academic.semester_cycle if academic else 'Odd'
+        active_semesters = get_active_semesters(cycle)
+    except Exception as acad_err:
+        from extensions import db
+        db.session.rollback()
+        current_app.logger.warning(f"[Faculty Notices Academic Error] {acad_err}")
+
+    assigned_subjects = []
+    try:
+        assigned_subjects = get_faculty_assigned_subjects(faculty_id, filter_by_cycle=True)
+    except Exception as sub_err:
+        from extensions import db
+        db.session.rollback()
+        current_app.logger.error(f"[Faculty Notices Subject Error] {sub_err}")
+
+    created_notices = []
+    try:
+        created_notices = get_faculty_created_notices(faculty_id, filter_by_cycle=True)
+    except Exception as cn_err:
+        from extensions import db
+        db.session.rollback()
+        current_app.logger.error(f"[Faculty Notices Created Error] {cn_err}")
+
+    campus_notices = []
+    try:
+        campus_notices = get_faculty_notices(filter_by_cycle=True)
+    except Exception as camp_err:
+        from extensions import db
+        db.session.rollback()
+        current_app.logger.error(f"[Faculty Notices Campus Error] {camp_err}")
 
     return render_template(
         'faculty/notices.html',
@@ -1248,7 +1278,7 @@ def faculty_notices():
         created_notices=created_notices,
         campus_notices=campus_notices,
         active_semesters=active_semesters,
-        semester_cycle=academic.semester_cycle if academic else 'Odd',
+        semester_cycle=cycle,
         active_page='notices'
     )
 
