@@ -87,15 +87,19 @@ def student_login():
             return render_template('auth/student-login.html', error=error)
 
         # 3. Smart Device Binding & Duplication Prevention Check
-        if device_fp and not device_fp.startswith('HW-') and not device_fp.startswith('DEV-'):
+        if device_fp:
             # Check if this phone is ALREADY registered to another student
             other_student = Student.query.filter(
                 Student.id != student.id,
-                Student.device_fingerprint == device_fp
+                db.or_(
+                    Student.device_fingerprint == device_fp,
+                    Student.device_fingerprint.like(f"{device_fp}:::%"),
+                    Student.device_fingerprint.like(f"%:::{device_fp}")
+                )
             ).first()
 
             if other_student:
-                # Device belongs to someone else (e.g. Sachin Rathod)!
+                # Device belongs to someone else!
                 session["pending_conflict_student_id"] = student.id
                 conflict_data = {
                     "student_id": student.id,
@@ -842,8 +846,14 @@ def student_webauthn_status():
     if not student:
         return jsonify({"success": False, "message": "Student not found"}), 404
 
-    fp = student.device_fingerprint
-    has_passkey = bool(fp and not fp.startswith('HW-') and not fp.startswith('DEV-') and not fp.startswith('PIN-'))
+    fp = student.device_fingerprint or ''
+    if ':::' in fp:
+        hw_part, cred_part = fp.split(':::', 1)
+        has_passkey = bool(cred_part)
+        credential_id = cred_part if has_passkey else None
+    else:
+        has_passkey = bool(fp and not fp.startswith('HW-') and not fp.startswith('DEV-') and not fp.startswith('PIN-'))
+        credential_id = fp if has_passkey else None
     
     reset_allowed = bool(getattr(student, 'device_reset_allowed', 0))
     if reset_allowed:
@@ -852,7 +862,7 @@ def student_webauthn_status():
     return jsonify({
         "success": True,
         "has_passkey": has_passkey,
-        "credential_id": fp if has_passkey else None,
+        "credential_id": credential_id,
         "student_id": student.id,
         "email": student.email,
         "full_name": student.full_name,
@@ -872,8 +882,12 @@ def student_webauthn_all_credentials():
 
     creds = []
     for s in students_with_cred:
-        if s.device_fingerprint and not s.device_fingerprint.startswith('HW-') and not s.device_fingerprint.startswith('DEV-') and not s.device_fingerprint.startswith('PIN-'):
-            creds.append(s.device_fingerprint.strip())
+        if s.device_fingerprint:
+            raw = s.device_fingerprint.strip()
+            if ':::' in raw:
+                raw = raw.split(':::')[1].strip()
+            if raw and not raw.startswith('HW-') and not raw.startswith('DEV-') and not raw.startswith('PIN-'):
+                creds.append(raw)
 
     return jsonify({
         "success": True,
@@ -892,16 +906,27 @@ def student_webauthn_register():
     data = request.get_json() or {}
     credential_id = data.get("credential_id", "").strip()
     device_name = data.get("device_name", "").strip()
+    hardware_fp = data.get("hardware_fingerprint", "").strip()
 
     if not credential_id:
         return jsonify({"success": False, "message": "Invalid credential ID."}), 400
 
     from models import Student, db
 
-    # 1. Duplication Prevention: Check if this phone credential is bound to another student
+    # 1. Duplication Prevention: Check if this phone credential or hardware FP is bound to another student
+    filter_clauses = [
+        Student.device_fingerprint == credential_id,
+        Student.device_fingerprint.like(f"%:::{credential_id}")
+    ]
+    if hardware_fp:
+        filter_clauses.extend([
+            Student.device_fingerprint == hardware_fp,
+            Student.device_fingerprint.like(f"{hardware_fp}:::%")
+        ])
+
     other = Student.query.filter(
         Student.id != student.id,
-        Student.device_fingerprint == credential_id
+        db.or_(*filter_clauses)
     ).first()
 
     if other:
@@ -911,16 +936,20 @@ def student_webauthn_register():
         }), 409
 
     # 2. Check if student already has a different phone bound without reset permission
-    current_fp = student.device_fingerprint
-    if current_fp and not current_fp.startswith('HW-') and not current_fp.startswith('DEV-'):
-        if current_fp != credential_id and not getattr(student, 'device_reset_allowed', 0):
+    current_fp = student.device_fingerprint or ''
+    current_cred = current_fp.split(':::')[1] if ':::' in current_fp else current_fp
+    if current_cred and not current_cred.startswith('HW-') and not current_cred.startswith('DEV-'):
+        if current_cred != credential_id and not getattr(student, 'device_reset_allowed', 0):
             return jsonify({
                 "success": False,
                 "message": "Your account is already bound to another phone. Please contact faculty or admin to reset your device."
             }), 403
 
-    # 3. Save student passkey
-    student.device_fingerprint = credential_id
+    # 3. Save student passkey linked with hardware fingerprint
+    if hardware_fp:
+        student.device_fingerprint = f"{hardware_fp}:::{credential_id}"
+    else:
+        student.device_fingerprint = credential_id
     student.device_model = device_name or "Mobile Device"
     student.device_bound_at = datetime.utcnow()
     student.device_reset_allowed = 0

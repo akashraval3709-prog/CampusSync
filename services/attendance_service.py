@@ -1731,17 +1731,22 @@ def mark_student_qr_attendance_secure(student_id, session_id=None, token=None, l
             # Anti-Duplication Check: Is this device ALREADY bound to another student?
             device_owner = Student.query.filter(
                 Student.id != student.id,
-                Student.device_fingerprint == clean_dev
+                db.or_(
+                    Student.device_fingerprint == clean_dev,
+                    Student.device_fingerprint.like(f"{clean_dev}:::%"),
+                    Student.device_fingerprint.like(f"%:::{clean_dev}")
+                )
             ).first()
 
             if device_owner:
+                msg = f"Proxy Attendance Blocked: This phone is registered to Roll #{device_owner.roll_number} ({device_owner.full_name}). Institutional policy permits only 1 student per physical phone."
                 if not request_approval:
                     return False, {
                         "requires_approval": True,
                         "device_conflict": True,
                         "owner_roll": device_owner.roll_number,
                         "owner_name": device_owner.full_name,
-                        "message": "This phone is already registered to another student. Do you still wish to submit your attendance from this device?"
+                        "message": msg
                     }
                 else:
                     try:
@@ -1777,12 +1782,12 @@ def mark_student_qr_attendance_secure(student_id, session_id=None, token=None, l
                         db.session.commit()
                     except Exception:
                         db.session.rollback()
-            elif student.device_fingerprint != clean_dev and not getattr(student, 'device_reset_allowed', 0):
+            elif clean_dev not in student.device_fingerprint and not getattr(student, 'device_reset_allowed', 0):
                 if not request_approval:
                     return False, {
                         "requires_approval": True,
                         "device_mismatch": True,
-                        "message": "This phone is already registered to another student. Do you still wish to submit your attendance from this device?"
+                        "message": "This phone does not match your registered personal device. Do you wish to submit an attendance request for faculty approval?"
                     }
                 else:
                     try:
@@ -1806,6 +1811,13 @@ def mark_student_qr_attendance_secure(student_id, session_id=None, token=None, l
                         "pending_approval": True,
                         "message": "Attendance request submitted. Awaiting faculty approval."
                     }
+            elif ':::' not in student.device_fingerprint and not student.device_fingerprint.startswith('HW-'):
+                # Self-upgrade legacy passkey registration to include hardware fingerprint
+                try:
+                    student.device_fingerprint = f"{clean_dev}:::{student.device_fingerprint}"
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
 
             # Anti-Proxy Check: Has this same device already scanned for another student in this session?
             conflict_entry = LectureAttendanceStudent.query.filter(
@@ -1820,13 +1832,14 @@ def mark_student_qr_attendance_secure(student_id, session_id=None, token=None, l
                 c_name = conflict_student.full_name if conflict_student else "another student"
                 c_roll = conflict_student.roll_number if conflict_student else ""
 
+                msg = f"Proxy Attendance Blocked: This phone was already used by Roll #{c_roll} ({c_name}) in this lecture. 1 Phone = 1 Student policy strictly enforced."
                 if not request_approval:
                     return False, {
                         "requires_approval": True,
                         "device_conflict": True,
                         "owner_roll": c_roll,
                         "owner_name": c_name,
-                        "message": "This phone is already registered to another student. Do you still wish to submit your attendance from this device?"
+                        "message": msg
                     }
                 else:
                     try:

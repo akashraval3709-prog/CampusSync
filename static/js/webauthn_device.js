@@ -181,13 +181,15 @@
         const credentialId = bufferToBase64URL(credential.rawId);
         const deviceName = getDeviceDescription();
 
+        const hwFp = (typeof getDeviceFingerprint === 'function' ? getDeviceFingerprint() : (window.CampusSyncDevice ? window.CampusSyncDevice.getHardwareFingerprint() : ''));
         // Submit registration to backend
         const res = await fetch('/student/webauthn/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 credential_id: credentialId,
-                device_name: deviceName
+                device_name: deviceName,
+                hardware_fingerprint: hwFp
             })
         });
 

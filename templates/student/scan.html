@@ -990,7 +990,8 @@
                 if (btnMark) {
                     btnMark.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Recording Attendance...';
                 }
-                executeBackendAttendance(activeSubmissionToken, authResult.credentialId, authResult.deviceModel, false);
+                // Use physical device hardware fingerprint for anti-proxy enforcement
+                executeBackendAttendance(activeSubmissionToken, getDeviceFingerprint(), authResult.deviceModel, false);
                 return;
             } catch (vErr) {
                 console.warn("Passkey verify failed on this phone, proceeding with hardware fingerprint check:", vErr);
@@ -1005,9 +1006,15 @@
     }
 
     // Displays confirmation modal for friend's / already registered phone
-    function showBorrowedDeviceWarning(token) {
+    function showBorrowedDeviceWarning(token, data) {
         const modalEl = document.getElementById('scanConfirmBorrowedModal');
         const modal = new bootstrap.Modal(modalEl);
+        const bodyText = document.getElementById('confirmBorrowedModalBodyText');
+        if (bodyText && data && data.message) {
+            bodyText.innerHTML = `<div class="p-2 rounded bg-danger-subtle text-danger fw-bold border border-danger-subtle">
+                <i class="bi bi-shield-lock-fill me-1"></i> ${data.message}
+            </div>`;
+        }
         const btnConfirm = document.getElementById('btnConfirmBorrowedScan');
 
         btnConfirm.onclick = function() {
@@ -1054,7 +1061,7 @@
 
             // Case A: Backend requires confirmation for friend's device
             if (data.requires_approval) {
-                showBorrowedDeviceWarning(token);
+                showBorrowedDeviceWarning(token, data);
                 return;
             }
 
