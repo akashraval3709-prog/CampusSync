@@ -77,6 +77,91 @@ def parse_datetime(dt_str):
     return None
 
 
+def ensure_notification_columns():
+    """
+    Bulletproof self-healing schema verification for the 'notifications' table.
+    Queries MySQL directly to check if all required columns exist, adding any missing ones.
+    """
+    needed_cols = [
+        ('category', "VARCHAR(50) NOT NULL DEFAULT 'General'"),
+        ('photo_file', "VARCHAR(255) NULL"),
+        ('file_type', "VARCHAR(20) NULL"),
+        ('start_date', "DATETIME NULL"),
+        ('end_date', "DATETIME NULL"),
+        ('posted_by_role', "ENUM('Admin','Faculty') NOT NULL DEFAULT 'Admin'"),
+        ('admin_id', "INT NULL"),
+        ('faculty_id', "INT NULL"),
+        ('target_audience', "ENUM('All','Guest','Faculty','Student') NOT NULL DEFAULT 'All'"),
+        ('target_semester', "SMALLINT NULL"),
+        ('target_division', "VARCHAR(10) NULL DEFAULT 'All'"),
+        ('subject_id', "INT NULL"),
+        ('target_student_id', "INT NULL"),
+        ('priority', "ENUM('Normal','Important','Urgent') NOT NULL DEFAULT 'Normal'"),
+        ('is_active', "TINYINT(1) NOT NULL DEFAULT 1"),
+        ('is_final_saved', "TINYINT(1) NOT NULL DEFAULT 0"),
+        ('final_saved_at', "DATETIME NULL"),
+        ('final_saved_by', "INT NULL")
+    ]
+    try:
+        from extensions import db
+        with db.engine.connect() as conn:
+            existing = set()
+            tbl_target = 'notifications'
+            try:
+                res = conn.execute(db.text("SHOW COLUMNS FROM notifications")).fetchall()
+                existing = {str(r[0]).lower() for r in res}
+            except Exception:
+                try:
+                    res = conn.execute(db.text("SHOW COLUMNS FROM Notifications")).fetchall()
+                    existing = {str(r[0]).lower() for r in res}
+                    tbl_target = 'Notifications'
+                except Exception:
+                    return False
+
+            for col_name, col_def in needed_cols:
+                if col_name.lower() not in existing:
+                    try:
+                        conn.execute(db.text(f"ALTER TABLE {tbl_target} ADD COLUMN {col_name} {col_def}"))
+                        conn.commit()
+                        existing.add(col_name.lower())
+                        if current_app:
+                            current_app.logger.info(f"Auto-migrated missing column '{col_name}' to '{tbl_target}'.")
+                    except Exception:
+                        pass
+
+            try:
+                conn.execute(db.text(f"ALTER TABLE {tbl_target} CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"))
+                conn.commit()
+            except Exception:
+                pass
+            return True
+    except Exception as e:
+        if current_app:
+            current_app.logger.warning(f"ensure_notification_columns error: {e}")
+        return False
+
+
+def ensure_notification_reads_table():
+    """Guarantees notification_reads table exists for unread tracking."""
+    try:
+        from extensions import db
+        with db.engine.connect() as conn:
+            conn.execute(db.text("""
+                CREATE TABLE IF NOT EXISTS notification_reads (
+                    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                    notification_id INT NOT NULL,
+                    user_role ENUM('Admin', 'Faculty', 'Student') NOT NULL,
+                    user_id INT NOT NULL,
+                    read_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE KEY uq_notification_user_read (notification_id, user_role, user_id),
+                    KEY idx_user_role_id (user_role, user_id)
+                )
+            """))
+            conn.commit()
+    except Exception:
+        pass
+
+
 def create_notification(title, message, category, posted_by_role,
                         admin_id=None, faculty_id=None, target_audience='All',
                         target_semester=None, target_division='All', subject_id=None,
@@ -167,34 +252,68 @@ def create_notification(title, message, category, posted_by_role,
         return notification
     except Exception as e:
         db.session.rollback()
+        err_str = str(e)
+        if '1054' in err_str or 'Unknown column' in err_str or 'target_student_id' in err_str:
+            ensure_notification_columns()
+            try:
+                db.session.add(notification)
+                db.session.commit()
+                return notification
+            except Exception as retry_err:
+                db.session.rollback()
+                current_app.logger.error(f"[create_notification Retry Error] {retry_err}", exc_info=True)
+                return None
         current_app.logger.error(f"[create_notification Error] {e}", exc_info=True)
         return None
 
 
 def get_public_notices(limit=10):
     """Fetches active notifications targeted to Guest or All for the college homepage."""
-    try:
+    def _fetch():
         return Notification.query.filter(
             Notification.target_audience.in_(['Guest', 'All']),
             Notification.is_active == True
         ).order_by(Notification.created_at.desc()).limit(limit).all()
+
+    try:
+        return _fetch()
     except Exception as e:
         db.session.rollback()
+        err_str = str(e)
+        if '1054' in err_str or 'Unknown column' in err_str or 'target_student_id' in err_str:
+            ensure_notification_columns()
+            try:
+                return _fetch()
+            except Exception:
+                db.session.rollback()
         current_app.logger.warning(f"[get_public_notices Error] {e}")
         return []
 
 
 def get_faculty_notices(filter_by_cycle=True):
     """Fetches active campus notices intended for Faculty or All, filtered by active semester cycle."""
-    try:
-        notices = Notification.query.filter(
+    def _fetch():
+        return Notification.query.filter(
             Notification.target_audience.in_(['Faculty', 'All']),
             Notification.is_active == True
         ).order_by(Notification.created_at.desc()).all()
+
+    try:
+        notices = _fetch()
     except Exception as e:
         db.session.rollback()
-        current_app.logger.warning(f"[get_faculty_notices Error] {e}")
-        return []
+        err_str = str(e)
+        if '1054' in err_str or 'Unknown column' in err_str or 'target_student_id' in err_str:
+            ensure_notification_columns()
+            try:
+                notices = _fetch()
+            except Exception:
+                db.session.rollback()
+                current_app.logger.warning(f"[get_faculty_notices Retry Error] {e}")
+                return []
+        else:
+            current_app.logger.warning(f"[get_faculty_notices Error] {e}")
+            return []
 
     if not filter_by_cycle:
         return notices
@@ -223,15 +342,28 @@ def get_faculty_notices(filter_by_cycle=True):
 
 def get_faculty_created_notices(faculty_id, filter_by_cycle=True):
     """Fetches notices posted by this specific faculty member, filtered by active semester cycle."""
-    try:
-        notices = Notification.query.filter_by(
+    def _fetch():
+        return Notification.query.filter_by(
             faculty_id=faculty_id,
             posted_by_role='Faculty'
         ).order_by(Notification.created_at.desc()).all()
+
+    try:
+        notices = _fetch()
     except Exception as e:
         db.session.rollback()
-        current_app.logger.warning(f"[get_faculty_created_notices Error] {e}")
-        return []
+        err_str = str(e)
+        if '1054' in err_str or 'Unknown column' in err_str or 'target_student_id' in err_str:
+            ensure_notification_columns()
+            try:
+                notices = _fetch()
+            except Exception:
+                db.session.rollback()
+                current_app.logger.warning(f"[get_faculty_created_notices Retry Error] {e}")
+                return []
+        else:
+            current_app.logger.warning(f"[get_faculty_created_notices Error] {e}")
+            return []
 
     if not filter_by_cycle:
         return notices
@@ -264,15 +396,28 @@ def get_admin_feed_notices(filter_by_cycle=True):
     Strictly includes only notices with target_audience in ('Admin', 'All').
     STRICTLY EXCLUDES student-specific notices (assignments, device reminders, etc.) and faculty-only notices.
     """
-    try:
-        notices = Notification.query.filter(
+    def _fetch():
+        return Notification.query.filter(
             Notification.target_audience.in_(['Admin', 'All']),
             Notification.is_active == True
         ).order_by(Notification.created_at.desc()).all()
+
+    try:
+        notices = _fetch()
     except Exception as e:
         db.session.rollback()
-        current_app.logger.warning(f"[get_admin_feed_notices Error] {e}")
-        return []
+        err_str = str(e)
+        if '1054' in err_str or 'Unknown column' in err_str or 'target_student_id' in err_str:
+            ensure_notification_columns()
+            try:
+                notices = _fetch()
+            except Exception:
+                db.session.rollback()
+                current_app.logger.warning(f"[get_admin_feed_notices Retry Error] {e}")
+                return []
+        else:
+            current_app.logger.warning(f"[get_admin_feed_notices Error] {e}")
+            return []
 
     if not filter_by_cycle:
         return notices
@@ -301,12 +446,25 @@ def get_admin_feed_notices(filter_by_cycle=True):
 
 def get_all_admin_notices(filter_by_cycle=True):
     """Fetches all notices (for Admin management table), filtered by active semester cycle."""
+    def _fetch():
+        return Notification.query.order_by(Notification.created_at.desc()).all()
+
     try:
-        notices = Notification.query.order_by(Notification.created_at.desc()).all()
+        notices = _fetch()
     except Exception as e:
         db.session.rollback()
-        current_app.logger.warning(f"[get_all_admin_notices Error] {e}")
-        return []
+        err_str = str(e)
+        if '1054' in err_str or 'Unknown column' in err_str or 'target_student_id' in err_str:
+            ensure_notification_columns()
+            try:
+                notices = _fetch()
+            except Exception:
+                db.session.rollback()
+                current_app.logger.warning(f"[get_all_admin_notices Retry Error] {e}")
+                return []
+        else:
+            current_app.logger.warning(f"[get_all_admin_notices Error] {e}")
+            return []
 
     if not filter_by_cycle:
         return notices
@@ -384,8 +542,18 @@ def get_student_notices(student, category=None):
         notices = query.order_by(Notification.created_at.desc()).all()
     except Exception as e:
         db.session.rollback()
-        current_app.logger.warning(f"[get_student_notices Error] {e}")
-        return []
+        err_str = str(e)
+        if '1054' in err_str or 'Unknown column' in err_str or 'target_student_id' in err_str:
+            ensure_notification_columns()
+            try:
+                notices = query.order_by(Notification.created_at.desc()).all()
+            except Exception:
+                db.session.rollback()
+                current_app.logger.warning(f"[get_student_notices Retry Error] {e}")
+                return []
+        else:
+            current_app.logger.warning(f"[get_student_notices Error] {e}")
+            return []
 
     filtered = []
     for n in notices:
@@ -609,12 +777,27 @@ def get_user_notifications_feed(user_role, user_id, limit=8):
         }
 
     notice_ids = [n.id for n in notices]
-    read_rows = NotificationRead.query.filter(
-        NotificationRead.user_role == user_role,
-        NotificationRead.user_id == user_id,
-        NotificationRead.notification_id.in_(notice_ids)
-    ).all()
-    read_ids = {r.notification_id for r in read_rows}
+    read_ids = set()
+    try:
+        read_rows = NotificationRead.query.filter(
+            NotificationRead.user_role == user_role,
+            NotificationRead.user_id == user_id,
+            NotificationRead.notification_id.in_(notice_ids)
+        ).all()
+        read_ids = {r.notification_id for r in read_rows}
+    except Exception:
+        db.session.rollback()
+        ensure_notification_reads_table()
+        try:
+            read_rows = NotificationRead.query.filter(
+                NotificationRead.user_role == user_role,
+                NotificationRead.user_id == user_id,
+                NotificationRead.notification_id.in_(notice_ids)
+            ).all()
+            read_ids = {r.notification_id for r in read_rows}
+        except Exception:
+            db.session.rollback()
+            read_ids = set()
 
     unread_count = sum(1 for nid in notice_ids if nid not in read_ids)
 

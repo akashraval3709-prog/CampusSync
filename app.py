@@ -150,8 +150,13 @@ for rule in list(app.url_map.iter_rules()):
             app.view_functions[short_ep] = app.view_functions[rule.endpoint]
             app.add_url_rule(rule.rule, endpoint=short_ep, view_func=app.view_functions[rule.endpoint], methods=rule.methods)
 
-# Auto-create tables from SQLAlchemy models if they don't exist
-with app.app_context():
+# Auto-create tables and perform resilient database migrations
+def run_all_database_migrations():
+    """
+    Comprehensive, resilient database schema migration for MySQL.
+    Every single table and column is checked and altered in its own isolated try-except block,
+    ensuring that errors in one table never cascade or abort migrations in other tables.
+    """
     import models
     from models import (
         Admin, Student, CollegeSetting, AcademicSetting, Subject, EmailLog,
@@ -160,267 +165,168 @@ with app.app_context():
         AssignmentSubmission, GalleryItem, HomePageSetting, ResultDeclaration,
         LectureAttendanceSession, LectureAttendanceStudent, AttendanceSecurityAlert
     )
+
     upload_dirs = [
         'admin', 'assignments', 'college', 'excel', 'faculty',
         'gallery', 'homepage', 'notices', 'notifications', 'students', 'student'
     ]
     for sub in upload_dirs:
         os.makedirs(os.path.join(app.root_path, 'uploads', sub), exist_ok=True)
+
+    report = {"migrated": [], "errors": []}
+
     try:
-        print(f"DEBUG: Connected to -> {db.engine.url}")
-
-        inspector_before = inspect(db.engine)
-        print(f"DEBUG: Tables in MySQL BEFORE create_all -> {inspector_before.get_table_names()}")
-
         db.create_all()
+    except Exception as e:
+        report["errors"].append(f"create_all: {e}")
 
-        # IMPORTANT: dispose + fresh inspector to avoid a stale connection cache
+    try:
         db.engine.dispose()
-        inspector_after = inspect(db.engine)
-        actual_tables = inspector_after.get_table_names()
-        print(f"DEBUG: Tables in MySQL AFTER create_all -> {actual_tables}")
+    except Exception:
+        pass
 
-        # Auto-seed default Administrator if admins table is empty
-        if 'admins' in actual_tables:
+    # 1. PRIORITY 1: Notifications table columns (especially target_student_id)
+    try:
+        from services.notification_service import ensure_notification_columns, ensure_notification_reads_table
+        ensure_notification_columns()
+        ensure_notification_reads_table()
+        report["migrated"].append("notifications_and_reads")
+    except Exception as e:
+        report["errors"].append(f"ensure_notification_columns: {e}")
+
+    # 2. attendance_security_alerts table
+    try:
+        with db.engine.connect() as conn:
+            conn.execute(db.text("""
+                CREATE TABLE IF NOT EXISTS attendance_security_alerts (
+                    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                    session_id INT NOT NULL,
+                    student_id INT NOT NULL,
+                    attempted_roll VARCHAR(20) NULL,
+                    device_fingerprint VARCHAR(500) NULL,
+                    conflicting_student_id INT NULL,
+                    alert_type ENUM('DUPLICATE_DEVICE','OUT_OF_GEOFENCE','EXPIRED_TOKEN','UNBOUND_DEVICE') NOT NULL,
+                    alert_message TEXT NULL,
+                    scan_latitude DECIMAL(10,8) NULL,
+                    scan_longitude DECIMAL(11,8) NULL,
+                    distance_meters FLOAT NULL,
+                    faculty_action ENUM('PENDING','APPROVED','REJECTED') DEFAULT 'PENDING',
+                    resolved_by_faculty_id INT NULL,
+                    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                )
+            """))
+            conn.commit()
+            report["migrated"].append("attendance_security_alerts")
+    except Exception as e:
+        report["errors"].append(f"attendance_security_alerts: {e}")
+
+    # 3. students table columns and constraints
+    try:
+        with db.engine.connect() as conn:
+            s_existing = set()
             try:
-                if Admin.query.first() is None:
-                    from werkzeug.security import generate_password_hash
-                    default_admin = Admin(
-                        username='admin',
-                        password=generate_password_hash('admin'),
-                        full_name='System Administrator',
-                        email='admin@campussync.edu',
-                        status='Active'
-                    )
-                    db.session.add(default_admin)
-                    db.session.commit()
-                    print("SUCCESS: Default administrator account ('admin' / 'admin') initialized.")
-            except Exception as seed_err:
-                print(f"Notice: Admin auto-seed error: {seed_err}")
+                res = conn.execute(db.text("SHOW COLUMNS FROM students")).fetchall()
+                s_existing = {str(r[0]).lower() for r in res}
+            except Exception:
+                pass
 
-        if 'students' not in actual_tables:
-            print("ERROR: 'students' table STILL missing after create_all()! "
-                  "Check MySQL user privileges (CREATE TABLE) and DB_NAME in .env")
-        else:
-            print("SUCCESS: 'students' table confirmed present in MySQL.")
-
-        if 'gallery_items' in actual_tables:
-            print("SUCCESS: 'gallery_items' table confirmed present in MySQL.")
-            g_cols = [c['name'] for c in inspector_after.get_columns('gallery_items')]
-            if 'views_count' not in g_cols:
-                with db.engine.connect() as conn:
-                    try:
-                        conn.execute(db.text("ALTER TABLE gallery_items ADD COLUMN views_count INT NOT NULL DEFAULT 0"))
-                        conn.commit()
-                        print("SUCCESS: Added 'views_count' column to 'gallery_items'.")
-                    except Exception as ge:
-                        print(f"Notice: Could not add views_count: {ge}")
-
-        if 'students' in actual_tables:
-            stud_cols = [c['name'] for c in inspector_after.get_columns('students')]
-            if 'academic_year' not in stud_cols:
-                print("Migrating database: Adding missing 'academic_year' column to 'students' table...")
-                with db.engine.connect() as conn:
-                    conn.execute(db.text("ALTER TABLE students ADD COLUMN academic_year VARCHAR(20) NULL"))
-                    conn.commit()
-                print("SUCCESS: Added 'academic_year' column to 'students'.")
-
-            # Missing device fingerprint columns
-            student_new_cols = [
+            student_cols = [
+                ('academic_year', 'VARCHAR(20) NULL'),
                 ('device_fingerprint', 'VARCHAR(500) NULL'),
                 ('device_model', 'VARCHAR(100) NULL'),
                 ('device_bound_at', 'DATETIME NULL'),
                 ('device_reset_allowed', 'SMALLINT DEFAULT 0')
             ]
-            with db.engine.connect() as conn:
-                for col_name, col_def in student_new_cols:
-                    if col_name not in stud_cols:
-                        try:
-                            conn.execute(db.text(f"ALTER TABLE students ADD COLUMN {col_name} {col_def}"))
-                            conn.commit()
-                            print(f"SUCCESS: Added '{col_name}' column to 'students'.")
-                        except Exception as e:
-                            print(f"Notice: Could not add {col_name} to students: {e}")
-
-            # Check existing indexes on 'students' table to migrate unique constraints safely
-            stud_indexes = inspector_after.get_indexes('students')
-            index_names = [idx['name'] for idx in stud_indexes]
-
-            with db.engine.connect() as conn:
-                # Drop old single-column unique index on roll_number if present
-                if 'roll_number' in index_names:
-                    print("Migrating database: Dropping old single-column UNIQUE index on 'roll_number'...")
+            for col_name, col_def in student_cols:
+                if col_name.lower() not in s_existing:
                     try:
-                        conn.execute(db.text("ALTER TABLE students DROP INDEX roll_number"))
+                        conn.execute(db.text(f"ALTER TABLE students ADD COLUMN {col_name} {col_def}"))
                         conn.commit()
-                        print("SUCCESS: Dropped old 'roll_number' UNIQUE index.")
-                    except Exception as drop_err:
-                        print(f"Notice: Could not drop old roll_number index: {drop_err}")
+                        s_existing.add(col_name.lower())
+                        report["migrated"].append(f"students.{col_name}")
+                    except Exception as err:
+                        report["errors"].append(f"students.{col_name}: {err}")
 
-                # Drop old composite UNIQUE constraint (academic_year, course, roll_number) if present
-                if 'uq_academic_course_roll' in index_names:
-                    print("Migrating database: Dropping redundant UNIQUE constraint uq_academic_course_roll...")
-                    try:
-                        conn.execute(db.text("ALTER TABLE students DROP INDEX uq_academic_course_roll"))
-                        conn.commit()
-                        print("SUCCESS: Dropped old uq_academic_course_roll UNIQUE constraint.")
-                    except Exception as drop_err:
-                        print(f"Notice: Could not drop uq_academic_course_roll: {drop_err}")
+            # Index migrations for students
+            try:
+                res_idx = conn.execute(db.text("SHOW INDEX FROM students")).fetchall()
+                idx_names = {str(r[2]) for r in res_idx if len(r) > 2}
+            except Exception:
+                idx_names = set()
 
-                # Add composite UNIQUE constraint (academic_year, course, semester, roll_number) if not present
-                if 'uq_academic_course_sem_roll' not in index_names:
-                    print("Migrating database: Adding composite UNIQUE constraint uq_academic_course_sem_roll...")
-                    try:
-                        conn.execute(db.text("ALTER TABLE students ADD CONSTRAINT uq_academic_course_sem_roll UNIQUE (academic_year, course, semester, roll_number)"))
-                        conn.commit()
-                        print("SUCCESS: Added composite UNIQUE constraint uq_academic_course_sem_roll.")
-                    except Exception as add_err:
-                        print(f"Notice: Could not add uq_academic_course_sem_roll: {add_err}")
-
-        if 'academic_settings' in actual_tables:
-            acad_cols = [c['name'] for c in inspector_after.get_columns('academic_settings')]
-            if 'students_per_division' not in acad_cols:
-                print("Migrating database: Adding missing 'students_per_division' column to 'academic_settings' table...")
-                with db.engine.connect() as conn:
-                    conn.execute(db.text("ALTER TABLE academic_settings ADD COLUMN students_per_division INT NOT NULL DEFAULT 70"))
-                    conn.commit()
-                print("SUCCESS: Added 'students_per_division' column to 'academic_settings'.")
-
-        if 'college_settings' in actual_tables:
-            columns = [c['name'] for c in inspector_after.get_columns('college_settings')]
-            if 'college_type' not in columns:
-                print("Migrating database: Adding missing 'college_type' column to 'college_settings' table...")
-                with db.engine.connect() as conn:
-                    conn.execute(db.text("ALTER TABLE college_settings ADD COLUMN college_type VARCHAR(50) NULL DEFAULT 'BCA'"))
-                    conn.commit()
-                print("SUCCESS: Added 'college_type' column to 'college_settings'.")
-
-        if 'subjects' in actual_tables:
-            subj_cols = [c['name'] for c in inspector_after.get_columns('subjects')]
-            if 'internal_marks' not in subj_cols:
-                print("Migrating database: Adding missing exam marks columns to 'subjects' table...")
-                with db.engine.connect() as conn:
-                    conn.execute(db.text("ALTER TABLE subjects ADD COLUMN internal_marks INT NOT NULL DEFAULT 30, ADD COLUMN external_marks INT NOT NULL DEFAULT 70, ADD COLUMN total_marks INT NOT NULL DEFAULT 100"))
-                    conn.commit()
-                print("SUCCESS: Added exam marks columns to 'subjects'.")
-            if 'component_config' not in subj_cols:
-                print("Migrating database: Adding missing 'component_config' column to 'subjects' table...")
-                with db.engine.connect() as conn:
-                    conn.execute(db.text("ALTER TABLE subjects ADD COLUMN component_config TEXT NULL"))
-                    conn.commit()
-                print("SUCCESS: Added 'component_config' column to 'subjects'.")
-
-        if 'internal_marks' in actual_tables:
-            im_cols = [c['name'] for c in inspector_after.get_columns('internal_marks')]
-            needed_cols = [
-                ('test1', 'FLOAT NULL'), ('test2', 'FLOAT NULL'), ('test3', 'FLOAT NULL'),
-                ('internal_exam', 'FLOAT NULL'),
-                ('active_learning', 'FLOAT NULL'), ('class_assignment', 'FLOAT NULL'), ('home_assignment', 'FLOAT NULL'),
-                ('attendance', 'FLOAT NULL'), ('practical_eval', 'FLOAT NULL'), ('viva', 'FLOAT NULL'),
-                ('journal', 'FLOAT NULL'), ('component_data', 'TEXT NULL')
-            ]
-            missing_cols = [col for col in needed_cols if col[0] not in im_cols]
-            if missing_cols:
-                print("Migrating database: Adding missing component columns to 'internal_marks' table...")
-                with db.engine.connect() as conn:
-                    for col_name, col_type in missing_cols:
-                        try:
-                            conn.execute(db.text(f"ALTER TABLE internal_marks ADD COLUMN {col_name} {col_type}"))
-                            conn.commit()
-                        except Exception as col_err:
-                            print(f"Notice: Could not add column {col_name}: {col_err}")
-                print("SUCCESS: Component columns verified/added in 'internal_marks'.")
-
-            # Automatically drop legacy unused quiz columns if present in database
-            legacy_quiz_cols = [c for c in ['quiz1', 'quiz2', 'quiz3', 'quiz4'] if c in im_cols]
-            if legacy_quiz_cols:
-                print(f"Migrating database: Dropping legacy unused quiz columns from 'internal_marks': {legacy_quiz_cols}...")
-                with db.engine.connect() as conn:
-                    for col_name in legacy_quiz_cols:
-                        try:
-                            conn.execute(db.text(f"ALTER TABLE internal_marks DROP COLUMN {col_name}"))
-                            conn.commit()
-                        except Exception as drop_err:
-                            print(f"Notice: Could not drop column {col_name}: {drop_err}")
-                print("SUCCESS: Removed legacy quiz columns from 'internal_marks'.")
-
-        # Migrate reset_otp and otp_expiry for Password Reset Feature
-        for tbl_name in ['students', 'faculty', 'admins']:
-            if tbl_name in actual_tables:
-                t_cols = [c['name'] for c in inspector_after.get_columns(tbl_name)]
-                with db.engine.connect() as conn:
-                    if 'reset_otp' not in t_cols:
-                        try:
-                            conn.execute(db.text(f"ALTER TABLE {tbl_name} ADD COLUMN reset_otp VARCHAR(255) NULL"))
-                            conn.commit()
-                            print(f"SUCCESS: Added 'reset_otp' column to '{tbl_name}'.")
-                        except Exception as e:
-                            print(f"Notice: Could not add reset_otp to {tbl_name}: {e}")
-                    if 'otp_expiry' not in t_cols:
-                        try:
-                            conn.execute(db.text(f"ALTER TABLE {tbl_name} ADD COLUMN otp_expiry DATETIME NULL"))
-                            conn.commit()
-                            print(f"SUCCESS: Added 'otp_expiry' column to '{tbl_name}'.")
-                        except Exception as e:
-                            print(f"Notice: Could not add otp_expiry to {tbl_name}: {e}")
-                    if 'otp_attempts' not in t_cols:
-                        try:
-                            conn.execute(db.text(f"ALTER TABLE {tbl_name} ADD COLUMN otp_attempts INT NOT NULL DEFAULT 0"))
-                            conn.commit()
-                            print(f"SUCCESS: Added 'otp_attempts' column to '{tbl_name}'.")
-                        except Exception as e:
-                            print(f"Notice: Could not add otp_attempts to {tbl_name}: {e}")
-                    if 'otp_blocked_until' not in t_cols:
-                        try:
-                            conn.execute(db.text(f"ALTER TABLE {tbl_name} ADD COLUMN otp_blocked_until DATETIME NULL"))
-                            conn.commit()
-                            print(f"SUCCESS: Added 'otp_blocked_until' column to '{tbl_name}'.")
-                        except Exception as e:
-                            print(f"Notice: Could not add otp_blocked_until to {tbl_name}: {e}")
-
-        # Migrate all columns for notifications table
-        if 'notifications' in actual_tables:
-            notif_cols = [c['name'] for c in inspector_after.get_columns('notifications')]
-            notif_new_cols = [
-                ('category', "VARCHAR(50) NOT NULL DEFAULT 'General'"),
-                ('photo_file', "VARCHAR(255) NULL"),
-                ('file_type', "VARCHAR(20) NULL"),
-                ('start_date', "DATETIME NULL"),
-                ('end_date', "DATETIME NULL"),
-                ('posted_by_role', "ENUM('Admin','Faculty') NOT NULL DEFAULT 'Admin'"),
-                ('admin_id', "INT NULL"),
-                ('faculty_id', "INT NULL"),
-                ('target_audience', "ENUM('All','Guest','Faculty','Student') NOT NULL DEFAULT 'All'"),
-                ('target_semester', "SMALLINT NULL"),
-                ('target_division', "VARCHAR(10) NULL DEFAULT 'All'"),
-                ('subject_id', "INT NULL"),
-                ('target_student_id', "INT NULL"),
-                ('priority', "ENUM('Normal','Important','Urgent') NOT NULL DEFAULT 'Normal'"),
-                ('is_active', "TINYINT(1) NOT NULL DEFAULT 1"),
-                ('is_final_saved', "TINYINT(1) NOT NULL DEFAULT 0"),
-                ('final_saved_at', "DATETIME NULL"),
-                ('final_saved_by', "INT NULL")
-            ]
-            with db.engine.connect() as conn:
-                for col_name, col_def in notif_new_cols:
-                    if col_name not in notif_cols:
-                        try:
-                            conn.execute(db.text(f"ALTER TABLE notifications ADD COLUMN {col_name} {col_def}"))
-                            conn.commit()
-                            print(f"SUCCESS: Added '{col_name}' column to 'notifications'.")
-                        except Exception as e:
-                            print(f"Notice: Could not add {col_name} to notifications: {e}")
-
+            if 'roll_number' in idx_names:
                 try:
-                    conn.execute(db.text("ALTER TABLE notifications CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"))
+                    conn.execute(db.text("ALTER TABLE students DROP INDEX roll_number"))
                     conn.commit()
                 except Exception:
                     pass
 
-        # Migrate college_settings Campus Geofencing & College Timing Columns
-        if 'college_settings' in actual_tables:
-            cs_cols = [c['name'] for c in inspector_after.get_columns('college_settings')]
-            cs_new_cols = [
+            if 'uq_academic_course_roll' in idx_names:
+                try:
+                    conn.execute(db.text("ALTER TABLE students DROP INDEX uq_academic_course_roll"))
+                    conn.commit()
+                except Exception:
+                    pass
+
+            if 'uq_academic_course_sem_roll' not in idx_names:
+                try:
+                    conn.execute(db.text("ALTER TABLE students ADD CONSTRAINT uq_academic_course_sem_roll UNIQUE (academic_year, course, semester, roll_number)"))
+                    conn.commit()
+                except Exception:
+                    pass
+    except Exception as e:
+        report["errors"].append(f"students_table: {e}")
+
+    # 4. Default Administrator auto-seed
+    try:
+        if Admin.query.first() is None:
+            from werkzeug.security import generate_password_hash
+            default_admin = Admin(
+                username='admin',
+                password=generate_password_hash('admin'),
+                full_name='System Administrator',
+                email='admin@campussync.edu',
+                status='Active'
+            )
+            db.session.add(default_admin)
+            db.session.commit()
+            report["migrated"].append("default_admin_seeded")
+    except Exception as e:
+        db.session.rollback()
+        report["errors"].append(f"admin_autoseed: {e}")
+
+    # 5. academic_settings table
+    try:
+        with db.engine.connect() as conn:
+            existing = set()
+            try:
+                res = conn.execute(db.text("SHOW COLUMNS FROM academic_settings")).fetchall()
+                existing = {str(r[0]).lower() for r in res}
+            except Exception:
+                pass
+            if 'students_per_division' not in existing:
+                try:
+                    conn.execute(db.text("ALTER TABLE academic_settings ADD COLUMN students_per_division INT NOT NULL DEFAULT 70"))
+                    conn.commit()
+                    report["migrated"].append("academic_settings.students_per_division")
+                except Exception as err:
+                    report["errors"].append(f"academic_settings: {err}")
+    except Exception as e:
+        report["errors"].append(f"academic_settings_block: {e}")
+
+    # 6. college_settings table
+    try:
+        with db.engine.connect() as conn:
+            existing = set()
+            try:
+                res = conn.execute(db.text("SHOW COLUMNS FROM college_settings")).fetchall()
+                existing = {str(r[0]).lower() for r in res}
+            except Exception:
+                pass
+
+            cs_cols = [
+                ('college_type', "VARCHAR(50) NULL DEFAULT 'BCA'"),
                 ('campus_latitude', 'DECIMAL(10,8) DEFAULT 24.15953750'),
                 ('campus_longitude', 'DECIMAL(11,8) DEFAULT 72.40295313'),
                 ('campus_radius_meters', 'INT DEFAULT 800'),
@@ -428,20 +334,142 @@ with app.app_context():
                 ('college_start_time', "VARCHAR(10) DEFAULT '10:00'"),
                 ('college_end_time', "VARCHAR(10) DEFAULT '17:00'")
             ]
-            with db.engine.connect() as conn:
-                for col_name, col_def in cs_new_cols:
-                    if col_name not in cs_cols:
-                        try:
-                            conn.execute(db.text(f"ALTER TABLE college_settings ADD COLUMN {col_name} {col_def}"))
-                            conn.commit()
-                            print(f"SUCCESS: Added '{col_name}' to 'college_settings'.")
-                        except Exception as e:
-                            print(f"Notice: Could not add {col_name} to college_settings: {e}")
+            for col_name, col_def in cs_cols:
+                if col_name.lower() not in existing:
+                    try:
+                        conn.execute(db.text(f"ALTER TABLE college_settings ADD COLUMN {col_name} {col_def}"))
+                        conn.commit()
+                        existing.add(col_name.lower())
+                        report["migrated"].append(f"college_settings.{col_name}")
+                    except Exception as err:
+                        report["errors"].append(f"college_settings.{col_name}: {err}")
+    except Exception as e:
+        report["errors"].append(f"college_settings_block: {e}")
 
-        # Migrate lecture_attendance_sessions QR Attendance Columns
-        if 'lecture_attendance_sessions' in actual_tables:
-            las_cols = [c['name'] for c in inspector_after.get_columns('lecture_attendance_sessions')]
-            las_new_cols = [
+    # 7. subjects table
+    try:
+        with db.engine.connect() as conn:
+            existing = set()
+            try:
+                res = conn.execute(db.text("SHOW COLUMNS FROM subjects")).fetchall()
+                existing = {str(r[0]).lower() for r in res}
+            except Exception:
+                pass
+
+            subj_cols = [
+                ('internal_marks', 'INT NOT NULL DEFAULT 30'),
+                ('external_marks', 'INT NOT NULL DEFAULT 70'),
+                ('total_marks', 'INT NOT NULL DEFAULT 100'),
+                ('component_config', 'TEXT NULL')
+            ]
+            for col_name, col_def in subj_cols:
+                if col_name.lower() not in existing:
+                    try:
+                        conn.execute(db.text(f"ALTER TABLE subjects ADD COLUMN {col_name} {col_def}"))
+                        conn.commit()
+                        existing.add(col_name.lower())
+                        report["migrated"].append(f"subjects.{col_name}")
+                    except Exception as err:
+                        report["errors"].append(f"subjects.{col_name}: {err}")
+    except Exception as e:
+        report["errors"].append(f"subjects_block: {e}")
+
+    # 8. internal_marks table
+    try:
+        with db.engine.connect() as conn:
+            existing = set()
+            try:
+                res = conn.execute(db.text("SHOW COLUMNS FROM internal_marks")).fetchall()
+                existing = {str(r[0]).lower() for r in res}
+            except Exception:
+                pass
+
+            needed_cols = [
+                ('test1', 'FLOAT NULL'), ('test2', 'FLOAT NULL'), ('test3', 'FLOAT NULL'),
+                ('internal_exam', 'FLOAT NULL'),
+                ('active_learning', 'FLOAT NULL'), ('class_assignment', 'FLOAT NULL'), ('home_assignment', 'FLOAT NULL'),
+                ('attendance', 'FLOAT NULL'), ('practical_eval', 'FLOAT NULL'), ('viva', 'FLOAT NULL'),
+                ('journal', 'FLOAT NULL'), ('component_data', 'TEXT NULL')
+            ]
+            for col_name, col_def in needed_cols:
+                if col_name.lower() not in existing:
+                    try:
+                        conn.execute(db.text(f"ALTER TABLE internal_marks ADD COLUMN {col_name} {col_def}"))
+                        conn.commit()
+                        existing.add(col_name.lower())
+                        report["migrated"].append(f"internal_marks.{col_name}")
+                    except Exception as err:
+                        report["errors"].append(f"internal_marks.{col_name}: {err}")
+
+            for q in ['quiz1', 'quiz2', 'quiz3', 'quiz4']:
+                if q in existing:
+                    try:
+                        conn.execute(db.text(f"ALTER TABLE internal_marks DROP COLUMN {q}"))
+                        conn.commit()
+                    except Exception:
+                        pass
+    except Exception as e:
+        report["errors"].append(f"internal_marks_block: {e}")
+
+    # 9. Password reset OTP columns for students, faculty, admins
+    for tbl_name in ['students', 'faculty', 'admins']:
+        try:
+            with db.engine.connect() as conn:
+                existing = set()
+                try:
+                    res = conn.execute(db.text(f"SHOW COLUMNS FROM {tbl_name}")).fetchall()
+                    existing = {str(r[0]).lower() for r in res}
+                except Exception:
+                    continue
+
+                otp_cols = [
+                    ('reset_otp', 'VARCHAR(255) NULL'),
+                    ('otp_expiry', 'DATETIME NULL'),
+                    ('otp_attempts', 'INT NOT NULL DEFAULT 0'),
+                    ('otp_blocked_until', 'DATETIME NULL')
+                ]
+                for col_name, col_def in otp_cols:
+                    if col_name.lower() not in existing:
+                        try:
+                            conn.execute(db.text(f"ALTER TABLE {tbl_name} ADD COLUMN {col_name} {col_def}"))
+                            conn.commit()
+                            existing.add(col_name.lower())
+                            report["migrated"].append(f"{tbl_name}.{col_name}")
+                        except Exception as err:
+                            report["errors"].append(f"{tbl_name}.{col_name}: {err}")
+        except Exception as e:
+            report["errors"].append(f"otp_{tbl_name}: {e}")
+
+    # 10. gallery_items views_count
+    try:
+        with db.engine.connect() as conn:
+            existing = set()
+            try:
+                res = conn.execute(db.text("SHOW COLUMNS FROM gallery_items")).fetchall()
+                existing = {str(r[0]).lower() for r in res}
+            except Exception:
+                pass
+            if 'views_count' not in existing:
+                try:
+                    conn.execute(db.text("ALTER TABLE gallery_items ADD COLUMN views_count INT NOT NULL DEFAULT 0"))
+                    conn.commit()
+                    report["migrated"].append("gallery_items.views_count")
+                except Exception as err:
+                    report["errors"].append(f"gallery_items: {err}")
+    except Exception as e:
+        report["errors"].append(f"gallery_items_block: {e}")
+
+    # 11. lecture_attendance_sessions
+    try:
+        with db.engine.connect() as conn:
+            existing = set()
+            try:
+                res = conn.execute(db.text("SHOW COLUMNS FROM lecture_attendance_sessions")).fetchall()
+                existing = {str(r[0]).lower() for r in res}
+            except Exception:
+                pass
+
+            las_cols = [
                 ('attendance_mode', "VARCHAR(20) DEFAULT 'Manual'"),
                 ('qr_session_token', 'VARCHAR(255) NULL'),
                 ('qr_session_expires_at', 'DATETIME NULL'),
@@ -450,20 +478,29 @@ with app.app_context():
                 ('start_time', 'VARCHAR(10) NULL'),
                 ('end_time', 'VARCHAR(10) NULL')
             ]
-            with db.engine.connect() as conn:
-                for col_name, col_def in las_new_cols:
-                    if col_name not in las_cols:
-                        try:
-                            conn.execute(db.text(f"ALTER TABLE lecture_attendance_sessions ADD COLUMN {col_name} {col_def}"))
-                            conn.commit()
-                            print(f"SUCCESS: Added '{col_name}' to 'lecture_attendance_sessions'.")
-                        except Exception as e:
-                            print(f"Notice: Could not add {col_name} to lecture_attendance_sessions: {e}")
+            for col_name, col_def in las_cols:
+                if col_name.lower() not in existing:
+                    try:
+                        conn.execute(db.text(f"ALTER TABLE lecture_attendance_sessions ADD COLUMN {col_name} {col_def}"))
+                        conn.commit()
+                        existing.add(col_name.lower())
+                        report["migrated"].append(f"lecture_attendance_sessions.{col_name}")
+                    except Exception as err:
+                        report["errors"].append(f"lecture_attendance_sessions.{col_name}: {err}")
+    except Exception as e:
+        report["errors"].append(f"lecture_attendance_sessions_block: {e}")
 
-        # Migrate lecture_attendance_students QR Scanned & Geolocation Columns
-        if 'lecture_attendance_students' in actual_tables:
-            lat_cols = [c['name'] for c in inspector_after.get_columns('lecture_attendance_students')]
-            lat_new_cols = [
+    # 12. lecture_attendance_students
+    try:
+        with db.engine.connect() as conn:
+            existing = set()
+            try:
+                res = conn.execute(db.text("SHOW COLUMNS FROM lecture_attendance_students")).fetchall()
+                existing = {str(r[0]).lower() for r in res}
+            except Exception:
+                pass
+
+            lat_cols = [
                 ('marked_method', "VARCHAR(30) DEFAULT 'MANUAL'"),
                 ('scanned_at', 'DATETIME NULL'),
                 ('device_fingerprint', 'VARCHAR(500) NULL'),
@@ -472,115 +509,92 @@ with app.app_context():
                 ('distance_meters', 'FLOAT NULL'),
                 ('is_verified', 'TINYINT(1) DEFAULT 1')
             ]
-            with db.engine.connect() as conn:
-                for col_name, col_def in lat_new_cols:
-                    if col_name not in lat_cols:
-                        try:
-                            conn.execute(db.text(f"ALTER TABLE lecture_attendance_students ADD COLUMN {col_name} {col_def}"))
-                            conn.commit()
-                            print(f"SUCCESS: Added '{col_name}' to 'lecture_attendance_students'.")
-                        except Exception as e:
-                            print(f"Notice: Could not add {col_name} to lecture_attendance_students: {e}")
-
-        # Ensure attendance_security_alerts table exists
-        with db.engine.connect() as conn:
-            try:
-                conn.execute(db.text("""
-                    CREATE TABLE IF NOT EXISTS attendance_security_alerts (
-                        id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-                        session_id INT NOT NULL,
-                        student_id INT NOT NULL,
-                        attempted_roll VARCHAR(20) NULL,
-                        device_fingerprint VARCHAR(500) NULL,
-                        conflicting_student_id INT NULL,
-                        alert_type ENUM('DUPLICATE_DEVICE','OUT_OF_GEOFENCE','EXPIRED_TOKEN','UNBOUND_DEVICE') NOT NULL,
-                        alert_message TEXT NULL,
-                        scan_latitude DECIMAL(10,8) NULL,
-                        scan_longitude DECIMAL(11,8) NULL,
-                        distance_meters FLOAT NULL,
-                        faculty_action ENUM('PENDING','APPROVED','REJECTED') DEFAULT 'PENDING',
-                        resolved_by_faculty_id INT NULL,
-                        created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-                    )
-                """))
-                conn.commit()
-            except Exception as e:
-                print(f"Notice: Could not ensure attendance_security_alerts table: {e}")
-
-            # Ensure notification_reads table exists
-            try:
-                conn.execute(db.text("""
-                    CREATE TABLE IF NOT EXISTS notification_reads (
-                        id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-                        notification_id INT NOT NULL,
-                        user_role ENUM('Admin', 'Faculty', 'Student') NOT NULL,
-                        user_id INT NOT NULL,
-                        read_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
-                        UNIQUE KEY uq_notification_user_read (notification_id, user_role, user_id),
-                        KEY idx_user_role_id (user_role, user_id)
-                    )
-                """))
-                conn.commit()
-                print("SUCCESS: Ensured 'notification_reads' table in MySQL.")
-            except Exception as e:
-                print(f"Notice: Could not ensure notification_reads table: {e}")
-
-        # Ensure default official public notices exist for Homepage bulletin board & student portal
-        try:
-            from models import Notification
-            pub_count = Notification.query.filter(
-                Notification.target_audience.in_(['Guest', 'All']),
-                Notification.is_active == True
-            ).count()
-            if pub_count < 2:
-                seed_notices = [
-                    Notification(
-                        title="Admissions Open for Academic Year 2026-27",
-                        message="Applications are now open for BCA, B.Sc. IT, and Diploma programs for the academic year 2026-27. Prospective students can submit their online registration via the admissions portal.",
-                        category="Academic",
-                        target_audience="All",
-                        target_semester=None,
-                        target_division="All",
-                        posted_by_role="Admin",
-                        priority="Important",
-                        is_active=True
-                    ),
-                    Notification(
-                        title="Official Examination Guidelines & Schedule Published",
-                        message="All semester students are hereby informed that the upcoming internal assessment and semester exam schedule has been released. Please check your respective course timetable.",
-                        category="Exam",
-                        target_audience="All",
-                        target_semester=None,
-                        target_division="All",
-                        posted_by_role="Admin",
-                        priority="Normal",
-                        is_active=True
-                    ),
-                    Notification(
-                        title="Smart Multimedia Classrooms & Campus Wi-Fi Operational",
-                        message="CampusSync digital classrooms and campus-wide high-speed Wi-Fi infrastructure are now fully operational. Students and faculty may connect using their portal credentials.",
-                        category="General",
-                        target_audience="All",
-                        target_semester=None,
-                        target_division="All",
-                        posted_by_role="Admin",
-                        priority="Normal",
-                        is_active=True
-                    )
-                ]
-                db.session.add_all(seed_notices)
-                db.session.commit()
-                print("SUCCESS: Seeded default official campus announcements for Homepage & Student Portal.")
-        except Exception as seed_err:
-            db.session.rollback()
-            print(f"Notice: Could not seed default public notices: {seed_err}")
-
+            for col_name, col_def in lat_cols:
+                if col_name.lower() not in existing:
+                    try:
+                        conn.execute(db.text(f"ALTER TABLE lecture_attendance_students ADD COLUMN {col_name} {col_def}"))
+                        conn.commit()
+                        existing.add(col_name.lower())
+                        report["migrated"].append(f"lecture_attendance_students.{col_name}")
+                    except Exception as err:
+                        report["errors"].append(f"lecture_attendance_students.{col_name}: {err}")
     except Exception as e:
-        print("--------------------------------------------------")
-        print("SQLAlchemy Table Creation ERROR (FULL TRACEBACK):")
+        report["errors"].append(f"lecture_attendance_students_block: {e}")
+
+    # 13. Default official public notices auto-seed
+    try:
+        from models import Notification
+        pub_count = Notification.query.filter(
+            Notification.target_audience.in_(['Guest', 'All']),
+            Notification.is_active == True
+        ).count()
+        if pub_count < 2:
+            seed_notices = [
+                Notification(
+                    title="Admissions Open for Academic Year 2026-27",
+                    message="Applications are now open for BCA, B.Sc. IT, and Diploma programs for the academic year 2026-27. Prospective students can submit their online registration via the admissions portal.",
+                    category="Academic",
+                    target_audience="All",
+                    target_semester=None,
+                    target_division="All",
+                    posted_by_role="Admin",
+                    priority="Important",
+                    is_active=True
+                ),
+                Notification(
+                    title="Official Examination Guidelines & Schedule Published",
+                    message="All semester students are hereby informed that the upcoming internal assessment and semester exam schedule has been released. Please check your respective course timetable.",
+                    category="Exam",
+                    target_audience="All",
+                    target_semester=None,
+                    target_division="All",
+                    posted_by_role="Admin",
+                    priority="Normal",
+                    is_active=True
+                ),
+                Notification(
+                    title="Smart Multimedia Classrooms & Campus Wi-Fi Operational",
+                    message="CampusSync digital classrooms and campus-wide high-speed Wi-Fi infrastructure are now fully operational. Students and faculty may connect using their portal credentials.",
+                    category="General",
+                    target_audience="All",
+                    target_semester=None,
+                    target_division="All",
+                    posted_by_role="Admin",
+                    priority="Normal",
+                    is_active=True
+                )
+            ]
+            db.session.add_all(seed_notices)
+            db.session.commit()
+            report["migrated"].append("default_notices_seeded")
+    except Exception as e:
+        db.session.rollback()
+        report["errors"].append(f"default_notices_seed: {e}")
+
+    return report
+
+
+# Run schema migration during application startup
+with app.app_context():
+    try:
+        migration_results = run_all_database_migrations()
+        print(f"DATABASE MIGRATION SUMMARY: Migrated={len(migration_results['migrated'])}, Errors={len(migration_results['errors'])}")
+    except Exception as e:
+        print(f"Database migration top-level error: {e}")
         traceback.print_exc()
-        print("--------------------------------------------------")
+
+# Dedicated endpoint to trigger/verify database migrations anytime
+@app.route('/system/migrate-db', methods=['GET', 'POST'])
+def trigger_database_migration():
+    """Manual or automated endpoint to run database migrations on Railway."""
+    res = run_all_database_migrations()
+    return {
+        "status": "success",
+        "migrated_count": len(res["migrated"]),
+        "migrated_items": res["migrated"],
+        "error_count": len(res["errors"]),
+        "errors": res["errors"]
+    }
 
 # Test Database Connection on server startup
 print("--------------------------------------------------")

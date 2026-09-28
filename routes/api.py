@@ -847,3 +847,24 @@ def api_mark_notification_read():
         db.session.rollback()
         return jsonify({"success": False, "message": str(e)}), 500
 
+
+# ------------------------------------------------------------------------------
+# System: Database Schema Migration Endpoint
+# ------------------------------------------------------------------------------
+@api_bp.route('/system/migrate-db', methods=['GET', 'POST'])
+def api_migrate_db():
+    """Manual or automated endpoint to run database migrations on Railway."""
+    try:
+        from app import run_all_database_migrations
+        res = run_all_database_migrations()
+        return jsonify({
+            "success": True,
+            "migrated_count": len(res.get("migrated", [])),
+            "migrated_items": res.get("migrated", []),
+            "error_count": len(res.get("errors", [])),
+            "errors": res.get("errors", [])
+        }), 200
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
