@@ -364,17 +364,24 @@
 <script>
 // Target Audience Radio Tab Selection Logic
 document.querySelectorAll('#audienceGroup .audience-tab-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-        document.querySelectorAll('#audienceGroup .audience-tab-btn').forEach(b => b.classList.remove('active'));
-        this.classList.add('active');
-        const radio = this.querySelector('input[type="radio"]');
-        radio.checked = true;
+    const radio = btn.querySelector('input[type="radio"]');
+    if (!radio) return;
 
+    function updateTabState() {
+        document.querySelectorAll('#audienceGroup .audience-tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
         const semBox = document.getElementById('semesterSelectorBox');
-        if (radio.value === 'Student') {
-            semBox.style.display = 'block';
-        } else {
-            semBox.style.display = 'none';
+        if (semBox) {
+            semBox.style.display = radio.value === 'Student' ? 'block' : 'none';
+        }
+    }
+
+    radio.addEventListener('change', updateTabState);
+
+    btn.addEventListener('click', function(e) {
+        if (e.target !== radio) {
+            radio.checked = true;
+            updateTabState();
         }
     });
 });

@@ -66,6 +66,9 @@ class Config:
     MAIL_PASSWORD = os.getenv('MAIL_PASSWORD', 'kjdu cius cygw nhyl')
     MAIL_DEFAULT_SENDER = os.getenv('MAIL_DEFAULT_SENDER', 'devidparmar8954@gmail.com')
 
+    # Brevo REST API Configuration (Bypasses SMTP port blocking on Railway / Cloud hosting)
+    BREVO_API_KEY = os.getenv('BREVO_API_KEY', '')
+
     # Flask-Compress Optimization
     COMPRESS_MIMETYPES = [
         'text/html', 'text/css', 'text/xml', 'application/json',

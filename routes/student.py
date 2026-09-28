@@ -69,7 +69,6 @@ def student_login():
                 return redirect(url_for('student_login'))
 
             # Verified student: DO NOT bind this foreign phone! Keep device_fingerprint as NULL
-            session.clear()
             session.permanent = True
             session["student_id"] = student.id
             session["user_role"] = "student"
@@ -122,7 +121,6 @@ def student_login():
                     db.session.commit()
 
         # 4. Standard clean login
-        session.clear()
         session.permanent = True
         session["student_id"] = student.id
         session["user_role"] = "student"
@@ -271,11 +269,13 @@ def student_dashboard():
 def student_logout():
     """
     Handles Student Logout:
-    - Clears session.
+    - Clears student session keys.
     - Redirects back to Student Login page.
     """
     session.pop("student_id", None)
-    session.clear()
+    if session.get("user_role") == "student":
+        session.pop("user_role", None)
+    session.pop("device_conflict_notice", None)
     return redirect(url_for('student_login'))
 
 
@@ -761,7 +761,13 @@ def student_notices():
         return redirect(url_for('student_login'))
 
     selected_category = request.args.get('category', 'All').strip()
-    from services.notification_service import get_student_notices, calculate_deadline_info
+    from services.notification_service import get_student_notices, calculate_deadline_info, mark_all_notifications_as_read
+
+    try:
+        mark_all_notifications_as_read('Student', student.id)
+    except Exception:
+        pass
+
     notices = get_student_notices(student, category=selected_category)
     for n in notices:
         n.deadline_info = calculate_deadline_info(n)

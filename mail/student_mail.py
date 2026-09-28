@@ -156,9 +156,29 @@ This is an automated email. Please do not reply.
                 )
 
 
-        # 7. Dispatch email via SMTP server
+        # 7. Dispatch email via Brevo REST API (HTTPS Port 443) or fallback to SMTP
+        from mail.brevo_service import is_brevo_configured, send_brevo_email
+        if is_brevo_configured():
+            logger.info(f"[Email Dispatch] Sending welcome email to {recipient_email} via Brevo HTTPS API...")
+            success, info = send_brevo_email(
+                to_email=recipient_email,
+                subject=subject,
+                html_content=html_body,
+                to_name=student_name,
+                text_content=text_body,
+                sender_email=sender,
+                sender_name=college_name,
+                logo_path=logo_path
+            )
+            if success:
+                logger.info(f"SUCCESS: Welcome email delivered via Brevo to {recipient_email} (MsgID: {info})")
+                return True
+            else:
+                logger.warning(f"[Brevo Fallback] Brevo dispatch failed: {info}. Falling back to standard SMTP...")
+
+        # Dispatch email via SMTP server
         mail.send(msg)
-        logger.info(f"SUCCESS: Welcome email sent to {recipient_email} (Enrollment: {enrollment_number})")
+        logger.info(f"SUCCESS: Welcome email sent to {recipient_email} (Enrollment: {enrollment_number}) via SMTP")
         return True
 
     except Exception as e:

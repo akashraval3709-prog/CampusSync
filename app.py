@@ -36,20 +36,27 @@ db.init_app(app)
 mail.init_app(app)
 
 # High-Performance Compression: automatically compress HTML, CSS, JS, and JSON via Gzip/Brotli
-from flask_compress import Compress
-Compress(app)
+try:
+    from flask_compress import Compress
+    Compress(app)
+except ImportError:
+    pass
 
 # ------------------------------------------------------------------------------
 # Security: Enforce HTTPS in Production Deployments
 # ------------------------------------------------------------------------------
 @app.before_request
 def enforce_https():
-    """Redirect plain HTTP requests to HTTPS on production deployments."""
-    if not app.debug:
-        proto = request.headers.get('X-Forwarded-Proto', request.scheme)
-        if proto == 'http':
-            url = request.url.replace('http://', 'https://', 1)
-            return redirect(url, code=301)
+    """Redirect plain HTTP requests to HTTPS on production deployments only."""
+    # Never enforce HTTPS on localhost, 127.0.0.1, or local area network IPs
+    host = request.host.split(':')[0].lower()
+    if host in ('localhost', '127.0.0.1', '0.0.0.0') or host.startswith('192.168.') or host.startswith('10.') or host.endswith('.local'):
+        return
+
+    proto = request.headers.get('X-Forwarded-Proto', request.scheme)
+    if proto == 'http':
+        url = request.url.replace('http://', 'https://', 1)
+        return redirect(url, code=301)
 
 
 # ------------------------------------------------------------------------------
@@ -149,7 +156,7 @@ with app.app_context():
     from models import (
         Admin, Student, CollegeSetting, AcademicSetting, Subject, EmailLog,
         Faculty, FacultySubjectAssignment, InternalMark, AttendanceRecord,
-        ArchivedStudent, ArchivedInternalMark, ArchivedStudentOTP, Notification,
+        ArchivedStudent, ArchivedInternalMark, ArchivedStudentOTP, Notification, NotificationRead,
         AssignmentSubmission, GalleryItem, HomePageSetting, ResultDeclaration,
         LectureAttendanceSession, LectureAttendanceStudent, AttendanceSecurityAlert
     )
@@ -415,7 +422,73 @@ def global_serve_uploads(filename):
             alt = os.path.join(uploads_dir, 'student', filename[len('students/'):])
             if os.path.exists(alt):
                 return send_from_directory(os.path.join(uploads_dir, 'student'), filename[len('students/'):])
-    return send_from_directory(uploads_dir, filename)
+# ------------------------------------------------------------------------------
+# Test Email Route (Brevo API Production Verification)
+# ------------------------------------------------------------------------------
+@app.route('/test-email')
+@app.route('/test-mail')
+def test_email_route():
+    """
+    Direct browser test endpoint to verify Brevo HTTPS API email delivery on Railway.
+    Usage: /test-email or /test-email?to=your_email@gmail.com
+    """
+    to_email = request.args.get('to', app.config.get('MAIL_DEFAULT_SENDER', 'devidparmar8954@gmail.com'))
+    from mail.brevo_service import is_brevo_configured, send_brevo_email
+    brevo_active = is_brevo_configured()
+    
+    html = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
+        <h2 style="color: #2563eb; margin-top: 0;">🎉 CampusSync - Brevo Email Test Successful!</h2>
+        <p style="font-size: 15px; color: #334155;">This is a live test email sent directly from <strong>CampusSync ERP on Railway</strong>.</p>
+        <div style="background: #f8fafc; padding: 14px; border-radius: 8px; border: 1px solid #e2e8f0; margin: 16px 0;">
+            <p style="margin: 4px 0;"><strong>Brevo API Status:</strong> <span style="color: #16a34a; font-weight: bold;">ACTIVE (Port 443 HTTPS)</span></p>
+            <p style="margin: 4px 0;"><strong>Timestamp:</strong> {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}</p>
+            <p style="margin: 4px 0;"><strong>Delivered To:</strong> {to_email}</p>
+        </div>
+        <p style="color: #64748b; font-size: 13px; margin-bottom: 0;">If you see this in your inbox, your email delivery system is working 100% on Railway!</p>
+    </div>
+    """
+    
+    if brevo_active:
+        success, info = send_brevo_email(
+            to_email=to_email,
+            subject="CampusSync - Brevo Email Test Successful",
+            html_content=html,
+            to_name="CampusSync Admin",
+            text_content="CampusSync live email test via Brevo was successful!"
+        )
+        if success:
+            return f"""
+            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 50px auto; padding: 30px; border-radius: 14px; background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+                <h2 style="margin-top: 0; color: #047857;">✅ Email Sent Successfully via Brevo!</h2>
+                <p style="font-size: 15px;">A live test email was successfully dispatched to: <strong>{to_email}</strong></p>
+                <p style="font-size: 13px; color: #065f46; background: #d1fae5; padding: 10px 14px; border-radius: 8px;"><strong>Brevo Message ID:</strong> <code>{info}</code></p>
+                <p style="margin-top: 20px; font-weight: 500;">Your Railway environment, Brevo API key, and HTTPS email delivery are functioning <strong>100% correctly</strong>!</p>
+                <div style="margin-top: 24px;">
+                    <a href="/admin/email-logs" style="display: inline-block; background: #059669; color: #ffffff; padding: 10px 18px; border-radius: 8px; text-decoration: none; font-weight: 600; margin-right: 10px;">Go to Email Logs</a>
+                    <a href="/admin/login" style="display: inline-block; background: #ffffff; color: #059669; border: 1px solid #059669; padding: 10px 18px; border-radius: 8px; text-decoration: none; font-weight: 600;">Admin Login</a>
+                </div>
+            </div>
+            """
+        else:
+            return f"""
+            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 50px auto; padding: 30px; border-radius: 14px; background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+                <h2 style="margin-top: 0; color: #b91c1c;">❌ Brevo Email Delivery Failed</h2>
+                <p>Attempted to send to: <strong>{to_email}</strong></p>
+                <div style="background: #fee2e2; padding: 12px 14px; border-radius: 8px; font-family: monospace; font-size: 13px; margin: 16px 0; word-break: break-all;">
+                    {info}
+                </div>
+                <p style="font-size: 14px; color: #7f1d1d;"><strong>Troubleshooting Tip:</strong> Ensure that your <code>MAIL_DEFAULT_SENDER</code> in Railway matches the verified sender in your Brevo account.</p>
+            </div>
+            """, 500
+    else:
+        return f"""
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 50px auto; padding: 30px; border-radius: 14px; background: #fffbeb; border: 1px solid #fde68a; color: #92400e; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+            <h2 style="margin-top: 0; color: #b45309;">⚠️ BREVO_API_KEY Not Found</h2>
+            <p>The <code>BREVO_API_KEY</code> environment variable is missing or empty on this server.</p>
+            <p>Please ensure you added <code>BREVO_API_KEY</code> in Railway Dashboard ➔ Variables and clicked <strong>Deploy</strong>.</p>
+        </div>
+        """, 400
 
 # Production Error Handlers
 from flask import render_template

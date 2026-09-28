@@ -18,15 +18,32 @@ from services.college_service import get_college_settings
 logger = logging.getLogger(__name__)
 
 
-def _dispatch_mail_in_background(app_obj, msg, recipient_email, role_name):
+def _dispatch_mail_in_background(app_obj, msg, recipient_email, role_name, subject=None, html_body=None, text_body=None, sender=None, college_name=None):
     """
     Background worker function that sends email asynchronously
     without blocking the user's web browser or HTTP response.
+    Supports Brevo HTTPS REST API with seamless SMTP fallback.
     """
     with app_obj.app_context():
         try:
+            from mail.brevo_service import is_brevo_configured, send_brevo_email
+            if is_brevo_configured() and html_body and subject:
+                success, info = send_brevo_email(
+                    to_email=recipient_email,
+                    subject=subject,
+                    html_content=html_body,
+                    text_content=text_body,
+                    sender_email=sender,
+                    sender_name=college_name
+                )
+                if success:
+                    logger.info(f"SUCCESS: Background OTP delivered via Brevo to {recipient_email} ({role_name})")
+                    return
+                else:
+                    logger.warning(f"Brevo OTP dispatch failed: {info}. Falling back to standard SMTP...")
+
             mail.send(msg)
-            logger.info(f"SUCCESS: Background OTP email delivered to {recipient_email} ({role_name})")
+            logger.info(f"SUCCESS: Background OTP email delivered to {recipient_email} ({role_name}) via SMTP")
         except Exception as e:
             logger.error(f"ERROR: Background email delivery failed for {recipient_email}: {str(e)}")
             print(f"[Async OTP Mail Error] Failed to send to {recipient_email}: {e}")
@@ -94,7 +111,7 @@ Regards,
         app_obj = current_app._get_current_object()
         worker_thread = threading.Thread(
             target=_dispatch_mail_in_background,
-            args=(app_obj, msg, user_email, role_name),
+            args=(app_obj, msg, user_email, role_name, subject, html_body, text_body, sender, college_name),
             daemon=True
         )
         worker_thread.start()

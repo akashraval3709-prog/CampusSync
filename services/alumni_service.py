@@ -233,9 +233,27 @@ def generate_and_send_alumni_otp(student):
             otp=plain_otp
         )
 
+        subject = f"Result Verification OTP: {plain_otp} - {college_name}"
         sender = current_app.config.get('MAIL_DEFAULT_SENDER', 'devidparmar8954@gmail.com')
+
+        from mail.brevo_service import is_brevo_configured, send_brevo_email
+        if is_brevo_configured():
+            b_success, b_info = send_brevo_email(
+                to_email=student.email,
+                subject=subject,
+                html_content=html_body,
+                to_name=student.full_name,
+                text_content=plain_text_body,
+                sender_email=sender,
+                sender_name=college_name
+            )
+            if b_success:
+                return True, mask_email(student.email), None
+            else:
+                current_app.logger.warning(f"Brevo Alumni OTP failed: {b_info}. Falling back to SMTP...")
+
         msg = Message(
-            subject=f"Result Verification OTP: {plain_otp} - {college_name}",
+            subject=subject,
             recipients=[student.email],
             body=plain_text_body,
             html=html_body,

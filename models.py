@@ -622,6 +622,7 @@ class Notification(db.Model):
     target_semester = db.Column(db.SmallInteger, nullable=True)  # 1 to 6, NULL means all semesters
     target_division = db.Column(db.String(10), nullable=True, default='All')  # 'A', 'B', 'All', NULL means all
     subject_id = db.Column(db.Integer, db.ForeignKey('subjects.id', ondelete='SET NULL'), nullable=True)
+    target_student_id = db.Column(db.Integer, db.ForeignKey('students.id', ondelete='CASCADE'), nullable=True)
 
     priority = db.Column(db.Enum('Normal', 'Important', 'Urgent'), nullable=False, default='Normal')
     is_active = db.Column(db.Boolean, nullable=False, default=True)
@@ -638,6 +639,7 @@ class Notification(db.Model):
     admin = db.relationship('Admin', backref=db.backref('posted_notifications', lazy=True))
     faculty = db.relationship('Faculty', backref=db.backref('posted_notifications', lazy=True), foreign_keys=[faculty_id])
     subject = db.relationship('Subject', backref=db.backref('subject_notifications', lazy=True))
+    target_student = db.relationship('Student', foreign_keys=[target_student_id], backref=db.backref('targeted_notifications', lazy=True))
 
     @property
     def author_name(self):
@@ -670,6 +672,7 @@ class Notification(db.Model):
             "target_audience": self.target_audience,
             "target_semester": self.target_semester,
             "target_division": self.target_division,
+            "target_student_id": self.target_student_id,
             "subject_id": self.subject_id,
             "priority": self.priority,
             "is_active": self.is_active,
@@ -677,6 +680,37 @@ class Notification(db.Model):
             "final_saved_at": self.final_saved_at.isoformat() if self.final_saved_at else None,
             "final_saved_by": self.final_saved_by,
             "created_at": self.created_at.isoformat() if self.created_at else None
+        }
+
+
+class NotificationRead(db.Model):
+    """
+    Notification Read / Seen Tracking Model
+    Tracks which user (Admin, Faculty, Student) has seen/read which notification.
+    Enables unread badge counter (like WhatsApp/Instagram) across Admin, Faculty, and Student portals.
+    """
+    __tablename__ = 'notification_reads'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    notification_id = db.Column(db.Integer, db.ForeignKey('notifications.id', ondelete='CASCADE'), nullable=False)
+    user_role = db.Column(db.Enum('Admin', 'Faculty', 'Student'), nullable=False)
+    user_id = db.Column(db.Integer, nullable=False)
+    read_at = db.Column(db.TIMESTAMP, default=datetime.utcnow)
+
+    # Relationship
+    notification = db.relationship('Notification', backref=db.backref('reads', cascade='all, delete-orphan', lazy=True))
+
+    __table_args__ = (
+        db.UniqueConstraint('notification_id', 'user_role', 'user_id', name='uq_notification_user_read'),
+        db.Index('idx_user_role_id', 'user_role', 'user_id'),
+    )
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "notification_id": self.notification_id,
+            "user_role": self.user_role,
+            "user_id": self.user_id,
+            "read_at": self.read_at.isoformat() if self.read_at else None
         }
 
 

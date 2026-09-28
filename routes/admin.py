@@ -1589,8 +1589,14 @@ def admin_old_student_pdf(student_id):
 @admin_required
 def admin_notices():
     """Renders the Announcement and Notification Management console."""
-    from services.notification_service import get_all_admin_notices
+    from services.notification_service import get_all_admin_notices, mark_all_notifications_as_read
     from services.academic_service import get_academic_settings, get_active_semesters
+
+    if "admin_id" in session:
+        try:
+            mark_all_notifications_as_read('Admin', session['admin_id'])
+        except Exception:
+            pass
 
     academic = get_academic_settings()
     cycle = academic.semester_cycle if academic else 'Odd'
@@ -1873,6 +1879,262 @@ def admin_homepage_content():
         settings=settings,
         active_page='website'
     )
+
+
+# ------------------------------------------------------------------------------
+# Student Device Management Console & Instant Reminders
+# ------------------------------------------------------------------------------
+@admin_bp.route('/admin/device-management', endpoint='admin_device_management')
+@admin_bp.route('/admin/device_management', endpoint='admin_device_management_alias')
+@admin_required
+def admin_device_management():
+    """
+    Renders the Admin Student Device Management Console.
+    Allows filtering by Semester, Division, and Device Binding Status.
+    Enables 1-click device reset and targeted reminder alerts for attendance passkey registration.
+    """
+    from services.academic_service import get_academic_settings, get_active_semesters
+
+    academic = get_academic_settings()
+    cycle = academic.semester_cycle if academic else 'Odd'
+    active_semesters = get_active_semesters(cycle)
+
+    return render_template(
+        'admin/device_management.html',
+        academic=academic,
+        active_semesters=active_semesters,
+        semester_cycle=cycle,
+        active_page='device_management'
+    )
+
+
+@admin_bp.route('/admin/api/device-management/data', methods=['GET'], endpoint='admin_api_device_data')
+@admin_bp.route('/admin/api/device_management/data', methods=['GET'], endpoint='admin_api_device_data_alias')
+@admin_required
+def admin_api_device_data():
+    """
+    API endpoint returning filtered student list and real-time binding statistics.
+    Filters: semester (int/all), division (str/all), status (all/bound/unbound), search (str).
+    """
+    from models import Student
+
+    semester = request.args.get('semester', 'all').strip()
+    division = request.args.get('division', 'all').strip()
+    status_filter = request.args.get('status', 'all').strip().lower()
+    search = request.args.get('search', '').strip().lower()
+
+    query = Student.query.filter_by(status='Active')
+
+    if semester and semester != 'all':
+        try:
+            query = query.filter_by(semester=int(semester))
+        except ValueError:
+            pass
+
+    if division and division != 'all':
+        query = query.filter_by(division=division)
+
+    students = query.order_by(Student.semester.asc(), Student.division.asc(), Student.roll_number.asc()).all()
+
+    total_count = 0
+    bound_count = 0
+    unbound_count = 0
+    student_rows = []
+
+    for s in students:
+        is_bound = bool(s.device_fingerprint and not s.device_fingerprint.startswith('PIN-'))
+
+        total_count += 1
+        if is_bound:
+            bound_count += 1
+        else:
+            unbound_count += 1
+
+        # Apply status filter
+        if status_filter == 'bound' and not is_bound:
+            continue
+        if status_filter == 'unbound' and is_bound:
+            continue
+
+        # Apply search filter
+        if search:
+            match_name = search in (s.full_name or '').lower()
+            match_roll = search in (s.roll_number or '').lower()
+            match_enr = search in (s.enrollment_no or '').lower()
+            if not (match_name or match_roll or match_enr):
+                continue
+
+        bound_at_str = s.device_bound_at.strftime('%d %b %Y, %I:%M %p') if s.device_bound_at else None
+
+        student_rows.append({
+            "id": s.id,
+            "roll_number": s.roll_number,
+            "enrollment_no": s.enrollment_no,
+            "full_name": s.full_name,
+            "course": s.course or 'BCA',
+            "semester": s.semester,
+            "division": s.division or 'A',
+            "email": s.email,
+            "mobile": s.mobile,
+            "profile_photo": s.profile_photo or 'default-avatar.png',
+            "is_bound": is_bound,
+            "device_model": s.device_model or ('Active Device' if is_bound else 'Not Registered'),
+            "device_bound_at": bound_at_str,
+            "device_reset_allowed": bool(getattr(s, 'device_reset_allowed', 0))
+        })
+
+    bound_percent = round((bound_count / total_count * 100), 1) if total_count > 0 else 0
+    unbound_percent = round((unbound_count / total_count * 100), 1) if total_count > 0 else 0
+
+    return jsonify({
+        "success": True,
+        "stats": {
+            "total_students": total_count,
+            "bound_count": bound_count,
+            "bound_percent": bound_percent,
+            "unbound_count": unbound_count,
+            "unbound_percent": unbound_percent
+        },
+        "students": student_rows,
+        "filtered_count": len(student_rows)
+    })
+
+
+@admin_bp.route('/admin/api/device-management/reset/<int:student_id>', methods=['POST'], endpoint='admin_api_reset_device')
+@admin_bp.route('/admin/api/device_management/reset/<int:student_id>', methods=['POST'], endpoint='admin_api_reset_device_alias')
+@admin_required
+def admin_api_reset_device(student_id):
+    """
+    1-Click reset of student device registration.
+    Clears fingerprint and binds allowed flag so student can register new device.
+    """
+    from models import Student
+
+    student = Student.query.get(student_id)
+    if not student:
+        return jsonify({"success": False, "message": "Student not found."}), 404
+
+    student.device_fingerprint = None
+    student.device_model = None
+    student.device_bound_at = None
+    student.device_reset_allowed = 1
+
+    try:
+        db.session.commit()
+        return jsonify({
+            "success": True,
+            "message": f"Device registration for {student.full_name} (Roll #{student.roll_number}) has been reset successfully. The student can now register their new device."
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "message": f"Failed to reset device: {str(e)}"}), 500
+
+
+@admin_bp.route('/admin/api/device-management/notify-pending', methods=['POST'], endpoint='admin_api_notify_pending')
+@admin_bp.route('/admin/api/device_management/notify-pending', methods=['POST'], endpoint='admin_api_notify_pending_alias')
+@admin_required
+def admin_api_notify_pending():
+    """
+    Sends device registration reminder notifications.
+    Supports single student alert or bulk reminder to all unbound students.
+    """
+    from models import Student
+    from services.notification_service import create_notification
+
+    data = request.get_json(silent=True) or request.form.to_dict() or {}
+    student_id = data.get('student_id')
+    is_bulk = data.get('bulk', False)
+
+    admin_id = session.get('admin_id')
+
+    if student_id and not is_bulk:
+        student = Student.query.get(student_id)
+        if not student:
+            return jsonify({"success": False, "message": "Student not found."}), 404
+
+        title = "⚠️ Urgent: Device Registration Required for Attendance"
+        msg = (
+            f"Dear {student.full_name} (Roll #{student.roll_number}),\n\n"
+            f"Your mobile phone has not yet been registered for QR lecture attendance. "
+            f"Please log in to your Student Portal, navigate to the 'Scan QR' page, and complete your device verification before today's lectures.\n\n"
+            f"Note: In accordance with college policy, attendance cannot be marked via QR code without device registration."
+        )
+
+        create_notification(
+            title=title,
+            message=msg,
+            category='Device Binding',
+            posted_by_role='Admin',
+            admin_id=admin_id,
+            target_audience='Student',
+            target_semester=student.semester,
+            target_division=student.division,
+            target_student_id=student.id,
+            priority='Urgent'
+        )
+
+        return jsonify({
+            "success": True,
+            "message": f"Reminder alert successfully sent to {student.full_name}!"
+        })
+
+    # Bulk Notification
+    semester = data.get('semester')
+    division = data.get('division')
+
+    query = Student.query.filter_by(status='Active')
+    if semester and str(semester).lower() != 'all':
+        try:
+            query = query.filter_by(semester=int(semester))
+        except ValueError:
+            pass
+
+    if division and str(division).lower() != 'all':
+        query = query.filter_by(division=str(division))
+
+    all_students = query.all()
+    unbound_students = [
+        s for s in all_students
+        if not s.device_fingerprint or s.device_fingerprint.startswith('PIN-')
+    ]
+
+    count = len(unbound_students)
+    if count == 0:
+        return jsonify({
+            "success": True,
+            "notified_count": 0,
+            "message": "All students in the selected filter already have their devices registered! No pending students found."
+        })
+
+    target_sem = int(semester) if semester and str(semester).lower() != 'all' else None
+    target_div = str(division) if division and str(division).lower() != 'all' else 'All'
+
+    title = "📢 Urgent: Device Registration Required for Attendance"
+    msg = (
+        "Dear Student,\n\n"
+        "Your mobile phone has not yet been registered for QR lecture attendance. "
+        "Please log in to your Student Portal, navigate to the 'Scan QR' section, and complete your device verification before attending lectures.\n\n"
+        "Note: In accordance with college policy, attendance cannot be marked via QR code without device registration."
+    )
+
+    create_notification(
+        title=title,
+        message=msg,
+        category='Device Binding',
+        posted_by_role='Admin',
+        admin_id=admin_id,
+        target_audience='Student',
+        target_semester=target_sem,
+        target_division=target_div,
+        priority='Urgent'
+    )
+
+    return jsonify({
+        "success": True,
+        "notified_count": count,
+        "message": f"Successfully published urgent device registration alert to {count} pending student(s)!"
+    })
+
 
 
 

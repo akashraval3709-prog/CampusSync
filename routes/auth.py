@@ -98,7 +98,6 @@ def admin_login():
 
         admin = authenticate_admin(username, password)
         if admin:
-            session.clear()
             session.permanent = True
             session["admin_id"] = admin.id
             session["user_role"] = "admin"
@@ -115,10 +114,12 @@ def admin_login():
 def admin_logout():
     """
     Handles Admin Logout.
-    - Clears Flask session.
+    - Clears Admin session keys.
     - Redirects user back to Admin Login page.
     """
-    session.clear()
+    session.pop("admin_id", None)
+    if session.get("user_role") == "admin":
+        session.pop("user_role", None)
     return redirect(url_for('admin_login'))
 
 # --- Admin Forgot Password Route ---

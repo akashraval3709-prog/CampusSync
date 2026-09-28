@@ -135,8 +135,9 @@
             <!-- Admin Panel Navigation Links -->
             {% set is_admin_dashboard = active_page == 'dashboard' or request.endpoint in ['admin.admin_dashboard', 'admin_dashboard'] %}
 
-            {% set is_students_section = active_page in ['students', 'old_students', 'attendance_blacklist'] or request.endpoint in [
+            {% set is_students_section = active_page in ['students', 'device_management', 'old_students', 'attendance_blacklist'] or request.endpoint in [
                 'admin.admin_students', 'admin_students',
+                'admin.admin_device_management', 'admin_device_management',
                 'admin.import_students', 'import_students',
                 'admin.admin_old_students', 'admin_old_students',
                 'admin.admin_old_student_marks', 'admin_old_student_marks',
@@ -193,6 +194,12 @@
                         <a href="{{ url_for('admin_students') }}">
                             <i class="bi bi-person-lines-fill"></i>
                             <span>Active Students</span>
+                        </a>
+                    </li>
+                    <li class="{% if active_page == 'device_management' or request.endpoint in ['admin.admin_device_management', 'admin_device_management'] %}active{% endif %}">
+                        <a href="{{ url_for('admin.admin_device_management') }}">
+                            <i class="bi bi-phone-fill text-primary"></i>
+                            <span>Device Management</span>
                         </a>
                     </li>
                     <li class="{% if active_page == 'old_students' or request.endpoint in ['admin.admin_old_students', 'admin_old_students', 'admin.admin_old_student_marks', 'admin_old_student_marks'] %}active{% endif %}">

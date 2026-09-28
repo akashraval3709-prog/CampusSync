@@ -75,7 +75,6 @@ def faculty_login():
             return render_template('auth/faculty-login.html', error=error)
 
         # Set faculty session (isolated from student_id and admin_id)
-        session.clear()
         session.permanent = True
         session["faculty_id"] = faculty.id
         session["user_role"] = "faculty"
@@ -1226,11 +1225,16 @@ def faculty_qr_extend_session():
 @faculty_required
 def faculty_notices():
     """Renders the Faculty Notice & Assignment Management console."""
-    from services.notification_service import get_faculty_notices, get_faculty_created_notices
+    from services.notification_service import get_faculty_notices, get_faculty_created_notices, mark_all_notifications_as_read
     from services.faculty_service import get_faculty_assigned_subjects
     from services.academic_service import get_academic_settings, get_active_semesters
 
     faculty_id = session.get('faculty_id')
+    if faculty_id:
+        try:
+            mark_all_notifications_as_read('Faculty', faculty_id)
+        except Exception:
+            pass
     academic = get_academic_settings()
     active_semesters = get_active_semesters(academic.semester_cycle if academic else 'Odd')
 

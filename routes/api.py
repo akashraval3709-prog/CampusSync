@@ -11,7 +11,7 @@ Zero impact on existing Flask Jinja2 web templates or routes.
 """
 
 from datetime import datetime
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, session
 from extensions import db
 from models import (
     Student, Faculty, Admin, Subject, InternalMark,
@@ -32,7 +32,8 @@ from services.attendance_service import (
 )
 from services.admin_dashboard_service import get_admin_dashboard_data
 from services.notification_service import (
-    get_public_notices, create_notification, get_all_admin_notices
+    get_public_notices, create_notification, get_all_admin_notices,
+    get_user_notifications_feed, mark_notification_as_read, mark_all_notifications_as_read
 )
 from services.college_service import get_college_settings
 
@@ -687,3 +688,158 @@ def api_college_settings():
         }), 200
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
+
+
+# ------------------------------------------------------------------------------
+# 16. Dynamic Notification Bell Feed & Unread Seen Tracking
+# ------------------------------------------------------------------------------
+@api_bp.route('/notifications/unread-feed', methods=['GET'])
+def api_unread_notifications_feed():
+    """
+    Returns unread count and latest notifications feed for the current logged-in user.
+    Used by topbar notification bell for dynamic badges and dropdown previews.
+    """
+    user_role = None
+    user_id = None
+
+    portal_req = (request.args.get('portal') or request.args.get('role') or '').lower()
+
+    if portal_req == 'student' and session.get('student_id'):
+        user_role = 'Student'
+        user_id = session['student_id']
+    elif portal_req == 'faculty' and session.get('faculty_id'):
+        user_role = 'Faculty'
+        user_id = session['faculty_id']
+    elif portal_req == 'admin' and session.get('admin_id'):
+        user_role = 'Admin'
+        user_id = session['admin_id']
+    else:
+        # Fallback to session user_role or session keys
+        sess_role = (session.get('user_role') or '').lower()
+        if sess_role == 'student' and session.get('student_id'):
+            user_role = 'Student'
+            user_id = session['student_id']
+        elif sess_role == 'faculty' and session.get('faculty_id'):
+            user_role = 'Faculty'
+            user_id = session['faculty_id']
+        elif sess_role == 'admin' and session.get('admin_id'):
+            user_role = 'Admin'
+            user_id = session['admin_id']
+        elif 'student_id' in session:
+            user_role = 'Student'
+            user_id = session['student_id']
+        elif 'faculty_id' in session:
+            user_role = 'Faculty'
+            user_id = session['faculty_id']
+        elif 'admin_id' in session:
+            user_role = 'Admin'
+            user_id = session['admin_id']
+        else:
+            role_param = request.args.get('role')
+            uid_param = request.args.get('user_id', type=int)
+            if role_param and uid_param:
+                user_role = role_param.capitalize()
+                user_id = uid_param
+
+    if not user_role or not user_id:
+        return jsonify({
+            "success": True,
+            "unread_count": 0,
+            "notifications": [],
+            "authenticated": False
+        }), 200
+
+    try:
+        limit = request.args.get('limit', default=8, type=int)
+        feed = get_user_notifications_feed(user_role, user_id, limit=limit)
+        return jsonify({
+            "success": True,
+            "user_role": user_role,
+            "user_id": user_id,
+            "unread_count": feed["unread_count"],
+            "notifications": feed["notifications"],
+            "authenticated": True
+        }), 200
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@api_bp.route('/notifications/mark-read', methods=['POST'])
+def api_mark_notification_read():
+    """
+    Marks a single notice or all notices as read for the logged-in user.
+    Instant WhatsApp/Instagram-like badge decrement and clearing.
+    """
+    user_role = None
+    user_id = None
+
+    data = request.get_json(silent=True) or request.form.to_dict() or {}
+    portal_req = (data.get('portal') or data.get('role') or request.args.get('portal') or '').lower()
+
+    if portal_req == 'student' and session.get('student_id'):
+        user_role = 'Student'
+        user_id = session['student_id']
+    elif portal_req == 'faculty' and session.get('faculty_id'):
+        user_role = 'Faculty'
+        user_id = session['faculty_id']
+    elif portal_req == 'admin' and session.get('admin_id'):
+        user_role = 'Admin'
+        user_id = session['admin_id']
+    else:
+        sess_role = (session.get('user_role') or '').lower()
+        if sess_role == 'student' and session.get('student_id'):
+            user_role = 'Student'
+            user_id = session['student_id']
+        elif sess_role == 'faculty' and session.get('faculty_id'):
+            user_role = 'Faculty'
+            user_id = session['faculty_id']
+        elif sess_role == 'admin' and session.get('admin_id'):
+            user_role = 'Admin'
+            user_id = session['admin_id']
+        elif 'student_id' in session:
+            user_role = 'Student'
+            user_id = session['student_id']
+        elif 'faculty_id' in session:
+            user_role = 'Faculty'
+            user_id = session['faculty_id']
+        elif 'admin_id' in session:
+            user_role = 'Admin'
+            user_id = session['admin_id']
+        else:
+            role_param = data.get('role')
+            uid_param = data.get('user_id')
+            if role_param and uid_param:
+                user_role = str(role_param).capitalize()
+                user_id = int(uid_param)
+
+    if not user_role or not user_id:
+        return jsonify({"success": False, "message": "Authentication required."}), 401
+
+    try:
+        mark_all = data.get('mark_all', False)
+        if str(mark_all).lower() in ('true', '1', 'yes'):
+            marked_count = mark_all_notifications_as_read(user_role, user_id)
+            feed = get_user_notifications_feed(user_role, user_id, limit=1)
+            return jsonify({
+                "success": True,
+                "marked_all": True,
+                "marked_count": marked_count,
+                "unread_count": feed["unread_count"]
+            }), 200
+
+        notification_id = data.get('notification_id')
+        if not notification_id:
+            return jsonify({"success": False, "message": "notification_id is required"}), 400
+
+        notification_id = int(notification_id)
+        mark_notification_as_read(notification_id, user_role, user_id)
+        feed = get_user_notifications_feed(user_role, user_id, limit=1)
+
+        return jsonify({
+            "success": True,
+            "notification_id": notification_id,
+            "unread_count": feed["unread_count"]
+        }), 200
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+

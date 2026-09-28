@@ -25,3 +25,4 @@ Desktop.ini
 # Logs and scratch files
 *.log
 scratch/
+*.docx

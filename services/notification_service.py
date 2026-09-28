@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 from flask import current_app
 from extensions import db
-from models import Notification, Subject, FacultySubjectAssignment
+from models import Notification, NotificationRead, Subject, FacultySubjectAssignment, Student, Admin, Faculty
 
 ALLOWED_EXTENSIONS = {
     'png', 'jpg', 'jpeg', 'webp', 'gif',
@@ -81,7 +81,7 @@ def create_notification(title, message, category, posted_by_role,
                         admin_id=None, faculty_id=None, target_audience='All',
                         target_semester=None, target_division='All', subject_id=None,
                         start_date=None, end_date=None, priority='Normal',
-                        photo_file=None, file_type=None):
+                        photo_file=None, file_type=None, target_student_id=None):
     """Creates a new Notification entry in database."""
     # Convert dates if given as strings
     if isinstance(start_date, str):
@@ -108,6 +108,14 @@ def create_notification(title, message, category, posted_by_role,
         except (ValueError, TypeError):
             subject_id = None
 
+    if target_student_id in ('', 'None', None):
+        target_student_id = None
+    else:
+        try:
+            target_student_id = int(target_student_id)
+        except (ValueError, TypeError):
+            target_student_id = None
+
     notification = Notification(
         title=title.strip(),
         message=message.strip(),
@@ -123,6 +131,7 @@ def create_notification(title, message, category, posted_by_role,
         target_semester=target_semester,
         target_division=target_division,
         subject_id=subject_id,
+        target_student_id=target_student_id,
         priority=priority if priority in ('Normal', 'Important', 'Urgent') else 'Normal',
         is_active=True
     )
@@ -192,6 +201,36 @@ def get_faculty_created_notices(faculty_id, filter_by_cycle=True):
     return filtered
 
 
+def get_admin_feed_notices(filter_by_cycle=True):
+    """
+    Fetches active notifications meant specifically for Administrator personal feed & topbar bell.
+    Strictly includes only notices with target_audience in ('Admin', 'All').
+    STRICTLY EXCLUDES student-specific notices (assignments, device reminders, etc.) and faculty-only notices.
+    """
+    notices = Notification.query.filter(
+        Notification.target_audience.in_(['Admin', 'All']),
+        Notification.is_active == True
+    ).order_by(Notification.created_at.desc()).all()
+
+    if not filter_by_cycle:
+        return notices
+
+    from services.academic_service import get_active_semesters
+    active_sems = get_active_semesters()
+
+    filtered = []
+    for n in notices:
+        if n.target_semester is not None:
+            if n.target_semester in active_sems:
+                filtered.append(n)
+        elif n.subject and n.subject.semester is not None:
+            if n.subject.semester in active_sems:
+                filtered.append(n)
+        else:
+            filtered.append(n)
+    return filtered
+
+
 def get_all_admin_notices(filter_by_cycle=True):
     """Fetches all notices (for Admin management table), filtered by active semester cycle."""
     notices = Notification.query.order_by(Notification.created_at.desc()).all()
@@ -217,24 +256,27 @@ def get_all_admin_notices(filter_by_cycle=True):
 
 def get_student_notices(student, category=None):
     """
-    Fetches all active notices visible to a specific student based on
-    their enrolled Semester and Division, strictly filtered by the active semester cycle.
+    Fetches all active notices visible to a specific student based on:
+    1. Target Audience: 'Student' or 'All'
+    2. Specific Student ID: If target_student_id is set, it MUST match this student's ID.
+    3. Semester & Division: Matches student.semester and student.division.
+    4. Device Binding Reminders: If category is 'Device Binding' or notice is a device registration reminder,
+       only show if student has NOT yet registered/bound their phone! Once bound, reminder automatically clears.
+    5. Filtered strictly by active semester cycle.
     """
     from services.academic_service import get_active_semesters
     active_sems = get_active_semesters()
 
     sem = student.semester
     div = student.division
+    is_device_bound = bool(student.device_fingerprint and not student.device_fingerprint.startswith('PIN-'))
 
+    # Base query: Active notices targeted to Student or All
     query = Notification.query.filter(
         Notification.is_active == True,
         db.or_(
             Notification.target_audience == 'All',
-            db.and_(
-                Notification.target_audience == 'Student',
-                db.or_(Notification.target_semester == None, Notification.target_semester == sem),
-                db.or_(Notification.target_division == None, Notification.target_division == 'All', Notification.target_division == div)
-            )
+            Notification.target_audience == 'Student'
         )
     )
 
@@ -245,6 +287,35 @@ def get_student_notices(student, category=None):
 
     filtered = []
     for n in notices:
+        # 1. If targeted to a specific individual student, MUST match this student ID
+        if n.target_student_id is not None:
+            if n.target_student_id != student.id:
+                continue
+        else:
+            # 2. Audience filter: If targeted to Student, must match Semester & Division
+            if n.target_audience == 'Student':
+                if n.target_semester is not None and n.target_semester != sem:
+                    continue
+                if n.target_division and n.target_division not in ('All', div):
+                    continue
+
+        # 3. Subject filter if specified
+        if n.subject_id is not None:
+            if n.subject and n.subject.semester is not None and n.subject.semester != sem:
+                continue
+
+        # 4. Device Binding Alert Filter:
+        # If this notice is a device registration reminder and student is ALREADY bound, do not show
+        is_device_notice = (
+            n.category == 'Device Binding' or 
+            'Device Registration' in (n.title or '') or 
+            'ડિવાઇસ' in (n.title or '') or
+            'Passkey' in (n.title or '')
+        )
+        if is_device_notice and is_device_bound:
+            continue
+
+        # 5. Active cycle validation
         if n.target_semester is not None:
             if n.target_semester in active_sems:
                 filtered.append(n)
@@ -369,3 +440,156 @@ def toggle_notification_status(notification_id):
     notice.is_active = not notice.is_active
     db.session.commit()
     return True, f"Notification marked as {'Active' if notice.is_active else 'Inactive'}"
+
+
+def format_time_ago(dt):
+    """Converts a datetime into a clean, relative time string (e.g. 5m ago, 2h ago, Yesterday)."""
+    if not dt:
+        return ""
+    now = datetime.utcnow()
+    diff = now - dt
+    seconds = int(diff.total_seconds())
+    if seconds < 0:
+        return "Just now"
+    if seconds < 60:
+        return "Just now"
+    minutes = seconds // 60
+    if minutes < 60:
+        return f"{minutes}m ago"
+    hours = minutes // 60
+    if hours < 24:
+        return f"{hours}h ago"
+    days = hours // 24
+    if days == 1:
+        return "Yesterday"
+    if days < 7:
+        return f"{days}d ago"
+    return dt.strftime("%d %b")
+
+
+def get_user_applicable_notices(user_role, user_id):
+    """Returns active notifications applicable to the given user role and id."""
+    role = (user_role or '').capitalize()
+    if role == 'Admin':
+        return get_admin_feed_notices(filter_by_cycle=True)
+    elif role == 'Faculty':
+        return get_faculty_notices(filter_by_cycle=True)
+    elif role == 'Student':
+        student = Student.query.get(user_id)
+        if not student:
+            return []
+        return get_student_notices(student)
+    return []
+
+
+def get_user_notifications_feed(user_role, user_id, limit=8):
+    """
+    Returns the notification feed and unread count for dynamic bell badge & dropdown.
+    WhatsApp/Instagram style seen tracking.
+    """
+    notices = get_user_applicable_notices(user_role, user_id)
+    if not notices:
+        return {
+            "unread_count": 0,
+            "notifications": []
+        }
+
+    notice_ids = [n.id for n in notices]
+    read_rows = NotificationRead.query.filter(
+        NotificationRead.user_role == user_role,
+        NotificationRead.user_id == user_id,
+        NotificationRead.notification_id.in_(notice_ids)
+    ).all()
+    read_ids = {r.notification_id for r in read_rows}
+
+    unread_count = sum(1 for nid in notice_ids if nid not in read_ids)
+
+    # Prepare top notices
+    feed_items = []
+    for n in notices[:limit]:
+        is_read = n.id in read_ids
+        feed_items.append({
+            "id": n.id,
+            "title": n.title,
+            "message": n.message[:130] + ("..." if len(n.message) > 130 else ""),
+            "full_message": n.message,
+            "category": n.category,
+            "priority": n.priority,
+            "posted_by_role": n.posted_by_role,
+            "posted_by_name": n.author_name,
+            "photo_file": n.photo_file,
+            "file_type": n.file_type,
+            "is_read": is_read,
+            "time_ago": format_time_ago(n.created_at),
+            "created_at": n.created_at.strftime("%d %b %Y, %I:%M %p") if n.created_at else None,
+            "start_date": n.start_date.strftime("%d %b %Y, %I:%M %p") if n.start_date else None,
+            "end_date": n.end_date.strftime("%d %b %Y, %I:%M %p") if n.end_date else None,
+        })
+
+    return {
+        "unread_count": unread_count,
+        "notifications": feed_items
+    }
+
+
+def mark_notification_as_read(notification_id, user_role, user_id):
+    """Marks a single notification as read for the user."""
+    if not notification_id or not user_role or not user_id:
+        return False
+
+    existing = NotificationRead.query.filter_by(
+        notification_id=notification_id,
+        user_role=user_role,
+        user_id=user_id
+    ).first()
+
+    if not existing:
+        new_read = NotificationRead(
+            notification_id=notification_id,
+            user_role=user_role,
+            user_id=user_id,
+            read_at=datetime.utcnow()
+        )
+        db.session.add(new_read)
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+    return True
+
+
+def mark_all_notifications_as_read(user_role, user_id):
+    """Marks all currently applicable active notifications as read for the user."""
+    notices = get_user_applicable_notices(user_role, user_id)
+    if not notices:
+        return 0
+
+    notice_ids = [n.id for n in notices]
+    existing_reads = {
+        r.notification_id for r in NotificationRead.query.filter(
+            NotificationRead.user_role == user_role,
+            NotificationRead.user_id == user_id,
+            NotificationRead.notification_id.in_(notice_ids)
+        ).all()
+    }
+
+    added_count = 0
+    now = datetime.utcnow()
+    for nid in notice_ids:
+        if nid not in existing_reads:
+            db.session.add(NotificationRead(
+                notification_id=nid,
+                user_role=user_role,
+                user_id=user_id,
+                read_at=now
+            ))
+            added_count += 1
+
+    if added_count > 0:
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+    return added_count
+
