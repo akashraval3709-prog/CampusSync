@@ -1234,11 +1234,7 @@
                                                         {% elif is_locked %}
                                                         <span class="badge bg-light text-danger border fs-8">Absent</span>
                                                         {% else %}
-                                                        <button type="button"
-                                                            class="btn btn-outline-secondary btn-sm py-0 px-2 fs-8 rounded-pill"
-                                                            onclick="simulateStudentScan({{ st.id }}, '{{ st.roll_number }}', '{{ st.full_name }}')">
-                                                            <i class="bi bi-hand-index me-1"></i> Mark
-                                                        </button>
+                                                        <span class="badge bg-light text-secondary border fs-8"><i class="bi bi-clock me-1"></i>Awaiting Scan</span>
                                                         {% endif %}
                                                     </td>
                                                 </tr>
@@ -1835,6 +1831,7 @@
                     const devCell = document.getElementById(`qr_device_${sid}`);
                     const statusCell = document.getElementById(`qr_status_${sid}`);
                     const manualRadioP = document.getElementById(`p_${sid}`);
+                    const manualRadioA = document.getElementById(`a_${sid}`);
 
                     if (st.status === 'Present') {
                         qrScannedStudents.add(sid);
@@ -1847,6 +1844,16 @@
                             statusCell.innerHTML = `<span class="status-pill present"><i class="bi bi-check-circle-fill"></i> Present</span>`;
                         }
                         if (manualRadioP) manualRadioP.checked = true;
+                    } else {
+                        qrScannedStudents.delete(sid);
+                        if (timeCell) timeCell.innerText = "—";
+                        if (devCell) {
+                            devCell.innerHTML = `<span class="badge bg-light text-muted border fs-8">Awaiting Scan</span>`;
+                        }
+                        if (statusCell) {
+                            statusCell.innerHTML = `<span class="badge bg-light text-secondary border fs-8"><i class="bi bi-clock me-1"></i>Awaiting Scan</span>`;
+                        }
+                        if (manualRadioA) manualRadioA.checked = true;
                     }
                 });
             }
@@ -2066,7 +2073,7 @@
                 if (timeCell) timeCell.innerText = "—";
                 if (devCell) devCell.innerHTML = `<span class="badge bg-light text-muted border fs-8">Awaiting Scan</span>`;
                 if (statusCell) {
-                    statusCell.innerHTML = `<button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 fs-8 rounded-pill" onclick="simulateStudentScan(${sid}, '${roll}', '${name}')"><i class="bi bi-hand-index me-1"></i> Mark</button>`;
+                    statusCell.innerHTML = `<span class="badge bg-light text-secondary border fs-8"><i class="bi bi-clock me-1"></i>Awaiting Scan</span>`;
                 }
             });
             updateQRStats();
@@ -2130,9 +2137,10 @@
         function toggleAllPresent(chk) {
             const table = document.getElementById('attendanceTable');
             if (!table) return;
-            const radiosP = table.querySelectorAll('input[type="radio"][value="P"]');
-            radiosP.forEach(r => {
-                r.checked = chk.checked;
+            const targetVal = chk.checked ? 'P' : 'A';
+            const radios = table.querySelectorAll(`input[type="radio"][value="${targetVal}"]`);
+            radios.forEach(r => {
+                r.checked = true;
             });
             recalculateCounts();
         }
@@ -2245,8 +2253,7 @@
                     const sid = r.getAttribute('data-student-id');
                     if (sid) {
                         const sidInt = parseInt(sid);
-                        const radioP = document.getElementById(`p_${sid}`);
-                        const isPresent = qrScannedStudents.has(sidInt) || (radioP && radioP.checked);
+                        const isPresent = qrScannedStudents.has(sidInt);
                         statuses[sid] = isPresent ? 'Present' : 'Absent';
                     }
                 });

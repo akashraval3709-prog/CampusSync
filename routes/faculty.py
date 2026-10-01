@@ -684,14 +684,14 @@ def faculty_attendance():
                     active_qr.qr_session_expires_at = dt.utcnow()
                     db.session.commit()
 
-            # Pre-fill status for each student if session exists
+            # Pre-fill status for each student if session exists (default to Absent so unscanned students do not show Present)
             if existing_session and existing_session.get("statuses"):
                 session_statuses = existing_session["statuses"]
                 for st in student_data["students"]:
-                    st["att_status"] = session_statuses.get(st["id"], "Present")
+                    st["att_status"] = session_statuses.get(st["id"], "Absent")
             else:
                 for st in student_data["students"]:
-                    st["att_status"] = "Present"
+                    st["att_status"] = "Absent"
 
     pending_alert = None
     session_id_to_check = None
