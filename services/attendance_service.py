@@ -777,11 +777,11 @@ def generate_student_attendance_pdf_bytes(student_id):
     return buffer
 
 
-def mark_student_qr_attendance(student_id, session_id=None, token=None, lat=None, lng=None, device_fingerprint=None, device_model=None, request_approval=False):
+def mark_student_qr_attendance(student_id, session_id=None, token=None, lat=None, lng=None, device_fingerprint=None, device_model=None, request_approval=False, alert_id=None):
     return mark_student_qr_attendance_secure(
         student_id, session_id=session_id, token=token, lat=lat, lng=lng,
         device_fingerprint=device_fingerprint, device_model=device_model,
-        request_approval=request_approval
+        request_approval=request_approval, alert_id=alert_id
     )
 
 def _legacy_mark_student_qr_attendance(student_id, session_id=None):
@@ -1594,7 +1594,7 @@ def stop_faculty_qr_session(session_id):
         return False, f"Database error stopping session: {str(e)}"
 
 
-def mark_student_qr_attendance_secure(student_id, session_id=None, token=None, lat=None, lng=None, device_fingerprint=None, device_model=None, request_approval=False):
+def mark_student_qr_attendance_secure(student_id, session_id=None, token=None, lat=None, lng=None, device_fingerprint=None, device_model=None, request_approval=False, alert_id=None):
     """
     Enterprise-grade QR Attendance Validator:
     1. Validates active session (is_qr_active == 1) for student's Semester & Division.
@@ -1641,7 +1641,7 @@ def mark_student_qr_attendance_secure(student_id, session_id=None, token=None, l
 
         if prior_alert and prior_alert.faculty_action == 'REJECTED':
             return False, "Proxy Violation: Your attendance for this lecture was rejected by faculty. You are marked Absent. Re-scanning is prohibited."
-        if prior_alert and prior_alert.faculty_action == 'PENDING' and prior_alert.alert_type in ['DUPLICATE_DEVICE', 'UNBOUND_DEVICE']:
+        if prior_alert and prior_alert.faculty_action == 'PENDING' and prior_alert.alert_type in ['DUPLICATE_DEVICE', 'UNBOUND_DEVICE'] and request_approval:
             return False, "Your scan has already been submitted and is currently pending faculty security review."
 
         prior_entry = LectureAttendanceStudent.query.filter_by(
@@ -1711,7 +1711,7 @@ def mark_student_qr_attendance_secure(student_id, session_id=None, token=None, l
                         scan_latitude=lat,
                         scan_longitude=lng,
                         distance_meters=distance_meters,
-                        faculty_action='FLAGGED'
+                        faculty_action='PENDING'
                     )
                     db.session.add(alert)
                     db.session.commit()
@@ -1741,14 +1741,7 @@ def mark_student_qr_attendance_secure(student_id, session_id=None, token=None, l
             if device_owner:
                 msg = f"Proxy Attendance Blocked: This phone is registered to Roll #{device_owner.roll_number} ({device_owner.full_name}). Institutional policy permits only 1 student per physical phone."
                 if not request_approval:
-                    return False, {
-                        "requires_approval": True,
-                        "device_conflict": True,
-                        "owner_roll": device_owner.roll_number,
-                        "owner_name": device_owner.full_name,
-                        "message": msg
-                    }
-                else:
+                    logged_alert_id = None
                     try:
                         alert = AttendanceSecurityAlert(
                             session_id=sess.id,
@@ -1757,13 +1750,45 @@ def mark_student_qr_attendance_secure(student_id, session_id=None, token=None, l
                             device_fingerprint=clean_dev,
                             conflicting_student_id=device_owner.id,
                             alert_type='DUPLICATE_DEVICE',
-                            alert_message=f"Attendance submitted from friend's/alternate phone (Registered to Roll #{device_owner.roll_number} - {device_owner.full_name}). Student requested faculty approval.",
+                            alert_message=f"Proxy Alert: Roll #{student.roll_number} ({student.full_name}) attempted to scan attendance from Roll #{device_owner.roll_number}'s ({device_owner.full_name}) phone. Warning modal displayed to student.",
                             scan_latitude=lat,
                             scan_longitude=lng,
                             distance_meters=distance_meters,
                             faculty_action='PENDING'
                         )
                         db.session.add(alert)
+                        db.session.commit()
+                        logged_alert_id = alert.id
+                    except Exception:
+                        db.session.rollback()
+
+                    return False, {
+                        "requires_approval": True,
+                        "device_conflict": True,
+                        "owner_roll": device_owner.roll_number,
+                        "owner_name": device_owner.full_name,
+                        "alert_id": logged_alert_id,
+                        "message": msg
+                    }
+                else:
+                    try:
+                        alert = AttendanceSecurityAlert.query.get(alert_id) if alert_id else None
+                        if not alert:
+                            alert = AttendanceSecurityAlert(
+                                session_id=sess.id,
+                                student_id=student.id,
+                                attempted_roll=student.roll_number,
+                                device_fingerprint=clean_dev,
+                                conflicting_student_id=device_owner.id,
+                                alert_type='DUPLICATE_DEVICE',
+                                scan_latitude=lat,
+                                scan_longitude=lng,
+                                distance_meters=distance_meters,
+                                faculty_action='PENDING'
+                            )
+                            db.session.add(alert)
+                        alert.alert_message = f"Attendance Approval Request: Roll #{student.roll_number} ({student.full_name}) confirmed attendance submission from Roll #{device_owner.roll_number}'s ({device_owner.full_name}) phone."
+                        alert.faculty_action = 'PENDING'
                         db.session.commit()
                     except Exception:
                         db.session.rollback()
@@ -1784,12 +1809,7 @@ def mark_student_qr_attendance_secure(student_id, session_id=None, token=None, l
                         db.session.rollback()
             elif clean_dev not in student.device_fingerprint and not getattr(student, 'device_reset_allowed', 0):
                 if not request_approval:
-                    return False, {
-                        "requires_approval": True,
-                        "device_mismatch": True,
-                        "message": "This phone does not match your registered personal device. Do you wish to submit an attendance request for faculty approval?"
-                    }
-                else:
+                    logged_alert_id = None
                     try:
                         alert = AttendanceSecurityAlert(
                             session_id=sess.id,
@@ -1797,13 +1817,39 @@ def mark_student_qr_attendance_secure(student_id, session_id=None, token=None, l
                             attempted_roll=student.roll_number,
                             device_fingerprint=clean_dev,
                             alert_type='UNBOUND_DEVICE',
-                            alert_message=f"Attendance submitted from unrecognized/borrowed device #{clean_dev[:8]}. Student requested faculty approval.",
+                            alert_message=f"Unregistered Device Alert: Roll #{student.roll_number} ({student.full_name}) scanned from unrecognized device (#{clean_dev[:8]}). Warning modal displayed to student.",
                             scan_latitude=lat,
                             scan_longitude=lng,
                             distance_meters=distance_meters,
                             faculty_action='PENDING'
                         )
                         db.session.add(alert)
+                        db.session.commit()
+                        logged_alert_id = alert.id
+                    except Exception:
+                        db.session.rollback()
+
+                    return False, {
+                        "requires_approval": True,
+                        "device_mismatch": True,
+                        "alert_id": logged_alert_id,
+                        "message": "This phone does not match your registered personal device. Do you wish to submit an attendance request for faculty approval?"
+                    }
+                else:
+                    try:
+                        alert = AttendanceSecurityAlert.query.get(alert_id) if alert_id else None
+                        if not alert:
+                            alert = AttendanceSecurityAlert(
+                                session_id=sess.id,
+                                student_id=student.id,
+                                attempted_roll=student.roll_number,
+                                device_fingerprint=clean_dev,
+                                alert_type='UNBOUND_DEVICE',
+                                faculty_action='PENDING'
+                            )
+                            db.session.add(alert)
+                        alert.alert_message = f"Attendance Approval Request: Roll #{student.roll_number} ({student.full_name}) submitted attendance from unrecognized device (#{clean_dev[:8]}). Awaiting faculty approval."
+                        alert.faculty_action = 'PENDING'
                         db.session.commit()
                     except Exception:
                         db.session.rollback()
@@ -1834,14 +1880,7 @@ def mark_student_qr_attendance_secure(student_id, session_id=None, token=None, l
 
                 msg = f"Proxy Attendance Blocked: This phone was already used by Roll #{c_roll} ({c_name}) in this lecture. 1 Phone = 1 Student policy strictly enforced."
                 if not request_approval:
-                    return False, {
-                        "requires_approval": True,
-                        "device_conflict": True,
-                        "owner_roll": c_roll,
-                        "owner_name": c_name,
-                        "message": msg
-                    }
-                else:
+                    logged_alert_id = None
                     try:
                         alert = AttendanceSecurityAlert(
                             session_id=sess.id,
@@ -1850,13 +1889,42 @@ def mark_student_qr_attendance_secure(student_id, session_id=None, token=None, l
                             device_fingerprint=clean_dev,
                             conflicting_student_id=conflict_entry.student_id,
                             alert_type='DUPLICATE_DEVICE',
-                            alert_message=f"Attendance submitted from friend's device (Used by Roll #{c_roll} - {c_name} in this session). Student requested faculty approval.",
+                            alert_message=f"Duplicate Device Proxy Alert: Roll #{student.roll_number} ({student.full_name}) attempted to scan with phone already used by Roll #{c_roll} ({c_name}) in this session. Warning modal displayed.",
                             scan_latitude=lat,
                             scan_longitude=lng,
                             distance_meters=distance_meters,
                             faculty_action='PENDING'
                         )
                         db.session.add(alert)
+                        db.session.commit()
+                        logged_alert_id = alert.id
+                    except Exception:
+                        db.session.rollback()
+
+                    return False, {
+                        "requires_approval": True,
+                        "device_conflict": True,
+                        "owner_roll": c_roll,
+                        "owner_name": c_name,
+                        "alert_id": logged_alert_id,
+                        "message": msg
+                    }
+                else:
+                    try:
+                        alert = AttendanceSecurityAlert.query.get(alert_id) if alert_id else None
+                        if not alert:
+                            alert = AttendanceSecurityAlert(
+                                session_id=sess.id,
+                                student_id=student.id,
+                                attempted_roll=student.roll_number,
+                                device_fingerprint=clean_dev,
+                                conflicting_student_id=conflict_entry.student_id,
+                                alert_type='DUPLICATE_DEVICE',
+                                faculty_action='PENDING'
+                            )
+                            db.session.add(alert)
+                        alert.alert_message = f"Attendance Approval Request: Roll #{student.roll_number} ({student.full_name}) requested faculty approval using phone already used by Roll #{c_roll} ({c_name}) in this session."
+                        alert.faculty_action = 'PENDING'
                         db.session.commit()
                     except Exception:
                         db.session.rollback()

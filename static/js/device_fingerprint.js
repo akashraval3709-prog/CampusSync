@@ -134,14 +134,31 @@
             return cachedHardwareFingerprint;
         }
 
+        let persistentFp = null;
+        try {
+            persistentFp = localStorage.getItem('cs_hw_fingerprint');
+        } catch(e) {}
+
         const canvasData = getCanvasProfile();
         const webglData = getWebGLProfile();
         const hardwareData = getHardwareMetrics();
 
         const rawCombinedSignature = `${webglData}##${hardwareData}##${canvasData}`;
         const hash = fastHash64(rawCombinedSignature);
-        
-        cachedHardwareFingerprint = `HW-${hash}`;
+        const computedFp = `HW-${hash}`;
+
+        // If Brave shields randomize canvas on refresh, preserve bound fingerprint
+        const isBrave = (navigator.brave && typeof navigator.brave.isBrave === 'function');
+        if (isBrave && persistentFp && persistentFp.startsWith('HW-')) {
+            cachedHardwareFingerprint = persistentFp;
+            return persistentFp;
+        }
+
+        cachedHardwareFingerprint = persistentFp || computedFp;
+        try {
+            localStorage.setItem('cs_hw_fingerprint', cachedHardwareFingerprint);
+        } catch(e) {}
+
         return cachedHardwareFingerprint;
     }
 

@@ -182,6 +182,13 @@
             <!-- (Shows Lecture Details & Enables QR Scanner)             -->
             <!-- ======================================================== -->
             <div id="activeSessionContainer">
+                <!-- Recommended Browser Banner -->
+                <div class="alert alert-info py-2 px-3 small border-0 shadow-sm d-flex align-items-center gap-2 mb-3" style="border-radius: 12px; background: #f0f9ff; color: #0369a1;">
+                    <i class="bi bi-info-circle-fill fs-5 text-primary"></i>
+                    <div>
+                        <strong>Recommended Browser:</strong> Please use <strong>Google Chrome, Samsung Internet, or Microsoft Edge</strong> with GPS Location turned ON for instant biometric attendance verification.
+                    </div>
+                </div>
                 <div class="row g-4 justify-content-center">
                     
                     <!-- Left: Camera QR Scanner / Verified Status Box -->
@@ -808,34 +815,47 @@
         );
     }
 
-    // Optional Device Registration Click Handler (Non-blocking)
-    function openOptionalDeviceRegistration() {
+    // Mandatory Device Registration Dialog (Enforces Screen Lock setup before attendance)
+    function openMandatoryDeviceRegistration(token, statusData) {
         const regModalEl = document.getElementById('scanDeviceRegisterModal');
-        const regModal = new bootstrap.Modal(regModalEl);
+        const regModal = new bootstrap.Modal(regModalEl, { backdrop: 'static', keyboard: false });
         const btnReg = document.getElementById('btnRegisterPersonalDevice');
+        const titleEl = document.getElementById('scanDeviceRegisterModalTitle');
+        if (titleEl) titleEl.innerText = "Mandatory Device Binding";
 
         btnReg.onclick = async function() {
-            regModal.hide();
-            showToast("Opening biometric / screen lock registration...", true);
+            btnReg.disabled = true;
+            btnReg.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Waiting for Screen Lock...';
             try {
-                const statusRes = await fetch('/student/webauthn/status');
-                const statusData = await statusRes.json();
-                const regResult = await window.CampusSyncWebAuthn.registerDevice(statusData || {});
-                showToast("Device registered successfully with personal screen lock!", true);
-                const sugBox = document.getElementById('deviceRegisterSuggestionBox');
-                if (sugBox) sugBox.innerHTML = '<span class="text-success small fw-medium"><i class="bi bi-check2-circle me-1"></i>Personal Phone Registered with Screen Lock</span>';
+                const stData = statusData || await (await fetch('/student/webauthn/status')).json();
+                const regResult = await window.CampusSyncWebAuthn.registerDevice(stData || {});
+                regModal.hide();
+                showToast("Device bound successfully! Now recording attendance...", true);
+                executeBackendAttendance(token, getDeviceFingerprint(), regResult.deviceModel, false);
             } catch (regErr) {
-                console.warn("Optional registration error:", regErr);
+                console.warn("Device registration error:", regErr);
+                btnReg.disabled = false;
+                btnReg.innerHTML = '<i class="bi bi-fingerprint me-2"></i>Verify Screen Lock / Fingerprint';
                 const errStr = (regErr && regErr.message ? regErr.message : '').toLowerCase();
                 if (errStr.includes('already_registered') || errStr.includes('invalidstateerror') || errStr.includes('another student')) {
-                    showBorrowedDeviceWarning(activeSessionToken);
-                } else if (!errStr.includes('cancelled')) {
-                    showProfessionalAlertModal(regErr.message || "Could not register biometric device on this phone.");
+                    regModal.hide();
+                    showBorrowedDeviceWarning(token);
+                } else {
+                    let dispMsg = regErr.message || "Screen lock verification failed.";
+                    if (dispMsg.includes('cancelled') || dispMsg.includes('NotAllowedError')) {
+                        dispMsg = "Screen lock verification is mandatory. You must verify your fingerprint / screen lock to bind this device.";
+                    }
+                    showProfessionalAlertModal(dispMsg);
                 }
             }
         };
 
         regModal.show();
+    }
+
+    // Optional Device Registration Click Handler (Manual Link)
+    function openOptionalDeviceRegistration() {
+        openMandatoryDeviceRegistration(activeSessionToken, null);
     }
 
     // 3. Camera QR Scanner Controls (HTML5-QRCode)
@@ -980,7 +1000,7 @@
             console.warn("Could not query device status:", e);
         }
 
-        // Step 3: If student HAS passkey registered, attempt one-tap biometric verification
+        // Step 3: Enforce Biometric Screen Lock verification on EVERY scan (No bypass)
         if (statusData && statusData.has_passkey) {
             if (btnMark) {
                 btnMark.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Verifying Screen Lock...';
@@ -990,25 +1010,41 @@
                 if (btnMark) {
                     btnMark.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Recording Attendance...';
                 }
-                // Use physical device hardware fingerprint for anti-proxy enforcement
                 executeBackendAttendance(activeSubmissionToken, getDeviceFingerprint(), authResult.deviceModel, false);
                 return;
             } catch (vErr) {
-                console.warn("Passkey verify failed on this phone, proceeding with hardware fingerprint check:", vErr);
+                console.warn("Passkey verify failed or cancelled:", vErr);
+                if (btnMark) {
+                    btnMark.disabled = false;
+                    btnMark.innerHTML = origBtnText || '<i class="bi bi-check2-circle me-1"></i> Mark Attendance';
+                }
+                let errDisplay = vErr && vErr.message ? vErr.message : "Screen lock verification was cancelled.";
+                if (errDisplay.includes('cancelled') || errDisplay.includes('NotAllowedError')) {
+                    errDisplay = "Screen lock verification is mandatory. You MUST verify your fingerprint / screen lock to mark attendance.";
+                }
+                showInCardAlert(errDisplay, false);
+                showToast(errDisplay, false);
+                showProfessionalAlertModal(errDisplay);
+                return; // STOP! DO NOT MARK ATTENDANCE!
             }
+        } else {
+            // Student does NOT have a registered passkey! Enforce mandatory registration before attendance
+            if (btnMark) {
+                btnMark.disabled = false;
+                btnMark.innerHTML = origBtnText || '<i class="bi bi-check2-circle me-1"></i> Mark Attendance';
+            }
+            openMandatoryDeviceRegistration(activeSubmissionToken, statusData);
+            return;
         }
-
-        // Step 4: Non-registered student or friend's device: proceed directly with hardware fingerprint (NO BLOCKING!)
-        if (btnMark) {
-            btnMark.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Recording Attendance...';
-        }
-        executeBackendAttendance(activeSubmissionToken, getDeviceFingerprint(), getDeviceModel(), false);
     }
+
+    let activeAlertId = null;
 
     // Displays confirmation modal for friend's / already registered phone
     function showBorrowedDeviceWarning(token, data) {
+        activeAlertId = (data && data.alert_id) ? data.alert_id : null;
         const modalEl = document.getElementById('scanConfirmBorrowedModal');
-        const modal = new bootstrap.Modal(modalEl);
+        const modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
         const bodyText = document.getElementById('confirmBorrowedModalBodyText');
         if (bodyText && data && data.message) {
             bodyText.innerHTML = `<div class="p-2 rounded bg-danger-subtle text-danger fw-bold border border-danger-subtle">
@@ -1016,6 +1052,21 @@
             </div>`;
         }
         const btnConfirm = document.getElementById('btnConfirmBorrowedScan');
+        const cancelBtns = modalEl.querySelectorAll('[data-bs-dismiss="modal"]');
+
+        cancelBtns.forEach(btn => {
+            btn.onclick = function() {
+                modal.hide();
+                if (activeAlertId) {
+                    fetch("{{ url_for('student_scan_cancel_proxy_alert') }}", {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ alert_id: activeAlertId })
+                    }).catch(e => console.warn("Failed to notify cancelled alert:", e));
+                }
+                showInCardAlert("Attendance request was cancelled. Proxy attempt logged for faculty review.", false);
+            };
+        });
 
         btnConfirm.onclick = function() {
             modal.hide();
@@ -1024,14 +1075,14 @@
                 btnMark.disabled = true;
                 btnMark.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Submitting Request...';
             }
-            executeBackendAttendance(token, getDeviceFingerprint(), getDeviceModel(), true);
+            executeBackendAttendance(token, getDeviceFingerprint(), getDeviceModel(), true, activeAlertId);
         };
 
         modal.show();
     }
 
     // Final API caller to student_scan
-    function executeBackendAttendance(token, devFp, devModel, requestApproval = false) {
+    function executeBackendAttendance(token, devFp, devModel, requestApproval = false, alertId = null) {
         const btnMark = document.getElementById('btnMarkAttendance');
 
         const payload = {
@@ -1041,7 +1092,8 @@
             longitude: cachedCoords.lng,
             device_fingerprint: devFp || getDeviceFingerprint(),
             device_model: devModel || getDeviceModel(),
-            request_approval: requestApproval
+            request_approval: requestApproval,
+            alert_id: alertId
         };
 
         fetch("{{ url_for('student_scan') }}", {

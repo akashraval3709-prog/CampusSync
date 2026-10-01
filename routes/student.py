@@ -131,8 +131,12 @@ def student_login():
         session["last_active"] = datetime.utcnow().timestamp()
 
         # Check if student already has a registered WebAuthn passkey
-        fp = student.device_fingerprint
-        has_passkey = bool(fp and not fp.startswith('HW-') and not fp.startswith('DEV-') and not fp.startswith('PIN-'))
+        fp = student.device_fingerprint or ''
+        if ':::' in fp:
+            hw_part, cred_part = fp.split(':::', 1)
+            has_passkey = bool(cred_part)
+        else:
+            has_passkey = bool(fp and not fp.startswith('HW-') and not fp.startswith('DEV-') and not fp.startswith('PIN-'))
         if getattr(student, 'device_reset_allowed', 0):
             has_passkey = False
 
@@ -601,6 +605,12 @@ def student_scan():
             device_fingerprint = payload.get("device_fingerprint")
             device_model = payload.get("device_model")
             request_approval = bool(payload.get("request_approval") or payload.get("is_borrowed_device"))
+            alert_id = payload.get("alert_id")
+            if alert_id:
+                try:
+                    alert_id = int(alert_id)
+                except (ValueError, TypeError):
+                    alert_id = None
 
             from services.attendance_service import mark_student_qr_attendance
             success, msg_or_data = mark_student_qr_attendance(
@@ -611,7 +621,8 @@ def student_scan():
                 lng=lng,
                 device_fingerprint=device_fingerprint,
                 device_model=device_model,
-                request_approval=request_approval
+                request_approval=request_approval,
+                alert_id=alert_id
             )
 
             if isinstance(msg_or_data, dict):
@@ -784,6 +795,31 @@ def student_scan_check_status():
             return jsonify({"success": True, "status": "ready"})
     except Exception as e:
         return jsonify({"success": False, "status": "error", "message": str(e)}), 500
+
+
+@student_bp.route('/student/scan/cancel-proxy-alert', methods=['POST'], endpoint='student_scan_cancel_proxy_alert')
+def student_scan_cancel_proxy_alert():
+    """
+    Called when a student dismisses/cancels the borrowed device warning modal.
+    Updates the security alert message so faculty sees that the proxy attempt was cancelled/aborted.
+    """
+    if "student_id" not in session:
+        return jsonify({"success": False, "message": "Not logged in"}), 401
+    payload = request.get_json(silent=True) or {}
+    alert_id = payload.get("alert_id")
+    if alert_id:
+        try:
+            alert_id = int(alert_id)
+            from models import AttendanceSecurityAlert, db
+            alert = AttendanceSecurityAlert.query.get(alert_id)
+            if alert and alert.student_id == session["student_id"]:
+                if "[ATTEMPT CANCELLED BY STUDENT]" not in (alert.alert_message or ""):
+                    alert.alert_message = f"{alert.alert_message} [ATTEMPT CANCELLED BY STUDENT ON WARNING MODAL]"
+                    db.session.commit()
+        except Exception as e:
+            from models import db
+            db.session.rollback()
+    return jsonify({"success": True})
 
 
 @student_bp.route('/student/notices', endpoint='student_notices')

@@ -290,13 +290,11 @@
           <div>This phone will be securely bound to your student account only. No other student can mark attendance from this physical device. Duplicate device registration is strictly blocked.</div>
         </div>
 
-        <!-- Action Buttons -->
-        <div class="d-flex flex-column flex-sm-row justify-content-center gap-2 pt-1">
-          <button type="button" class="btn btn-outline-secondary px-3 py-2.5 rounded-pill fw-medium" id="btnSkipWebauthnLogin">
-            Skip for Now (Attendance Disabled)
-          </button>
-          <button type="button" class="btn btn-primary px-4 py-2.5 rounded-pill fw-semibold shadow" id="btnVerifyWebauthnLogin" style="background: linear-gradient(135deg, #4f46e5, #7c3aed); border: none;">
-            <i class="bi bi-fingerprint me-1"></i> Verify Screen Lock Now
+        <!-- Action Buttons (Mandatory Binding - No Skip Permitted) -->
+        <div class="d-flex justify-content-center pt-2">
+          <button type="button" class="btn btn-primary px-5 py-2.5 rounded-pill fw-semibold shadow w-100" id="btnVerifyWebauthnLogin" style="background: linear-gradient(135deg, #4f46e5, #7c3aed); border: none; max-width: 360px;">
+            <i class="bi bi-fingerprint me-2 fs-5"></i>
+            <span id="btnVerifyText">Bind Device with Screen Lock / Fingerprint</span>
           </button>
         </div>
       </div>
@@ -433,6 +431,77 @@
     const confirmConflictBtn = document.getElementById('confirmConflictLoginBtn');
 
     let pendingConflictData = null;
+
+    // WebAuthn First-Time Device Binding Modal Controller (Mandatory - No Skip)
+    function openWebauthnSetupModal(studentData) {
+        const modalEl = document.getElementById('webauthnSetupModal');
+        if (!modalEl) {
+            window.location.href = studentData.redirect_url || "{{ url_for('student_dashboard') }}";
+            return;
+        }
+
+        const nameEl = document.getElementById('webauthnStudentName');
+        if (nameEl) nameEl.textContent = studentData.full_name || 'Student';
+
+        const alertBox = document.getElementById('webauthnAlertBox');
+        const btnVerify = document.getElementById('btnVerifyWebauthnLogin');
+        const btnVerifyText = document.getElementById('btnVerifyText');
+
+        if (alertBox) {
+            alertBox.className = 'alert alert-warning py-2 px-3 small text-start mb-3';
+            alertBox.innerHTML = '<i class="bi bi-shield-lock-fill me-1 text-warning"></i> Device binding is <strong>mandatory</strong>. You must verify your phone screen lock (Fingerprint, PIN, or Pattern) to bind this device before accessing the portal.';
+        }
+
+        const setupModal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
+        setupModal.show();
+
+        if (btnVerify) {
+            btnVerify.onclick = async function() {
+                btnVerify.disabled = true;
+                if (btnVerifyText) btnVerifyText.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Waiting for Fingerprint / Screen Lock...';
+
+                try {
+                    if (window.CampusSyncWebAuthn && typeof window.CampusSyncWebAuthn.registerDevice === 'function') {
+                        await window.CampusSyncWebAuthn.registerDevice(studentData);
+                    } else {
+                        const res = await fetch('/student/webauthn/register', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                credential_id: 'HW-' + getDeviceFingerprint(),
+                                device_name: getDeviceModel(),
+                                hardware_fingerprint: getDeviceFingerprint()
+                            })
+                        });
+                        const data = await res.json();
+                        if (!data.success) throw new Error(data.message || 'Registration failed');
+                    }
+
+                    if (alertBox) {
+                        alertBox.className = 'alert alert-success py-2 px-3 small text-start mb-3';
+                        alertBox.innerHTML = '<i class="bi bi-check-circle-fill me-1 text-success"></i> <strong>Device Bound Successfully!</strong> Redirecting to student portal...';
+                    }
+                    if (btnVerifyText) btnVerifyText.innerHTML = '<i class="bi bi-check2-circle me-1"></i> Verified & Bound!';
+
+                    setTimeout(() => {
+                        window.location.href = studentData.redirect_url || "{{ url_for('student_dashboard') }}";
+                    }, 800);
+                } catch (err) {
+                    console.error("WebAuthn setup error:", err);
+                    btnVerify.disabled = false;
+                    if (btnVerifyText) btnVerifyText.textContent = 'Retry Screen Lock Verification';
+                    if (alertBox) {
+                        alertBox.className = 'alert alert-danger py-2 px-3 small text-start mb-3';
+                        let errDisplay = err.message || "Screen lock verification failed or was cancelled.";
+                        if (errDisplay.includes('cancelled') || errDisplay.includes('NotAllowedError')) {
+                            errDisplay = "Screen lock verification was cancelled. You MUST verify your device screen lock (Fingerprint/PIN/Pattern) to proceed.";
+                        }
+                        alertBox.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-1 text-danger"></i> ${errDisplay}`;
+                    }
+                }
+            };
+        }
+    }
 
     if (loginForm) {
         loginForm.addEventListener('submit', async function(e) {

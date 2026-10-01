@@ -162,6 +162,7 @@
             credential = await navigator.credentials.create(createOptions);
         } catch (err) {
             console.error('[WebAuthn] navigator.credentials.create error:', err);
+            const errStr = (err.message || '').toLowerCase();
             if (err.name === 'InvalidStateError') {
                 throw new Error('DEVICE_ALREADY_REGISTERED: This physical phone is already registered to another student.');
             }
