@@ -1933,6 +1933,33 @@ def mark_student_qr_attendance_secure(student_id, session_id=None, token=None, l
                         "message": "Attendance request submitted. Awaiting faculty approval."
                     }
 
+        # Fallback: If student explicitly submitted with request_approval=True (e.g. Passkey unverified or alternate device)
+        if request_approval:
+            try:
+                alert = AttendanceSecurityAlert.query.get(alert_id) if alert_id else None
+                if not alert:
+                    alert = AttendanceSecurityAlert(
+                        session_id=sess.id,
+                        student_id=student.id,
+                        attempted_roll=student.roll_number,
+                        device_fingerprint=clean_dev if device_fingerprint else None,
+                        alert_type='UNBOUND_DEVICE',
+                        scan_latitude=lat,
+                        scan_longitude=lng,
+                        distance_meters=distance_meters,
+                        faculty_action='PENDING'
+                    )
+                    db.session.add(alert)
+                alert.alert_message = f"Attendance Approval Request: Roll #{student.roll_number} ({student.full_name}) requested manual verification and approval (Screen lock unverified or alternate device)."
+                alert.faculty_action = 'PENDING'
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+            return True, {
+                "pending_approval": True,
+                "message": "Attendance request submitted. Awaiting faculty approval."
+            }
+
         # 6. Record Attendance as Present
         st_entry = LectureAttendanceStudent.query.filter_by(
             session_id=sess.id,
