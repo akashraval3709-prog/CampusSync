@@ -579,19 +579,25 @@ def run_all_database_migrations():
     except Exception as e:
         report["errors"].append(f"reset_student_devices: {e}")
 
-    # 15. Ensure Semester 5 internal marks and result declaration for akash raval
+    # 15. Ensure Semester 5 internal marks and archive akash raval (BCA15226000041) to Old Students
     try:
-        from models import Student, Subject, InternalMark, ResultDeclaration, Faculty, FacultySubjectAssignment
+        from models import Student, Subject, InternalMark, ResultDeclaration, Faculty, FacultySubjectAssignment, ArchivedStudent, ArchivedInternalMark
         import json
 
-        st = Student.query.filter_by(email='akashraval3709@gmail.com').first()
+        target_enrollment = 'BCA15226000041'
+        st = Student.query.filter(
+            (Student.email == 'akashraval3709@gmail.com') |
+            (Student.enrollment_no == target_enrollment)
+        ).first()
+
         if st:
             target_sem = 5
             target_div = 'A'
             st.semester = target_sem
             st.division = target_div
             st.course = 'BCA'
-            st.status = 'Active'
+            st.enrollment_no = target_enrollment
+            st.status = 'Inactive'  # Moved to Old Students (Inactive in active table)
             st.academic_year = '2024-25'
             st.mobile_number = '9328976261'
 
@@ -676,11 +682,75 @@ def run_all_database_migrations():
                     else:
                         decl.is_declared = True
 
+            # Create or update ArchivedStudent record
+            arch_st = ArchivedStudent.query.filter(
+                (ArchivedStudent.enrollment_no == target_enrollment) |
+                (ArchivedStudent.email == st.email)
+            ).first()
+
+            if not arch_st:
+                arch_st = ArchivedStudent(
+                    original_student_id=st.id,
+                    roll_number=st.roll_number or '1',
+                    enrollment_no=target_enrollment,
+                    full_name=st.full_name,
+                    email=st.email,
+                    mobile=st.mobile,
+                    dob=st.dob,
+                    course=st.course or 'BCA',
+                    final_semester=target_sem,
+                    division=target_div,
+                    academic_year='2024-25',
+                    profile_photo=st.profile_photo or 'default-avatar.png',
+                    status='Archived',
+                    archived_at=datetime.utcnow()
+                )
+                db.session.add(arch_st)
+            else:
+                arch_st.original_student_id = st.id
+                arch_st.enrollment_no = target_enrollment
+                arch_st.full_name = st.full_name
+                arch_st.email = st.email
+                arch_st.final_semester = target_sem
+                arch_st.academic_year = '2024-25'
+                arch_st.status = 'Archived'
+
+            # Sync Sem 5 marks into ArchivedInternalMark (2024-25)
+            for s in subs:
+                spec = marks_specs.get(s.subject_code)
+                if not spec:
+                    continue
+                arch_m = ArchivedInternalMark.query.filter_by(
+                    enrollment_no=target_enrollment,
+                    subject_id=s.id,
+                    semester=target_sem,
+                    academic_year='2024-25'
+                ).first()
+                if not arch_m:
+                    arch_m = ArchivedInternalMark(
+                        enrollment_no=target_enrollment,
+                        student_name=st.full_name,
+                        subject_id=s.id,
+                        subject_code=s.subject_code,
+                        subject_name=s.subject_name,
+                        semester=target_sem,
+                        academic_year='2024-25',
+                        marks_obtained=spec['total'],
+                        max_marks=spec['max'],
+                        component_data=json.dumps(spec),
+                        archived_at=datetime.utcnow()
+                    )
+                    db.session.add(arch_m)
+                else:
+                    arch_m.marks_obtained = spec['total']
+                    arch_m.max_marks = spec['max']
+                    arch_m.component_data = json.dumps(spec)
+
             db.session.commit()
-            report["migrated"].append("akash_raval_sem5_marks_and_declaration")
+            report["migrated"].append("akash_raval_sem5_archived_alumni")
     except Exception as e:
         db.session.rollback()
-        report["errors"].append(f"akash_raval_sem5_seed: {e}")
+        report["errors"].append(f"akash_raval_sem5_archive: {e}")
 
     return report
 

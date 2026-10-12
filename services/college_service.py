@@ -20,6 +20,9 @@ class CollegeSettingSnapshot:
         for col in record.__table__.columns:
             setattr(self, col.name, getattr(record, col.name))
 
+    def to_dict(self):
+        return {k: v for k, v in self.__dict__.items() if not k.startswith('_')}
+
 def invalidate_college_cache():
     """Invalidates the in-memory college settings snapshot cache."""
     global _cached_college_snapshot, _cached_college_time
