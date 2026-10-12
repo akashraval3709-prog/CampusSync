@@ -579,6 +579,109 @@ def run_all_database_migrations():
     except Exception as e:
         report["errors"].append(f"reset_student_devices: {e}")
 
+    # 15. Ensure Semester 5 internal marks and result declaration for akash raval
+    try:
+        from models import Student, Subject, InternalMark, ResultDeclaration, Faculty, FacultySubjectAssignment
+        import json
+
+        st = Student.query.filter_by(email='akashraval3709@gmail.com').first()
+        if st:
+            target_sem = 5
+            target_div = 'A'
+            st.semester = target_sem
+            st.division = target_div
+            st.course = 'BCA'
+            st.status = 'Active'
+            st.academic_year = '2024-25'
+            st.mobile_number = '9328976261'
+
+            fac = Faculty.query.filter_by(faculty_code='FAC002').first()
+            subs = Subject.query.filter_by(semester=target_sem).all()
+            if fac and subs:
+                for s in subs:
+                    assign = FacultySubjectAssignment.query.filter_by(subject_id=s.id, division=target_div).first()
+                    if not assign:
+                        assign = FacultySubjectAssignment(
+                            faculty_id=fac.id,
+                            subject_id=s.id,
+                            division=target_div,
+                            status='Active'
+                        )
+                        db.session.add(assign)
+                    else:
+                        assign.faculty_id = fac.id
+                        assign.status = 'Active'
+
+            marks_specs = {
+                'BCA501': {'type': 'Theory', 'max': 50, 'test1': 14.0, 'test2': 13.0, 'test3': 12.0, 'best2': 13.5, 'internal_exam': 44.0, 'active_learning': 5.0, 'class_assignment': 5.0, 'home_assignment': 5.0, 'attendance': 4.5, 'total': 46.5},
+                'BCA501A': {'type': 'Theory', 'max': 50, 'test1': 13.0, 'test2': 14.0, 'test3': 12.0, 'best2': 13.5, 'internal_exam': 45.0, 'active_learning': 5.0, 'class_assignment': 5.0, 'home_assignment': 5.0, 'attendance': 4.0, 'total': 45.15},
+                'BCA501B': {'type': 'Practical', 'max': 25, 'internal_exam': 9.0, 'practical_eval': 9.5, 'viva': 4.0, 'journal': 4.5, 'total': 23.0},
+                'BCA501C': {'type': 'Practical', 'max': 25, 'internal_exam': 9.0, 'practical_eval': 9.0, 'viva': 4.0, 'journal': 4.0, 'total': 22.0},
+                'BCA502': {'type': 'Theory', 'max': 50, 'test1': 13.0, 'test2': 13.0, 'test3': 14.0, 'best2': 13.5, 'internal_exam': 43.0, 'active_learning': 5.0, 'class_assignment': 4.5, 'home_assignment': 5.0, 'attendance': 4.0, 'total': 45.0},
+                'BCA502A': {'type': 'Theory', 'max': 50, 'test1': 14.0, 'test2': 12.0, 'test3': 13.0, 'best2': 13.5, 'internal_exam': 44.0, 'active_learning': 5.0, 'class_assignment': 5.0, 'home_assignment': 4.5, 'attendance': 4.5, 'total': 46.5},
+                'BCA506': {'type': 'Practical', 'max': 25, 'internal_exam': 9.5, 'practical_eval': 9.5, 'viva': 4.5, 'journal': 4.5, 'total': 24.0}
+            }
+
+            for ay in ['2024-25', '2026-27']:
+                for s in subs:
+                    spec = marks_specs.get(s.subject_code)
+                    if not spec:
+                        continue
+                    m = InternalMark.query.filter_by(
+                        student_id=st.id,
+                        subject_id=s.id,
+                        semester=target_sem,
+                        academic_year=ay
+                    ).first()
+                    if not m:
+                        m = InternalMark(
+                            student_id=st.id,
+                            subject_id=s.id,
+                            semester=target_sem,
+                            academic_year=ay
+                        )
+                        db.session.add(m)
+                    m.marks_obtained = spec['total']
+                    m.max_marks = spec['max']
+                    if spec['type'] == 'Theory':
+                        m.test1, m.test2, m.test3 = spec['test1'], spec['test2'], spec['test3']
+                        m.internal_exam = spec['internal_exam']
+                        m.active_learning, m.class_assignment, m.home_assignment = spec['active_learning'], spec['class_assignment'], spec['home_assignment']
+                        m.attendance = spec['attendance']
+                        m.practical_eval, m.viva, m.journal = None, None, None
+                        cdata = {
+                            "type": "Theory", "save_type": "final", "status": "final", "is_final": True,
+                            "test1": spec['test1'], "test2": spec['test2'], "test3": spec['test3'], "best2": spec['best2'],
+                            "internal_exam": spec['internal_exam'], "active_learning": spec['active_learning'],
+                            "class_assignment": spec['class_assignment'], "home_assignment": spec['home_assignment'],
+                            "attendance": spec['attendance'], "total": spec['total'], "max_marks": spec['max']
+                        }
+                    else:
+                        m.test1, m.test2, m.test3 = None, None, None
+                        m.active_learning, m.class_assignment, m.home_assignment, m.attendance = None, None, None, None
+                        m.internal_exam = spec['internal_exam']
+                        m.practical_eval, m.viva, m.journal = spec['practical_eval'], spec['viva'], spec['journal']
+                        cdata = {
+                            "type": "Practical", "save_type": "final", "status": "final", "is_final": True,
+                            "internal_exam": spec['internal_exam'], "practical_eval": spec['practical_eval'],
+                            "viva": spec['viva'], "journal": spec['journal'], "total": spec['total'], "max_marks": spec['max']
+                        }
+                    m.component_data = json.dumps(cdata)
+
+                for target_d in ['All', 'A']:
+                    decl = ResultDeclaration.query.filter_by(academic_year=ay, semester=target_sem, division=target_d).first()
+                    if not decl:
+                        decl = ResultDeclaration(academic_year=ay, semester=target_sem, division=target_d, is_declared=True, declared_at=datetime.utcnow(), declared_by=1)
+                        db.session.add(decl)
+                    else:
+                        decl.is_declared = True
+
+            db.session.commit()
+            report["migrated"].append("akash_raval_sem5_marks_and_declaration")
+    except Exception as e:
+        db.session.rollback()
+        report["errors"].append(f"akash_raval_sem5_seed: {e}")
+
     return report
 
 
