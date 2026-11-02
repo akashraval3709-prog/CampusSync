@@ -398,10 +398,10 @@ def run_all_database_migrations():
 
             cs_cols = [
                 ('college_type', "VARCHAR(50) NULL DEFAULT 'BCA'"),
-                ('campus_latitude', 'DECIMAL(10,8) DEFAULT 24.15953750'),
-                ('campus_longitude', 'DECIMAL(11,8) DEFAULT 72.40295313'),
+                ('campus_latitude', 'DECIMAL(10,8) DEFAULT 24.17526250'),
+                ('campus_longitude', 'DECIMAL(11,8) DEFAULT 72.41945313'),
                 ('campus_radius_meters', 'INT DEFAULT 800'),
-                ('campus_plus_code', "VARCHAR(100) DEFAULT '5C53+R58 Palanpur, Gujarat'"),
+                ('campus_plus_code', "VARCHAR(100) DEFAULT '5CG9+4Q4 Palanpur, Gujarat'"),
                 ('college_start_time', "VARCHAR(10) DEFAULT '10:00'"),
                 ('college_end_time', "VARCHAR(10) DEFAULT '17:00'")
             ]
@@ -1010,3 +1010,4 @@ if __name__ == '__main__':
     host = os.environ.get('HOST', '0.0.0.0')
     debug = os.environ.get('FLASK_DEBUG', 'False').lower() in ('true', '1', 't')
     app.run(host=host, port=port, debug=debug)
+

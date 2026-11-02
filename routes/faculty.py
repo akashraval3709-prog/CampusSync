@@ -649,8 +649,8 @@ def faculty_attendance():
                 db.session.commit()
             else:
                 college = CollegeSetting.query.first()
-                campus_lat = float(college.campus_latitude) if college and college.campus_latitude else 24.15953750
-                campus_lng = float(college.campus_longitude) if college and college.campus_longitude else 72.40295313
+                campus_lat = float(college.campus_latitude) if college and college.campus_latitude else 24.17526250
+                campus_lng = float(college.campus_longitude) if college and college.campus_longitude else 72.41945313
                 campus_radius = int(college.campus_radius_meters) if college and college.campus_radius_meters else 800
                 qr_remaining_seconds = max(0, int((active_qr.qr_session_expires_at - now_utc).total_seconds())) if active_qr.qr_session_expires_at else 600
 

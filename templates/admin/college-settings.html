@@ -341,12 +341,12 @@
                                                 <i class="bi bi-pin-map-fill text-danger me-1"></i>Google Maps Plus Code / Key
                                             </label>
                                             <div class="input-group">
-                                                <input type="text" class="form-control font-monospace" id="campus_plus_code" name="campus_plus_code" value="{{ college.campus_plus_code if college and college.campus_plus_code else '5C53+R58 Palanpur, Gujarat' }}" placeholder="e.g. 5C53+R58 Palanpur, Gujarat">
-                                                <a href="https://www.google.com/maps/search/?api=1&query={{ college.campus_latitude if college and college.campus_latitude else '24.15953750' }},{{ college.campus_longitude if college and college.campus_longitude else '72.40295313' }}" target="_blank" class="btn btn-outline-secondary" title="View on Google Maps">
+                                                <input type="text" class="form-control font-monospace" id="campus_plus_code" name="campus_plus_code" value="{{ college.campus_plus_code if college and college.campus_plus_code else '5CG9+4Q4 Palanpur, Gujarat' }}" placeholder="e.g. 5CG9+4Q4 Palanpur, Gujarat">
+                                                <a href="https://www.google.com/maps/search/?api=1&query={{ college.campus_latitude if college and college.campus_latitude else '24.17526250' }},{{ college.campus_longitude if college and college.campus_longitude else '72.41945313' }}" target="_blank" class="btn btn-outline-secondary" title="View on Google Maps">
                                                     <i class="bi bi-box-arrow-up-right"></i> Maps
                                                 </a>
                                             </div>
-                                            <div class="form-text small text-muted">Current Campus Key: <strong>5C53+R58 Palanpur, Gujarat</strong></div>
+                                            <div class="form-text small text-muted">Current Campus Key: <strong>5CG9+4Q4 Palanpur, Gujarat</strong></div>
                                         </div>
 
                                         <div class="col-md-6">
@@ -380,7 +380,7 @@
                                             <label for="campus_latitude" class="form-label fw-semibold small">
                                                 <i class="bi bi-compass text-secondary me-1"></i>Campus Central Latitude
                                             </label>
-                                            <input type="number" step="0.00000001" class="form-control font-monospace" id="campus_latitude" name="campus_latitude" value="{{ college.campus_latitude if college and college.campus_latitude else 24.15953750 }}" required>
+                                            <input type="number" step="0.00000001" class="form-control font-monospace" id="campus_latitude" name="campus_latitude" value="{{ college.campus_latitude if college and college.campus_latitude else 24.17526250 }}" required>
                                             <div class="form-text small text-muted">Auto-computed from Google Maps (Palanpur).</div>
                                         </div>
 
@@ -388,7 +388,7 @@
                                             <label for="campus_longitude" class="form-label fw-semibold small">
                                                 <i class="bi bi-compass text-secondary me-1"></i>Campus Central Longitude
                                             </label>
-                                            <input type="number" step="0.00000001" class="form-control font-monospace" id="campus_longitude" name="campus_longitude" value="{{ college.campus_longitude if college and college.campus_longitude else 72.40295313 }}" required>
+                                            <input type="number" step="0.00000001" class="form-control font-monospace" id="campus_longitude" name="campus_longitude" value="{{ college.campus_longitude if college and college.campus_longitude else 72.41945313 }}" required>
                                             <div class="form-text small text-muted">Auto-computed from Google Maps (Palanpur).</div>
                                         </div>
                                     </div>

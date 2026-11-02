@@ -340,7 +340,7 @@ CREATE TABLE `college_settings` (
   `campus_latitude` decimal(10,8) DEFAULT '23.83680000',
   `campus_longitude` decimal(11,8) DEFAULT '72.11240000',
   `campus_radius_meters` int DEFAULT '150',
-  `campus_plus_code` varchar(100) DEFAULT '5C53+R58 Palanpur, Gujarat',
+  `campus_plus_code` varchar(100) DEFAULT '5CG9+4Q4 Palanpur, Gujarat',
   `college_start_time` varchar(10) DEFAULT '10:00',
   `college_end_time` varchar(10) DEFAULT '17:00',
   PRIMARY KEY (`id`)
@@ -353,7 +353,7 @@ CREATE TABLE `college_settings` (
 
 LOCK TABLES `college_settings` WRITE;
 /*!40000 ALTER TABLE `college_settings` DISABLE KEYS */;
-INSERT INTO `college_settings` VALUES (1,'CampusSync College','','college_logo_1787122488.png','','','','','','','','','','','2026-08-12 06:46:37','2026-09-18 11:15:37','','college_stamp_1789729887.png','principal_sig_1789729887.png',70,70,50,24.15953750,72.40295313,800,'5C53+R58 Palanpur, Gujarat','10:00','17:00');
+INSERT INTO `college_settings` VALUES (1,'CampusSync College','','college_logo_1787122488.png','','','','','','','','','','','2026-08-12 06:46:37','2026-09-18 11:15:37','','college_stamp_1789729887.png','principal_sig_1789729887.png',70,70,50,24.17526250,72.41945313,800,'5CG9+4Q4 Palanpur, Gujarat','10:00','17:00');
 /*!40000 ALTER TABLE `college_settings` ENABLE KEYS */;
 UNLOCK TABLES;
 

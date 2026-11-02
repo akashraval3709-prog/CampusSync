@@ -569,7 +569,7 @@ INSERT INTO `result_declarations` (`id`, `academic_year`, `semester`, `division`
 -- Dumping data for table `college_settings` (1 records)
 DELETE FROM `college_settings`;
 INSERT INTO `college_settings` (`id`, `college_name`, `college_short_name`, `college_type`, `logo`, `college_stamp`, `principal_signature`, `address`, `city`, `state`, `pincode`, `phone`, `email`, `website`, `principal_name`, `established_year`, `description`, `min_overall_attendance`, `min_subject_attendance`, `attendance_warning_threshold`, `campus_latitude`, `campus_longitude`, `campus_radius_meters`, `campus_plus_code`, `college_start_time`, `college_end_time`, `created_at`, `updated_at`) VALUES
-  (1, 'CampusSync College', 'CampusSync', 'BCA', 'default-logo.png', 'default-stamp.png', 'default-signature.png', 'College Campus Road', 'Palanpur', 'Gujarat', '385001', '+91 00000 00000', 'info@college.edu', 'https://campussync.edu', 'Dr. Principal', '2020', 'Welcome to our college management system.', 75.0, 75.0, 60.0, '23.83680000', '72.11240000', 150, '5C53+R58 Palanpur, Gujarat', '10:00', '17:00', '2026-10-28 14:59:48', '2026-10-28 14:59:48');
+  (1, 'CampusSync College', 'CampusSync', 'BCA', 'default-logo.png', 'default-stamp.png', 'default-signature.png', 'College Campus Road', 'Palanpur', 'Gujarat', '385001', '+91 00000 00000', 'info@college.edu', 'https://campussync.edu', 'Dr. Principal', '2020', 'Welcome to our college management system.', 75.0, 75.0, 60.0, '24.17526250', '72.41945313', 150, '5CG9+4Q4 Palanpur, Gujarat', '10:00', '17:00', '2026-10-28 14:59:48', '2026-10-28 14:59:48');
 
 
 -- Dumping data for table `academic_settings` (1 records)

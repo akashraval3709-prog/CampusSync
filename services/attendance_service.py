@@ -1387,8 +1387,8 @@ def start_faculty_qr_session(faculty_id, subject_id, division, semester, academi
         db.session.commit()
 
         college = CollegeSetting.query.first()
-        campus_lat = float(college.campus_latitude) if college and college.campus_latitude else 24.15953750
-        campus_lng = float(college.campus_longitude) if college and college.campus_longitude else 72.40295313
+        campus_lat = float(college.campus_latitude) if college and college.campus_latitude else 24.17526250
+        campus_lng = float(college.campus_longitude) if college and college.campus_longitude else 72.41945313
         campus_radius = int(college.campus_radius_meters) if college and college.campus_radius_meters else 800
 
         rem_secs = 600

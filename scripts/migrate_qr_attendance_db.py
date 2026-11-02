@@ -31,18 +31,18 @@ def add_column_if_not_exists(table, col, col_def):
 
 # 1. college_settings
 print("\n[1/5] Updating `college_settings` table...")
-add_column_if_not_exists('college_settings', 'campus_latitude', 'decimal(10,8) DEFAULT 23.83680000')
-add_column_if_not_exists('college_settings', 'campus_longitude', 'decimal(11,8) DEFAULT 72.11240000')
+add_column_if_not_exists('college_settings', 'campus_latitude', 'decimal(10,8) DEFAULT 24.17526250')
+add_column_if_not_exists('college_settings', 'campus_longitude', 'decimal(11,8) DEFAULT 72.41945313')
 add_column_if_not_exists('college_settings', 'campus_radius_meters', 'int DEFAULT 150')
-add_column_if_not_exists('college_settings', 'campus_plus_code', "varchar(100) DEFAULT '5C53+R58 Palanpur, Gujarat'")
+add_column_if_not_exists('college_settings', 'campus_plus_code', "varchar(100) DEFAULT '5CG9+4Q4 Palanpur, Gujarat'")
 add_column_if_not_exists('college_settings', 'college_start_time', "varchar(10) DEFAULT '10:00'")
 add_column_if_not_exists('college_settings', 'college_end_time', "varchar(10) DEFAULT '17:00'")
 
 # Set active college default coordinates & timings
 cur.execute("""
 UPDATE college_settings 
-SET campus_latitude=24.15953750, campus_longitude=72.40295313, campus_radius_meters=800,
-    campus_plus_code='5C53+R58 Palanpur, Gujarat', college_start_time='10:00', college_end_time='17:00'
+SET campus_latitude=24.17526250, campus_longitude=72.41945313, campus_radius_meters=800,
+    campus_plus_code='5CG9+4Q4 Palanpur, Gujarat', college_start_time='10:00', college_end_time='17:00'
 WHERE id=1;
 """)
 
